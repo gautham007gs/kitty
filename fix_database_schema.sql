@@ -1,60 +1,53 @@
-
--- Fix database schema issues
--- First, check if messages_log table exists and fix column names
-DO $$
+-- Fix messages_log table schema to match application expectations
+DO $$ 
 BEGIN
-    -- Check if messages_log table exists
+    -- Check if messages_log table exists and fix column names
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'messages_log') THEN
-        -- Check if message_content column exists, if not rename or add it
+        -- Add missing columns if they don't exist
         IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'message_content') THEN
-            -- Try to rename existing message column to message_content
-            IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'message') THEN
-                ALTER TABLE messages_log RENAME COLUMN message TO message_content;
-            ELSE
-                -- Add the missing column
-                ALTER TABLE messages_log ADD COLUMN message_content TEXT;
-            END IF;
+            ALTER TABLE messages_log ADD COLUMN message_content TEXT;
         END IF;
-        
-        -- Ensure user_id column exists
+
         IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'user_id') THEN
             ALTER TABLE messages_log ADD COLUMN user_id TEXT;
         END IF;
-        
-        -- Add message status columns for read receipts
-        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'is_delivered') THEN
-            ALTER TABLE messages_log ADD COLUMN is_delivered BOOLEAN DEFAULT TRUE;
+
+        -- Update existing content column to message_content if needed
+        IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'content') 
+           AND NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'message_content') THEN
+            ALTER TABLE messages_log RENAME COLUMN content TO message_content;
         END IF;
-        
-        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'is_read') THEN
-            ALTER TABLE messages_log ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
-        END IF;
-        
-        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'messages_log' AND column_name = 'read_at') THEN
-            ALTER TABLE messages_log ADD COLUMN read_at TIMESTAMP;
-        END IF;
-        
+
+        RAISE NOTICE 'messages_log table schema updated successfully';
     ELSE
-        -- Create messages_log table if it doesn't exist
+        -- Create the table with correct schema
         CREATE TABLE messages_log (
-            id BIGSERIAL PRIMARY KEY,
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
             user_id TEXT,
-            message_content TEXT NOT NULL,
-            role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-            timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            is_delivered BOOLEAN DEFAULT TRUE,
-            is_read BOOLEAN DEFAULT FALSE,
-            read_at TIMESTAMP,
             session_id TEXT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            message_content TEXT NOT NULL,
+            sender_type TEXT CHECK (sender_type IN ('user', 'ai')) NOT NULL,
+            has_image BOOLEAN DEFAULT false,
+            tokens_used INTEGER DEFAULT 0,
+            response_time_ms INTEGER,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
         );
-        
-        -- Create index for better performance
-        CREATE INDEX IF NOT EXISTS idx_messages_log_user_id ON messages_log(user_id);
-        CREATE INDEX IF NOT EXISTS idx_messages_log_timestamp ON messages_log(timestamp);
+
+        -- Enable RLS
+        ALTER TABLE messages_log ENABLE ROW LEVEL SECURITY;
+
+        -- Create policy for public access
+        CREATE POLICY "Allow public access to messages_log" ON messages_log
+            FOR ALL USING (true);
+
+        RAISE NOTICE 'messages_log table created successfully';
     END IF;
-END
-$$;
+END $$;
+
+-- Ensure proper indexes for performance
+CREATE INDEX IF NOT EXISTS idx_messages_log_user_id ON messages_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_log_session_id ON messages_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_messages_log_created_at ON messages_log(created_at);
 
 -- Update existing ad settings to ensure they're properly configured
 INSERT INTO public.app_configurations (id, settings) 

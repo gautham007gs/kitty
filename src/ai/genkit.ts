@@ -1,83 +1,48 @@
-import {genkit} from 'genkit';
-import {vertexAI} from '@genkit-ai/vertexai';
+import { genkit } from 'genkit';
+import { vertexAI } from '@genkit-ai/vertexai';
 
 // -----------------------------------------------------------------------------
-// Genkit AI Initialization with Vertex AI (Gemini)
+// Genkit AI Initialization with Vertex AI (Gemini 1.5 Flash - Cheapest Model)
 // -----------------------------------------------------------------------------
 
-// Function to determine the API key and project configuration for Vertex AI
-const MIN_API_KEY_LENGTH = 30;
-
-const getVertexAIConfig = (): { projectId: string; location: string; apiKey?: string } | null => {
-  // Check for Google Cloud project configuration
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_AI_PROJECT_ID || process.env.GCP_PROJECT_ID;
-  const location = process.env.VERTEX_AI_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-
-  // Check for various possible API key environment variable names
-  let apiKey: string | undefined;
-  const possibleKeys = ['GOOGLE_API_KEY', 'GEMINI_API_KEY', 'VERTEX_AI_API_KEY', 'GCP_API_KEY'];
-
-  for (const keyName of possibleKeys) {
-    const key = process.env[keyName];
-    console.log(`Genkit: Checking environment variable: ${keyName}`);
-    if (key && key.trim() !== '' && key.length > 10 && !key.toLowerCase().includes('your_') && !key.toLowerCase().includes('placeholder')) {
-      apiKey = key.trim();
-      console.log(`Genkit: Valid API key found in ${keyName}`);
-      break;
-    } else {
-      console.log(`Genkit: Environment variable ${keyName} is not set.`);
-    }
-  }
-
-  if (!projectId) {
-    console.error('CRITICAL Genkit Error: No Google Cloud Project ID found. Please set GOOGLE_CLOUD_PROJECT environment variable.');
-    return null;
-  }
-
-  console.log(`Genkit: Using Vertex AI with Project ID: ${projectId}, Location: ${location}`);
-
-  return {
-    projectId,
-    location,
-    apiKey
+// Environment variable validation
+const validateEnvironment = () => {
+  const required = {
+    projectId: process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_AI_PROJECT_ID,
+    location: process.env.VERTEX_AI_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'us-central1',
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   };
+
+  console.log('Vertex AI Environment Check:');
+  console.log('- Project ID:', required.projectId ? 'SET' : 'MISSING');
+  console.log('- Location:', required.location);
+  console.log('- API Key:', required.apiKey ? 'SET' : 'MISSING');
+
+  return required;
 };
 
-const vertexConfig = getVertexAIConfig();
+const config = validateEnvironment();
 
+// Initialize Genkit with Vertex AI
 export const ai = genkit({
-  plugins: vertexConfig ?
-    [
-      vertexAI({
-        projectId: vertexConfig.projectId,
-        location: vertexConfig.location,
-        apiKey: vertexConfig.apiKey, // Optional - will use default credentials if not provided
-      }),
-    ] :
-    [], // Initialize with no plugins if no valid config is found
-  model: 'vertexai/gemini-1.5-flash', // Using the cheapest Gemini model
+  plugins: [
+    vertexAI({
+      projectId: config.projectId || 'your-google-cloud-project', // Replace with actual project ID
+      location: config.location,
+      // API key is optional - Vertex AI can use default credentials in production
+      ...(config.apiKey && { apiKey: config.apiKey })
+    }),
+  ],
+  // Using the cheapest Gemini model for cost optimization
+  model: 'vertexai/gemini-1.5-flash',
 });
 
-// --- IMPORTANT NOTES ON VERTEX AI CONFIGURATION ---
-//
-// 1.  **ENVIRONMENT VARIABLES REQUIRED:**
-//     - GOOGLE_CLOUD_PROJECT: Your Google Cloud Project ID
-//     - VERTEX_AI_LOCATION: Region (defaults to us-central1)
-//     - GOOGLE_API_KEY: Your API key (or use default credentials)
-//
-// 2.  **COST OPTIMIZATION:**
-//     - Using gemini-1.5-flash which is the most cost-effective model
-//     - Vertex AI pricing is generally more predictable than direct API calls
-//
-// 3.  **GOOGLE CLOUD $300 CREDIT:**
-//     - Make sure your project is set up to use the free credits
-//     - Monitor usage in Google Cloud Console
-//     - Set up billing alerts to avoid unexpected charges
-//
-// 4.  **AUTHENTICATION:**
-//     - API key method for simplicity in development
-//     - For production, consider using service account credentials
-//
-// 5.  **RATE LIMITS:**
-//     - Vertex AI has generous rate limits compared to direct API
-//     - Perfect for scaling your chat application
+// Export configuration for monitoring
+export const vertexConfig = {
+  projectId: config.projectId,
+  location: config.location,
+  model: 'vertexai/gemini-1.5-flash',
+  hasApiKey: !!config.apiKey
+};
+
+console.log('Vertex AI initialized with Gemini 1.5 Flash model');
