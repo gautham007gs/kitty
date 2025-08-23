@@ -2,14 +2,16 @@
 DROP TABLE IF EXISTS messages_log;
 
 CREATE TABLE messages_log (
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     message_id TEXT NOT NULL,
     sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'ai')),
     chat_id TEXT NOT NULL DEFAULT 'kruthika_chat',
     user_id TEXT,
     text_content TEXT,
+    message_content TEXT,
     has_image BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_session_id TEXT
 );
 
 -- Create indexes for better performance

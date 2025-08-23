@@ -73,14 +73,32 @@ const ChatView: React.FC<ChatViewProps> = ({
         </div>
       )}
 
-      {displayMessages.map((msg) => (
-        <MessageBubble 
-            key={msg.id} 
-            message={msg} 
-            aiAvatarUrl={aiAvatarUrl} 
-            aiName={aiName} 
-            onTriggerAd={onTriggerAd} // Pass down the callback
-        />
+      {displayMessages.map((msg, index) => (
+        <React.Fragment key={`msg-fragment-${msg.id || index}`}>
+          <MessageBubble 
+            key={`msg-${msg.id || index}`}
+            message={msg.text}
+            isUser={msg.sender === 'user'}
+            timestamp={msg.timestamp ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+            isRead={msg.sender === 'user' ? msg.status === 'read' : undefined}
+            isDelivered={msg.sender === 'user' ? msg.status !== 'sending' : undefined}
+            aiAvatarUrl={msg.sender === 'ai' ? aiAvatarUrl : undefined}
+            userImageUrl={msg.userImageUrl}
+            aiImageUrl={msg.aiImageUrl}
+            audioUrl={msg.audioUrl}
+            onTriggerAd={onTriggerAd}
+          />
+          {/* Show banner ad every 5 messages */}
+          {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
+            <div key={`ad-${index}`} className="my-4">
+              <div className="mx-auto w-full max-w-md">
+                <div className="bg-gray-100 p-2 text-center text-sm text-gray-600 rounded">
+                  Advertisement Space
+                </div>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
       ))}
       {isAiTyping && <TypingIndicator avatarUrl={aiAvatarUrl} />}
       <div ref={messagesEndRef} />

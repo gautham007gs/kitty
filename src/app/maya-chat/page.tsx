@@ -996,31 +996,7 @@ const KruthikaChatPage: NextPage = () => {
         />
 
         <ChatView
-          messages={messages.map((msg, index) => (
-              <React.Fragment key={index}>
-                <MessageBubble
-                  message={msg.text}
-                  isUser={msg.sender === 'user'}
-                  timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  isRead={msg.sender === 'user' ? msg.status === 'read' : undefined}
-                  isDelivered={msg.sender === 'user' ? msg.status !== 'sending' : undefined}
-                  aiAvatarUrl={msg.sender === 'ai' ? displayAIProfile.avatarUrl : undefined}
-                  userImageUrl={msg.userImageUrl}
-                  aiImageUrl={msg.aiImageUrl}
-                  audioUrl={msg.audioUrl}
-                />
-                {/* Show banner ad every 5 messages */}
-                {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
-                  <BannerAdDisplay
-                    adType="standard"
-                    placementKey={`chat-message-${index}`}
-                    contextual={true}
-                    delayMs={1000}
-                    className="my-4"
-                  />
-                )}
-              </React.Fragment>
-            ))}
+          messages={messages}
           aiAvatarUrl={displayAIProfile.avatarUrl}
           aiName={displayAIProfile.name}
           isAiTyping={isAiTyping}
