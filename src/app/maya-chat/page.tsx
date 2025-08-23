@@ -245,7 +245,7 @@ const KruthikaChatPage: NextPage = () => {
       const yesterday = format(new Date(Date.now() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
 
       if (lastActiveDate !== today) {
-        // Update visit streak
+        // Update streak
         let currentStreak = parseInt(localStorage.getItem(VISIT_STREAK_KEY) || '0', 10);
         if (lastActiveDate === yesterday) {
           currentStreak++;
@@ -464,16 +464,16 @@ const KruthikaChatPage: NextPage = () => {
   useEffect(() => {
     checkFirstDailyVisit();
     resetInactivityTimer();
-    
+
     // Close options menu when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       if (showOptionsMenu) {
         setShowOptionsMenu(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
-    
+
     return () => {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (interstitialAdTimerRef.current) clearTimeout(interstitialAdTimerRef.current);
@@ -482,8 +482,8 @@ const KruthikaChatPage: NextPage = () => {
   }, [messages, resetInactivityTimer, checkFirstDailyVisit, showOptionsMenu]);
 
 
-  const handleSendMessage = async (text: string, imageUriFromInput?: string) => {
-    let currentImageUri = imageUriFromInput;
+  const handleSendMessage = async (text: string, userImageUriFromInput?: string) => {
+    let currentImageUri = userImageUriFromInput;
     const currentEffectiveAIProfile = globalAIProfile || defaultAIProfile;
 
     if (!text.trim() && !currentImageUri) return;
@@ -549,11 +549,18 @@ const KruthikaChatPage: NextPage = () => {
     const updatedRecentInteractions = [...recentInteractions, interactionMessage].slice(-10);
     setRecentInteractions(updatedRecentInteractions);
 
+    // Automatically progress message status
     setTimeout(() => {
-        setMessages(prev => prev.map(msg =>
-          msg.id === newUserMessage.id ? { ...msg, status: 'delivered' as MessageStatus } : msg
-        ));
-    }, 300 + Math.random() * 200);
+      setMessages(prev => prev.map(msg =>
+        msg.id === newUserMessage.id ? { ...msg, status: 'delivered' as MessageStatus } : msg
+      ));
+    }, 1000); // Mark as delivered after 1 second
+
+    setTimeout(() => {
+      setMessages(prev => prev.map(msg =>
+        msg.id === newUserMessage.id ? { ...msg, status: 'read' as MessageStatus } : msg
+      ));
+    }, 3000); // Mark as read after 3 seconds
 
     // Faster typing indicator for better responsiveness
     const typingAppearDelay = 200 + Math.random() * 300;
@@ -876,9 +883,9 @@ const KruthikaChatPage: NextPage = () => {
         <div className="bg-[#25D366] text-white px-4 py-3 shadow-md sticky top-0 z-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <ArrowLeft 
-                className="h-6 w-6 cursor-pointer text-white hover:text-gray-200 transition-colors" 
-                onClick={() => router.push('/')} 
+              <ArrowLeft
+                className="h-6 w-6 cursor-pointer text-white hover:text-gray-200 transition-colors"
+                onClick={() => router.push('/')}
               />
               <div className="relative">
                 <Avatar className="h-10 w-10 cursor-pointer border-2 border-white/20" onClick={handleOpenAvatarZoom}>
@@ -902,13 +909,13 @@ const KruthikaChatPage: NextPage = () => {
               <Phone className="h-5 w-5 cursor-pointer text-white hover:text-green-200 transition-colors" onClick={handleCallVideoClick} />
               <Video className="h-5 w-5 cursor-pointer text-white hover:text-green-200 transition-colors" onClick={handleCallVideoClick} />
               <div className="relative">
-                <MoreVertical 
-                  className="h-5 w-5 cursor-pointer text-white hover:text-green-200 transition-colors" 
-                  onClick={() => setShowOptionsMenu(!showOptionsMenu)} 
+                <MoreVertical
+                  className="h-5 w-5 cursor-pointer text-white hover:text-green-200 transition-colors"
+                  onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                 />
                 {showOptionsMenu && (
                   <div className="absolute right-0 top-8 bg-white text-gray-800 rounded-lg shadow-lg w-48 py-2 z-50">
-                    <button 
+                    <button
                       className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
                       onClick={() => {
                         setShowOptionsMenu(false);
@@ -917,7 +924,7 @@ const KruthikaChatPage: NextPage = () => {
                     >
                       Terms of Service
                     </button>
-                    <button 
+                    <button
                       className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
                       onClick={() => {
                         setShowOptionsMenu(false);
@@ -927,7 +934,7 @@ const KruthikaChatPage: NextPage = () => {
                       Privacy Policy
                     </button>
                     <div className="border-t border-gray-200 my-1"></div>
-                    <button 
+                    <button
                       className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-600"
                       onClick={() => {
                         setShowOptionsMenu(false);
@@ -940,7 +947,7 @@ const KruthikaChatPage: NextPage = () => {
                     >
                       About AI Companion
                     </button>
-                    <button 
+                    <button
                       className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
                       onClick={() => {
                         setShowOptionsMenu(false);

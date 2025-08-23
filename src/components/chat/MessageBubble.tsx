@@ -92,7 +92,7 @@ const MessageBubble = memo(({ message, aiAvatarUrl, aiName = "AI", onImageClick,
           </div>
         )}
 
-        <div className="flex justify-end mt-1">
+        <div className="flex justify-end items-center gap-1 mt-1">
           <span className="text-xs opacity-70">
             {message.timestamp.toLocaleTimeString([], {
               hour: '2-digit',
@@ -100,6 +100,35 @@ const MessageBubble = memo(({ message, aiAvatarUrl, aiName = "AI", onImageClick,
               hour12: true
             })}
           </span>
+          {isUser && (
+            <div className="flex items-center">
+              {message.status === 'sent' && (
+                <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 15" fill="none">
+                  <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
+                </svg>
+              )}
+              {message.status === 'delivered' && (
+                <div className="flex">
+                  <svg className="w-4 h-4 text-gray-500 -mr-1" viewBox="0 0 16 15" fill="none">
+                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
+                  </svg>
+                  <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 15" fill="none">
+                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
+                  </svg>
+                </div>
+              )}
+              {message.status === 'read' && (
+                <div className="flex">
+                  <svg className="w-4 h-4 text-blue-500 -mr-1" viewBox="0 0 16 15" fill="none">
+                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
+                  </svg>
+                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 16 15" fill="none">
+                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
