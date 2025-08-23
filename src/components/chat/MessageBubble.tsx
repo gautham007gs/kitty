@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import Image from 'next/image';
 import type { Message } from '@/types';
 import { cn } from '@/lib/utils';
+import { Check, CheckCheck } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -101,31 +102,12 @@ const MessageBubble = memo(({ message, aiAvatarUrl, aiName = "AI", onImageClick,
             })}
           </span>
           {isUser && (
-            <div className="flex items-center">
-              {message.status === 'sent' && (
-                <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 15" fill="none">
-                  <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
-                </svg>
-              )}
+            <div className="flex items-center ml-1">
               {message.status === 'delivered' && (
-                <div className="flex">
-                  <svg className="w-4 h-4 text-gray-500 -mr-1" viewBox="0 0 16 15" fill="none">
-                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
-                  </svg>
-                  <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 15" fill="none">
-                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
-                  </svg>
-                </div>
+                <CheckCheck className="h-3 w-3 text-gray-400" />
               )}
               {message.status === 'read' && (
-                <div className="flex">
-                  <svg className="w-4 h-4 text-blue-500 -mr-1" viewBox="0 0 16 15" fill="none">
-                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
-                  </svg>
-                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 16 15" fill="none">
-                    <path d="M10.91 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.85 4.85 5.824 1.85a.365.365 0 0 0-.51-.063l-.478.372a.377.377 0 0 0-.062.53l3.584 4.134a.365.365 0 0 0 .51.063l.478-.372a.377.377 0 0 0 .062-.53L10.91 3.316z" fill="currentColor"/>
-                  </svg>
-                </div>
+                <CheckCheck className="h-3 w-3 text-blue-500" />
               )}
             </div>
           )}

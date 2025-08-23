@@ -28,6 +28,7 @@ import { useAIMediaAssets } from '@/contexts/AIMediaAssetsContext';
 import SocialBarAdDisplay from '@/components/SocialBarAdDisplay';
 import GlobalAdScripts from '@/components/GlobalAdScripts';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MessageBubble from '@/components/chat/MessageBubble';
 
 const AI_DISCLAIMER_SHOWN_KEY = 'ai_disclaimer_shown_kruthika_chat_v2';
 const AI_DISCLAIMER_DURATION = 2000;
@@ -971,7 +972,31 @@ const KruthikaChatPage: NextPage = () => {
         />
 
         <ChatView
-          messages={messages}
+          messages={messages.map((msg, index) => (
+              <React.Fragment key={index}>
+                <MessageBubble
+                  message={msg.text}
+                  isUser={msg.sender === 'user'}
+                  timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  isRead={msg.sender === 'user' ? true : undefined}
+                  isDelivered={msg.sender === 'user' ? true : undefined}
+                  aiAvatarUrl={msg.sender === 'ai' ? displayAIProfile.avatarUrl : undefined}
+                  userImageUrl={msg.userImageUrl}
+                  aiImageUrl={msg.aiImageUrl}
+                  audioUrl={msg.audioUrl}
+                />
+                {/* Show banner ad every 5 messages */}
+                {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
+                  <BannerAdDisplay
+                    adType="standard"
+                    placementKey={`chat-message-${index}`}
+                    contextual={true}
+                    delayMs={1000}
+                    className="my-4"
+                  />
+                )}
+              </React.Fragment>
+            ))}
           aiAvatarUrl={displayAIProfile.avatarUrl}
           aiName={displayAIProfile.name}
           isAiTyping={isAiTyping}
@@ -987,6 +1012,13 @@ const KruthikaChatPage: NextPage = () => {
             delayMs={messages.length > 10 ? 5000 : 10000} // Show after 5s if engaged, 10s if new
           />
         </div>
+
+        {/* Native Banner Ad before input */}
+        <BannerAdDisplay
+          adType="native"
+          placementKey="chat-bottom"
+          className="mb-2 mx-4"
+        />
 
         <ChatInput onSendMessage={handleSendMessage} isAiTyping={isAiTyping} />
 
