@@ -1,4 +1,3 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 
 // Environment variable validation for Vertex AI
@@ -32,7 +31,7 @@ const initializeVertexAI = () => {
   try {
     // Decode base64 credentials
     const credentials = JSON.parse(Buffer.from(config.credentialsJson, 'base64').toString());
-    
+
     vertex = new VertexAI({
       project: config.projectId,
       location: config.location,
@@ -99,15 +98,15 @@ export class AIService {
 
       const result = await model.generateContent(request);
       const response = result.response;
-      
+
       if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
         return response.candidates[0].content.parts[0].text;
       }
-      
+
       throw new Error('No valid response received from Vertex AI');
     } catch (error) {
       console.error('Error generating AI response:', error);
-      
+
       // Fallback responses for common errors
       if (error instanceof Error) {
         if (error.message.includes('quota') || error.message.includes('limit')) {
@@ -120,7 +119,7 @@ export class AIService {
           return "I'm having some technical difficulties. Please check back later! 🔧";
         }
       }
-      
+
       return "Sorry, I'm having trouble processing that right now. Could you try rephrasing? 💭";
     }
   }
@@ -140,7 +139,7 @@ Personality traits:
 Current conversation context:`;
 
       let contextPrompt = systemPrompt;
-      
+
       // Add recent conversation history (last 5 messages)
       if (conversationHistory.length > 0) {
         const recentHistory = conversationHistory.slice(-5);

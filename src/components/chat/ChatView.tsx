@@ -4,6 +4,7 @@ import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import { useMessagePagination } from '@/hooks/useMessagePagination';
 import { Button } from '@/components/ui/button';
+import BannerAdDisplay from './BannerAdDisplay';
 
 interface ChatViewProps {
   messages: Message[];
@@ -92,9 +93,11 @@ const ChatView: React.FC<ChatViewProps> = ({
           {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
             <div key={`ad-${index}`} className="my-4">
               <div className="mx-auto w-full max-w-md">
-                <div className="bg-gray-100 p-2 text-center text-sm text-gray-600 rounded">
-                  Advertisement Space
-                </div>
+                <BannerAdDisplay 
+                  adType="standard" 
+                  placementKey={`chat-inline-${index}`}
+                  className="w-full"
+                />
               </div>
             </div>
           )}

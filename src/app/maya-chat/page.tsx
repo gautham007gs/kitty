@@ -504,7 +504,7 @@ const KruthikaChatPage: NextPage = () => {
     );
   };
 
-  const handleSendMessage = async (text: string, userImageUriFromInput?: string) => {
+  const handleSendMessage = useCallback(async (text: string, userImageUriFromInput?: string) => {
     let currentImageUri = userImageUriFromInput;
     const currentEffectiveAIProfile = globalAIProfile || defaultAIProfile;
 
@@ -773,7 +773,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  };
+  }, [text, isAiTyping, resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, adSettings?.adsEnabledGlobally, toast, userIdRef.current, typingIndicatorTimeoutRef]); // Added text and isAiTyping to dependency array
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 
