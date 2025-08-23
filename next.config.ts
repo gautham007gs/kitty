@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Fix Server Actions CORS issue
+  allowedDevOrigins: ['*']
 };
 
 export default nextConfig;

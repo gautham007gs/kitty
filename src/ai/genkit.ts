@@ -33,21 +33,22 @@ if (config.projectId && config.credentialsJson) {
     
     // Try to parse as base64 first, then as direct JSON
     try {
-      const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
-      credentials = JSON.parse(decodedCredentials);
-      console.log('Vertex AI: Successfully parsed base64 encoded credentials');
-    } catch (base64Error) {
-      // If base64 decode fails, try parsing as direct JSON
-      try {
+      // First check if it looks like base64
+      if (config.credentialsJson.includes('{') && config.credentialsJson.includes('}')) {
+        // Looks like direct JSON
         credentials = JSON.parse(config.credentialsJson);
         console.log('Vertex AI: Successfully parsed direct JSON credentials');
-      } catch (jsonError) {
-        console.error('Vertex AI: Failed to parse credentials as both base64 and direct JSON');
-        console.error('Base64 error:', base64Error.message);
-        console.error('JSON error:', jsonError.message);
-        console.error('Credentials preview:', config.credentialsJson.substring(0, 50) + '...');
-        throw new Error('Invalid credentials format');
+      } else {
+        // Try base64 decode
+        const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
+        credentials = JSON.parse(decodedCredentials);
+        console.log('Vertex AI: Successfully parsed base64 encoded credentials');
       }
+    } catch (parseError) {
+      console.error('Vertex AI: Failed to parse credentials');
+      console.error('Parse error:', parseError.message);
+      console.error('Credentials preview:', config.credentialsJson.substring(0, 100) + '...');
+      throw new Error('Invalid credentials format - please check your GOOGLE_APPLICATION_CREDENTIALS_JSON');
     }
     
     vertex = new VertexAI({
