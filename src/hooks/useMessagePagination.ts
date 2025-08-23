@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -31,7 +30,7 @@ export const useMessagePagination = ({
 
   const loadMessages = useCallback(async (reset = false) => {
     if (loading) return;
-    
+
     setLoading(true);
     const currentOffset = reset ? 0 : offset;
 

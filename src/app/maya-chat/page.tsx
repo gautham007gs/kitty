@@ -605,7 +605,7 @@ const KruthikaChatPage: NextPage = () => {
                 sender_type: 'ai',
                 chat_id: 'kruthika_chat',
                 user_id: userIdRef.current,
-                text_content: aiText.substring(0, 500),
+                message_content: aiText.substring(0, 500),
                 has_image: hasImage || hasAudio,
               }]);
             if (aiLogError) console.error('Supabase error logging AI message:', aiLogError.message);
@@ -819,7 +819,7 @@ const KruthikaChatPage: NextPage = () => {
                 const { error: offlineLogError } = await supabase.from('messages_log').insert([{
                     message_id: newOfflineMsgId, sender_type: 'ai', chat_id: 'kruthika_chat_offline_ping',
                     user_id: userIdRef.current,
-                    text_content: offlineResult.message.substring(0, 500), has_image: false,
+                    message_content: offlineResult.message.substring(0, 500), has_image: false,
                 }]);
                 if (offlineLogError) console.error('Supabase error logging offline AI message:', offlineLogError.message);
             } catch (e: any) { console.error('Supabase offline AI message logging failed:', e?.message || String(e)); }

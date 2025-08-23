@@ -13,7 +13,7 @@ CREATE TABLE public.messages_log (
     sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'ai')),
     chat_id TEXT NOT NULL DEFAULT 'kruthika_chat',
     user_id TEXT,
-    text_content TEXT NOT NULL,
+    message_content TEXT NOT NULL,
     has_image BOOLEAN DEFAULT FALSE,
     timestamp TIMESTAMPTZ DEFAULT NOW()
 );
