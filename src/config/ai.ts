@@ -4,11 +4,11 @@ import type { AIProfile, AvatarOption, AdminStatusDisplay, ManagedContactStatus,
 // These should be URLs to publicly hosted images.
 
 export const defaultAIProfile: AIProfile = {
-  name: 'Kruthika',
-  avatarUrl: 'https://placehold.co/100x100.png/E91E63/FFFFFF?text=K',
-  status: '🌸 Living my best life! Let\'s chat! 🌸',
-  statusStoryText: 'Ask me anything! 💬',
-  statusStoryImageUrl: undefined,
+  name: "Kruthika",
+  avatarUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+  status: "🌸 Living my best life! Let's chat! 🌸",
+  statusStoryText: "Ask me anything! 💬",
+  statusStoryImageUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
   statusStoryHasUpdate: true,
 };
 
