@@ -773,7 +773,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [text, isAiTyping, resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, adSettings?.adsEnabledGlobally, toast, userIdRef.current, typingIndicatorTimeoutRef]); // Added text and isAiTyping to dependency array
+  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig]); // Fixed dependency array
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 
