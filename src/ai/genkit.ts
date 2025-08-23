@@ -29,8 +29,26 @@ let model: any = null;
 
 if (config.projectId && config.credentialsJson) {
   try {
-    // Decode base64 credentials
-    const credentials = JSON.parse(Buffer.from(config.credentialsJson, 'base64').toString());
+    let credentials;
+    
+    // Try to parse as base64 first, then as direct JSON
+    try {
+      const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
+      credentials = JSON.parse(decodedCredentials);
+      console.log('Vertex AI: Successfully parsed base64 encoded credentials');
+    } catch (base64Error) {
+      // If base64 decode fails, try parsing as direct JSON
+      try {
+        credentials = JSON.parse(config.credentialsJson);
+        console.log('Vertex AI: Successfully parsed direct JSON credentials');
+      } catch (jsonError) {
+        console.error('Vertex AI: Failed to parse credentials as both base64 and direct JSON');
+        console.error('Base64 error:', base64Error.message);
+        console.error('JSON error:', jsonError.message);
+        console.error('Credentials preview:', config.credentialsJson.substring(0, 50) + '...');
+        throw new Error('Invalid credentials format');
+      }
+    }
     
     vertex = new VertexAI({
       project: config.projectId,
@@ -53,9 +71,11 @@ if (config.projectId && config.credentialsJson) {
     console.log('Vertex AI initialized with Gemini 1.5 Flash model');
   } catch (error) {
     console.error('Failed to initialize Vertex AI:', error);
+    console.error('Please check your GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable');
   }
 } else {
   console.error('Missing required Vertex AI configuration');
+  console.error('Required: GOOGLE_CLOUD_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS_JSON');
 }
 
 // Get the Vertex AI model instance

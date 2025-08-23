@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const securityHeaders = [
   {
@@ -20,6 +20,17 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        'localhost:3000',
+        '*.replit.dev',
+        '*.replit.co',
+        '*.replit.com',
+        'edb3d2f8-5baa-409a-bbeb-469cdd803722-00-x5fjipggwmfa.sisko.replit.dev'
+      ]
+    }
+  },
   images: {
     unoptimized: true,
     domains: ['localhost', '0.0.0.0', 'ykgzsazqjhbdlzioduzx.supabase.co'],
