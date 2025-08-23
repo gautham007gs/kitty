@@ -15,7 +15,7 @@ CREATE TABLE messages_log (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     chat_id TEXT NOT NULL DEFAULT 'default',
     sender TEXT NOT NULL CHECK (sender IN ('user', 'ai')),
-    message_content TEXT NOT NULL, -- Correct column name
+    text TEXT NOT NULL, -- Changed from message_content to text to match application code
     message_type TEXT DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'audio', 'media')),
     media_url TEXT,
     media_caption TEXT,

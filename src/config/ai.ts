@@ -255,11 +255,45 @@ export const revenueOptimization = {
 export const DEFAULT_ADSTERRA_DIRECT_LINK = "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69";
 export const DEFAULT_MONETAG_DIRECT_LINK = "https://www.profitablecpmgate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69";
 
+// Default admin status display configuration
+export const defaultAdminStatusDisplay = {
+  id: "admin-own-status",
+  name: "Kruthika",
+  avatarUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+  statusText: "Ask me anything! 💬 Main hamesha available hun!",
+  statusImageUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+  hasUpdate: true
+};
+
+// Default managed contact statuses
+export const defaultManagedContactStatuses = [
+  {
+    id: "demo-contact-1",
+    name: "Priya",
+    avatarUrl: "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
+    statusText: "Coffee date today! ☕",
+    hasUpdate: true,
+    dataAiHint: "friend college student",
+    statusImageUrl: "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg"
+  },
+  {
+    id: "demo-contact-2", 
+    name: "Sneha",
+    avatarUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    statusText: "Weekend vibes! 🌟",
+    hasUpdate: false,
+    dataAiHint: "friend social media",
+    statusImageUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg"
+  }
+];
+
 // Export all configurations
 export {
   defaultAIProfile,
   defaultAdSettings, 
   defaultAIMediaAssetsConfig,
+  defaultAdminStatusDisplay,
+  defaultManagedContactStatuses,
   multilingualPersonality,
   engagementPatterns,
   addictionTriggers,
