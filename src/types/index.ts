@@ -1,12 +1,11 @@
-
 export type MessageStatus = 'sent' | 'delivered' | 'read';
 
 export interface Message {
   id: string;
-  text: string;
-  sender: 'user' | 'ai';
+  text: string; // Renamed from 'content'
+  sender: 'user' | 'ai'; // Renamed from 'isUser'
   timestamp: Date;
-  status: MessageStatus;
+  status: MessageStatus; // Added new status field
   aiImageUrl?: string;
   userImageUrl?: string;
   audioUrl?: string;
@@ -48,15 +47,15 @@ export interface ManagedContactStatus {
 
 export interface AdSettings {
   adsEnabledGlobally: boolean;
-  
+
   adsterraDirectLink: string;
   adsterraDirectLinkEnabled: boolean;
   adsterraBannerCode: string;
   adsterraBannerEnabled: boolean;
-  adsterraNativeBannerCode: string; 
-  adsterraNativeBannerEnabled: boolean; 
-  adsterraSocialBarCode: string; 
-  adsterraSocialBarEnabled: boolean; 
+  adsterraNativeBannerCode: string;
+  adsterraNativeBannerEnabled: boolean;
+  adsterraSocialBarCode: string;
+  adsterraSocialBarEnabled: boolean;
   adsterraPopunderCode: string;
   adsterraPopunderEnabled: boolean;
 
@@ -64,10 +63,10 @@ export interface AdSettings {
   monetagDirectLinkEnabled: boolean;
   monetagBannerCode: string;
   monetagBannerEnabled: boolean;
-  monetagNativeBannerCode: string; 
-  monetagNativeBannerEnabled: boolean; 
-  monetagSocialBarCode: string; 
-  monetagSocialBarEnabled: boolean; 
+  monetagNativeBannerCode: string;
+  monetagNativeBannerEnabled: boolean;
+  monetagSocialBarCode: string;
+  monetagSocialBarEnabled: boolean;
   monetagPopunderCode: string;
   monetagPopunderEnabled: boolean;
 
@@ -77,7 +76,7 @@ export interface AdSettings {
 }
 
 export interface AIMediaAsset {
-  id: string; 
+  id: string;
   type: 'image' | 'audio';
   url: string; // Full public URL for images, or path like '/media/sound.mp3' for audio
   description?: string; // Optional description for admin reference

@@ -1,4 +1,3 @@
-
 import type { AIProfile, AvatarOption, AdminStatusDisplay, ManagedContactStatus, AdSettings, AIMediaAssetsConfig } from '@/types';
 
 // For AIProfile.avatarUrl, AvatarOption.url, and statusStoryImageUrl:
@@ -33,13 +32,13 @@ export const DEFAULT_MONETAG_DIRECT_LINK = "https://otieu.com/4/9403276";
 
 export const defaultAdSettings: AdSettings = {
   adsEnabledGlobally: true,
-  
+
   adsterraDirectLink: DEFAULT_ADSTERRA_DIRECT_LINK,
   adsterraDirectLinkEnabled: true,
   adsterraBannerCode: "<!-- Adsterra Banner Code Placeholder: Paste full script here -->",
-  adsterraBannerEnabled: false,
+  adsterraBannerEnabled: true,
   adsterraNativeBannerCode: "<!-- Adsterra Native Banner Code Placeholder: Paste full script here -->",
-  adsterraNativeBannerEnabled: false,
+  adsterraNativeBannerEnabled: true,
   adsterraSocialBarCode: "<!-- Adsterra Social Bar Code Placeholder: Paste full script here -->",
   adsterraSocialBarEnabled: false,
   adsterraPopunderCode: "<!-- Adsterra Pop-under Script Placeholder: Paste full script here -->",
