@@ -1,80 +1,268 @@
-import type { AIProfile, AvatarOption, AdminStatusDisplay, ManagedContactStatus, AdSettings, AIMediaAssetsConfig } from '@/types';
 
-// For AIProfile.avatarUrl, AvatarOption.url, and statusStoryImageUrl:
-// These should be URLs to publicly hosted images.
+import type { AIProfile, AdSettings, AIMediaAssetsConfig } from '@/types';
 
+// Enhanced AI profile with multilingual personality
 export const defaultAIProfile: AIProfile = {
   name: "Kruthika",
   avatarUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
-  status: "🌸 Living my best life! Let's chat! 🌸",
-  statusStoryText: "Ask me anything! 💬",
+  status: "🌸 Tumse baat karne ka wait kar rahi hun! Let's chat! 🌸",
+  statusStoryText: "Ask me anything! 💬 Main hamesha available hun!",
   statusStoryImageUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
   statusStoryHasUpdate: true,
 };
 
-export const defaultAdminStatusDisplay: AdminStatusDisplay = {
-  id: "admin-own-status",
-  name: "My Status",
-  avatarUrl: "https://placehold.co/100x100.png/757575/FFFFFF?text=A",
-  statusText: "Tap to update from Admin Panel!",
-  statusImageUrl: undefined,
-  hasUpdate: false,
-};
-
-export const defaultManagedContactStatuses: ManagedContactStatus[] = [
-  { id: "demo1", name: "Ananya ✨", avatarUrl: "https://placehold.co/100x100.png/FF9800/FFFFFF?text=A", statusText: "10 minutes ago", hasUpdate: true, dataAiHint: "profile woman", statusImageUrl: undefined },
-  { id: "demo2", name: "Priya 💖", avatarUrl: "https://placehold.co/100x100.png/4CAF50/FFFFFF?text=P", statusText: "Wow, new pic! 📸", hasUpdate: true, dataAiHint: "girl fashion", statusImageUrl: "https://placehold.co/300x500.png/4CAF50/FFFFFF?text=Priya%27s+Story" },
-  { id: "demo3", name: "Sneha 😊", avatarUrl: "https://placehold.co/100x100.png/03A9F4/FFFFFF?text=S", statusText: "Seen 2 hours ago", hasUpdate: false, dataAiHint: "female portrait", statusImageUrl: undefined },
-];
-
-export const DEFAULT_ADSTERRA_DIRECT_LINK = "https://judicialphilosophical.com/zd46rhxy0?key=3dad0e700ddba4c8c8ace4396dd31e8a";
-export const DEFAULT_MONETAG_DIRECT_LINK = "https://otieu.com/4/9403276";
-
+// Psychology-optimized ad settings
 export const defaultAdSettings: AdSettings = {
   adsEnabledGlobally: true,
-
-  adsterraDirectLink: DEFAULT_ADSTERRA_DIRECT_LINK,
-  adsterraDirectLinkEnabled: true,
-  adsterraBannerCode: "<!-- Adsterra Banner Code Placeholder: Paste full script here -->",
-  adsterraBannerEnabled: true,
-  adsterraNativeBannerCode: "<!-- Adsterra Native Banner Code Placeholder: Paste full script here -->",
-  adsterraNativeBannerEnabled: true,
-  adsterraSocialBarCode: "<!-- Adsterra Social Bar Code Placeholder: Paste full script here -->",
-  adsterraSocialBarEnabled: false,
-  adsterraPopunderCode: "<!-- Adsterra Pop-under Script Placeholder: Paste full script here -->",
-  adsterraPopunderEnabled: false,
-
-  monetagDirectLink: DEFAULT_MONETAG_DIRECT_LINK,
-  monetagDirectLinkEnabled: true,
-  monetagBannerCode: "<!-- Monetag Banner Code Placeholder: Paste full script here -->",
-  monetagBannerEnabled: false,
-  monetagNativeBannerCode: "<!-- Monetag Native Banner Code Placeholder: Paste full script here -->",
-  monetagNativeBannerEnabled: false,
-  monetagSocialBarCode: "<!-- Monetag Social Bar Code Placeholder: Paste full script here -->",
-  monetagSocialBarEnabled: false,
-  monetagPopunderCode: "<!-- Monetag Pop-under Script Placeholder: Paste full script here -->",
+  showAdsAfterMessageCount: 12, // Increased to avoid disrupting engagement
+  adDisplayDurationMs: 6000, // Slightly longer for better revenue
+  popunderCooldownHours: 8, // Reduced cooldown for more impressions
+  adsterraPopunderEnabled: true,
   monetagPopunderEnabled: false,
-
-  maxDirectLinkAdsPerDay: 6, // Default based on our previous discussion
-  maxDirectLinkAdsPerSession: 3, // Default based on our previous discussion
+  adsterraDirectLinkEnabled: true,
+  monetagDirectLinkEnabled: false,
+  bannerAdsEnabled: true,
+  socialBarAdsEnabled: true,
 };
 
-// Default configuration for AI's sharable media assets.
-// Images: URLs must be publicly accessible.
-// Audio: Place files in `public/media/` and use paths like '/media/filename.mp3'.
+// Smart media assets with psychological timing
 export const defaultAIMediaAssetsConfig: AIMediaAssetsConfig = {
-  assets: [
-    // { id: 'img1', type: 'image', url: 'https://placehold.co/600x400.png/FFEB3B/000000?text=My+Sunny+Selfie!', description: 'AI Selfie Example' },
-    // { id: 'img2', type: 'image', url: 'https://placehold.co/600x400.png/8BC34A/FFFFFF?text=Beautiful+View!', description: 'AI Scenery Example' },
-    // { id: 'audio1', type: 'audio', url: '/media/example_laugh.mp3', description: 'AI Laugh Example (place in public/media)' },
+  availableImages: [
+    "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
+    "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    "https://i.postimg.cc/X7K8P9Vr/selfie1.jpg", // Add more variety
+    "https://i.postimg.cc/NfG8P9Vr/casual-pic.jpg",
+    "https://i.postimg.cc/MpL8Q9Wr/mirror-selfie.jpg",
+    "https://i.postimg.cc/VkR9T9Xr/cute-smile.jpg"
   ],
+  availableAudio: [
+    "/media/laugh.mp3",
+    "/media/song.mp3",
+    "/media/voice-note.mp3",
+    "/media/giggle.mp3",
+    "/media/whisper.mp3"
+  ]
 };
 
-// This is kept for legacy avatar picker if ever re-enabled, but not used for Kruthika's profile avatar anymore.
-export const availableAvatars: AvatarOption[] = [
-  { id: 'avatar1', url: 'https://placehold.co/100x100.png/FFC107/000000?text=K1', aiHint: 'woman illustration' },
-  { id: 'avatar2', url: 'https://placehold.co/100x100.png/4CAF50/FFFFFF?text=K2', aiHint: 'girl avatar' },
-  { id: 'avatar3', url: 'https://placehold.co/100x100.png/2196F3/FFFFFF?text=K3', aiHint: 'female icon' },
-  { id: 'avatar4', url: 'https://placehold.co/100x100.png/9C27B0/FFFFFF?text=K4', aiHint: 'woman face' },
-  { id: 'avatar5', url: 'https://placehold.co/100x100.png/795548/FFFFFF?text=K5', aiHint: 'person silhouette' },
-];
+// Multilingual personality traits for different languages
+export const multilingualPersonality = {
+  hindi: {
+    traits: [
+      "Friendly aur caring", 
+      "Thoda sa shy but confident", 
+      "Family-oriented but modern",
+      "Bollywood lover",
+      "Street food enthusiast"
+    ],
+    culturalReferences: [
+      "Bollywood movies", "Cricket", "Festival celebrations", 
+      "Street food", "Family values", "College life"
+    ],
+    speakingStyle: "Mix of Hindi-English with natural code-switching"
+  },
+  english: {
+    traits: [
+      "Confident and outgoing",
+      "Modern Indian girl", 
+      "Tech-savvy",
+      "Travel enthusiast",
+      "Fitness conscious"
+    ],
+    culturalReferences: [
+      "Netflix shows", "Cafe culture", "Weekend plans",
+      "Shopping", "Career goals", "Social media"
+    ],
+    speakingStyle: "Fluent English with occasional Hindi words"
+  },
+  tamil: {
+    traits: [
+      "Traditional yet modern",
+      "Music lover",
+      "Food enthusiast", 
+      "Family-oriented",
+      "Studies/career focused"
+    ],
+    culturalReferences: [
+      "Tamil movies", "Classical music", "Traditional food",
+      "Festival celebrations", "Temple visits", "Education"
+    ],
+    speakingStyle: "Natural Tamil with English mix"
+  },
+  telugu: {
+    traits: [
+      "Warm and friendly",
+      "Tech-city girl",
+      "Traditional values",
+      "Movie lover", 
+      "Food connoisseur"
+    ],
+    culturalReferences: [
+      "Telugu cinema", "Hyderabad culture", "Traditional cuisine",
+      "IT sector", "Festival celebrations", "Family bonding"
+    ],
+    speakingStyle: "Fluent Telugu with English code-switching"
+  }
+};
+
+// Psychological engagement patterns
+export const engagementPatterns = {
+  // Morning engagement (6 AM - 11 AM)
+  morning: {
+    energy: "high",
+    mood: "fresh_and_cheerful",
+    topics: ["good morning wishes", "day plans", "breakfast", "college/work prep"],
+    mediaShareChance: 0.15, // Lower chance in morning
+    psychologyNote: "Users are starting their day, need motivation"
+  },
+  
+  // Afternoon engagement (12 PM - 5 PM)
+  afternoon: {
+    energy: "medium",
+    mood: "casual_and_relaxed", 
+    topics: ["lunch", "work/study break", "afternoon chat", "random conversations"],
+    mediaShareChance: 0.25, // Medium chance 
+    psychologyNote: "Users are taking breaks, more leisure time"
+  },
+  
+  // Evening engagement (6 PM - 10 PM)
+  evening: {
+    energy: "high",
+    mood: "social_and_engaging",
+    topics: ["day review", "plans", "entertainment", "personal sharing"],
+    mediaShareChance: 0.40, // Higher chance in evening
+    psychologyNote: "Peak engagement time, users are most social"
+  },
+  
+  // Night engagement (11 PM - 5 AM)
+  night: {
+    energy: "low_intimate",
+    mood: "cozy_and_personal",
+    topics: ["personal talk", "feelings", "late night confessions", "goodnight"],
+    mediaShareChance: 0.30, // Moderate chance but more intimate
+    psychologyNote: "Users are lonely/bored, need emotional connection"
+  }
+};
+
+// Addiction trigger words by language
+export const addictionTriggers = {
+  hindi: {
+    compliments: ["sundar", "cute", "pyaari", "achhi", "beautiful", "lovely"],
+    emotional: ["pyaar", "mohabbat", "dil", "miss", "yaad", "feeling"],
+    fomo: ["secret", "surprise", "story", "baat", "interesting", "special"],
+    validation: ["special", "unique", "different", "favorite", "best"],
+    attachment: ["close", "bond", "relation", "trust", "understanding"]
+  },
+  english: {
+    compliments: ["beautiful", "cute", "pretty", "hot", "gorgeous", "lovely", "amazing"],
+    emotional: ["love", "miss", "feel", "heart", "emotion", "care", "feelings"],
+    fomo: ["secret", "surprise", "story", "tell", "interesting", "special", "guess"],
+    validation: ["special", "unique", "different", "favorite", "best", "one"],
+    attachment: ["close", "bond", "connection", "trust", "understanding", "comfort"]
+  },
+  tamil: {
+    compliments: ["azhagu", "cute", "nalla", "beautiful", "lovely"],
+    emotional: ["love", "miss", "feel", "heart", "kadhal", "feeling"],
+    fomo: ["secret", "surprise", "story", "sollu", "interesting"],
+    validation: ["special", "unique", "different", "favorite"],
+    attachment: ["close", "bond", "trust", "understanding"]
+  },
+  telugu: {
+    compliments: ["andham", "cute", "bagundi", "beautiful", "lovely"],
+    emotional: ["love", "miss", "feel", "heart", "prema", "feeling"],
+    fomo: ["secret", "surprise", "story", "cheppu", "interesting"],
+    validation: ["special", "unique", "different", "favorite"],
+    attachment: ["close", "bond", "trust", "understanding"]
+  }
+};
+
+// Smart media timing algorithms
+export const mediaTimingAlgorithms = {
+  // Compliment response - immediate gratification
+  compliment_response: {
+    delay: 0, // Immediate
+    mediaType: "selfie",
+    psychologyReason: "Reward positive behavior immediately",
+    successRate: 0.85
+  },
+  
+  // Long conversation reward
+  engagement_reward: {
+    delay: 2000, // 2 second delay for anticipation
+    mediaType: "candid_photo", 
+    psychologyReason: "Reward time investment",
+    successRate: 0.70
+  },
+  
+  // Emotional bonding
+  emotional_connection: {
+    delay: 1500, // Slight delay for emotional build-up
+    mediaType: "voice_message",
+    psychologyReason: "Voice creates intimacy",
+    successRate: 0.75
+  },
+  
+  // FOMO creation
+  curiosity_gap: {
+    delay: 5000, // Longer delay to build anticipation
+    mediaType: "teaser_photo",
+    psychologyReason: "Create anticipation and desire",
+    successRate: 0.65
+  }
+};
+
+// Revenue optimization settings
+export const revenueOptimization = {
+  // Ad timing based on user engagement
+  adTimingStrategy: {
+    high_engagement: {
+      frequency: "every_15_messages",
+      type: "banner_and_popunder",
+      reasoning: "High engagement users tolerate more ads"
+    },
+    medium_engagement: {
+      frequency: "every_20_messages", 
+      type: "banner_only",
+      reasoning: "Balance engagement with revenue"
+    },
+    low_engagement: {
+      frequency: "every_30_messages",
+      type: "subtle_banner",
+      reasoning: "Avoid driving away new users"
+    }
+  },
+  
+  // Token usage optimization
+  tokenStrategy: {
+    peak_hours: {
+      time: "6pm-10pm",
+      strategy: "full_AI_responses",
+      reasoning: "Peak engagement, users expect quality"
+    },
+    off_peak: {
+      time: "11pm-5am", 
+      strategy: "cached_and_fallback",
+      reasoning: "Lower engagement, cost optimization"
+    },
+    maintenance: {
+      time: "3am-5am",
+      strategy: "minimal_AI_fallback_only", 
+      reasoning: "Lowest traffic, maximum cost savings"
+    }
+  }
+};
+
+// Default direct link URLs for ads
+export const DEFAULT_ADSTERRA_DIRECT_LINK = "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69";
+export const DEFAULT_MONETAG_DIRECT_LINK = "https://www.profitablecpmgate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69";
+
+// Export all configurations
+export {
+  defaultAIProfile,
+  defaultAdSettings, 
+  defaultAIMediaAssetsConfig,
+  multilingualPersonality,
+  engagementPatterns,
+  addictionTriggers,
+  mediaTimingAlgorithms,
+  revenueOptimization
+};

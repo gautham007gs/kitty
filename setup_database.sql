@@ -1,254 +1,149 @@
+-- Complete database setup for Maya Chat Application
+-- Run this SQL in your Supabase SQL Editor
 
--- =============================================================================
--- COMPLETE SUPABASE DATABASE SETUP FOR VERTEX AI CHATBOT
--- =============================================================================
--- This file contains all necessary SQL commands to set up your Supabase database
--- Copy and paste each section into Supabase SQL Editor and run them in order
--- =============================================================================
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- STEP 1: Clean up existing tables (if needed)
--- =============================================================================
-DROP TABLE IF EXISTS public.messages_log CASCADE;
-DROP TABLE IF EXISTS public.daily_activity_log CASCADE;
-DROP TABLE IF EXISTS public.app_configurations CASCADE;
+-- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS messages_log CASCADE;
+DROP TABLE IF EXISTS ai_profile_settings CASCADE;
+DROP TABLE IF EXISTS ad_settings CASCADE;
+DROP TABLE IF EXISTS ai_media_assets CASCADE;
 
--- STEP 2: Create messages_log table for chat message storage
--- =============================================================================
--- This stores all chat messages between users and AI
-CREATE TABLE public.messages_log (
-    id BIGSERIAL PRIMARY KEY,
-    message_id TEXT NOT NULL,
-    sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'ai')),
-    chat_id TEXT NOT NULL DEFAULT 'kruthika_chat',
-    user_id TEXT,
-    message_content TEXT NOT NULL, -- Fixed: using message_content instead of text_content
-    has_image BOOLEAN DEFAULT FALSE,
-    timestamp TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+-- Create messages_log table with correct column name
+CREATE TABLE messages_log (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    chat_id TEXT NOT NULL DEFAULT 'default',
+    sender TEXT NOT NULL CHECK (sender IN ('user', 'ai')),
+    message_content TEXT NOT NULL, -- Correct column name
+    message_type TEXT DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'audio', 'media')),
+    media_url TEXT,
+    media_caption TEXT,
+    mood TEXT,
+    user_agent TEXT,
+    ip_address INET,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create AI profile settings table
+CREATE TABLE ai_profile_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create ad settings table
+CREATE TABLE ad_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create AI media assets table
+CREATE TABLE ai_media_assets (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    assets JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_messages_log_chat_id ON public.messages_log(chat_id);
-CREATE INDEX IF NOT EXISTS idx_messages_log_created_at ON public.messages_log(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_log_user_id ON public.messages_log(user_id);
-CREATE INDEX IF NOT EXISTS idx_messages_log_sender_type ON public.messages_log(sender_type);
+CREATE INDEX IF NOT EXISTS idx_messages_log_chat_id ON messages_log(chat_id);
+CREATE INDEX IF NOT EXISTS idx_messages_log_created_at ON messages_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_log_sender ON messages_log(sender);
+CREATE INDEX IF NOT EXISTS idx_messages_log_message_type ON messages_log(message_type);
 
--- STEP 3: Create daily_activity_log table for user analytics
--- =============================================================================
--- This tracks daily active users for analytics
-CREATE TABLE public.daily_activity_log (
-    id BIGSERIAL PRIMARY KEY,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    user_id TEXT,
-    session_id TEXT,
-    first_visit_timestamp TIMESTAMPTZ DEFAULT NOW(),
-    last_visit_timestamp TIMESTAMPTZ DEFAULT NOW(),
-    activity_count INTEGER DEFAULT 1,
-    chat_id TEXT DEFAULT 'kruthika_chat',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT unique_user_activity_per_day UNIQUE(date, user_id)
+-- Create triggers for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_messages_log_updated_at BEFORE UPDATE ON messages_log
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ai_profile_settings_updated_at BEFORE UPDATE ON ai_profile_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ad_settings_updated_at BEFORE UPDATE ON ad_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ai_media_assets_updated_at BEFORE UPDATE ON ai_media_assets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert default AI profile
+INSERT INTO ai_profile_settings (settings) VALUES (
+    '{
+        "name": "Kruthika",
+        "status": "🌸 Living my best life! Let'\''s chat! 🌸",
+        "avatarUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+        "statusStoryText": "Ask me anything! 💬",
+        "statusStoryImageUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+        "statusStoryHasUpdate": true
+    }'::jsonb
 );
 
--- Create indexes for analytics queries
-CREATE INDEX IF NOT EXISTS idx_daily_activity_date ON public.daily_activity_log(date DESC);
-CREATE INDEX IF NOT EXISTS idx_daily_activity_user_id ON public.daily_activity_log(user_id);
-
--- STEP 4: Create app_configurations table for global settings
--- =============================================================================
--- This stores AI profile, ad settings, and other global configurations
-CREATE TABLE public.app_configurations (
-    id TEXT PRIMARY KEY,
-    settings JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+-- Insert default ad settings
+INSERT INTO ad_settings (settings) VALUES (
+    '{
+        "adsEnabledGlobally": true,
+        "showAdsAfterMessageCount": 8,
+        "adDisplayDurationMs": 5000,
+        "popunderCooldownHours": 24,
+        "adsterraPopunderEnabled": true,
+        "monetagPopunderEnabled": false,
+        "adsterraDirectLinkEnabled": true,
+        "monetagDirectLinkEnabled": false,
+        "bannerAdsEnabled": true,
+        "socialBarAdsEnabled": true
+    }'::jsonb
 );
 
--- Create index for settings lookup
-CREATE INDEX IF NOT EXISTS idx_app_configurations_id ON public.app_configurations(id);
+-- Insert default media assets
+INSERT INTO ai_media_assets (assets) VALUES (
+    '{
+        "availableImages": [
+            "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
+            "https://i.postimg.cc/52S3BZrM/images-10.jpg"
+        ],
+        "availableAudio": [
+            "/media/laugh.mp3",
+            "/media/song.mp3"
+        ]
+    }'::jsonb
+);
 
--- STEP 5: Enable Row Level Security (RLS)
--- =============================================================================
-ALTER TABLE public.messages_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_activity_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_configurations ENABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security (RLS) - Optional for security
+ALTER TABLE messages_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_profile_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ad_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_media_assets ENABLE ROW LEVEL SECURITY;
 
--- STEP 6: Create RLS policies for public access
--- =============================================================================
--- WARNING: These policies are permissive for development. Tighten for production!
+-- Create policies for public access (adjust as needed)
+CREATE POLICY "Enable read access for all users" ON messages_log FOR SELECT USING (true);
+CREATE POLICY "Enable insert for all users" ON messages_log FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update for all users" ON messages_log FOR UPDATE USING (true);
 
--- Allow all operations on messages_log (for chat functionality)
-CREATE POLICY "Allow all operations on messages_log" 
-ON public.messages_log FOR ALL 
-USING (true) 
-WITH CHECK (true);
+CREATE POLICY "Enable read access for all users" ON ai_profile_settings FOR SELECT USING (true);
+CREATE POLICY "Enable update for all users" ON ai_profile_settings FOR UPDATE USING (true);
 
--- Allow all operations on daily_activity_log (for analytics)
-CREATE POLICY "Allow all operations on daily_activity_log" 
-ON public.daily_activity_log FOR ALL 
-USING (true) 
-WITH CHECK (true);
+CREATE POLICY "Enable read access for all users" ON ad_settings FOR SELECT USING (true);
+CREATE POLICY "Enable update for all users" ON ad_settings FOR UPDATE USING (true);
 
--- Allow all operations on app_configurations (for settings)
-CREATE POLICY "Allow all operations on app_configurations" 
-ON public.app_configurations FOR ALL 
-USING (true) 
-WITH CHECK (true);
+CREATE POLICY "Enable read access for all users" ON ai_media_assets FOR SELECT USING (true);
+CREATE POLICY "Enable update for all users" ON ai_media_assets FOR UPDATE USING (true);
 
--- STEP 7: Create stored functions for optimized operations
--- =============================================================================
+-- Grant necessary permissions
+GRANT ALL ON messages_log TO anon, authenticated;
+GRANT ALL ON ai_profile_settings TO anon, authenticated;
+GRANT ALL ON ad_settings TO anon, authenticated;
+GRANT ALL ON ai_media_assets TO anon, authenticated;
 
--- Function to log daily activity with conflict resolution
-CREATE OR REPLACE FUNCTION log_daily_activity(
-    p_user_id TEXT DEFAULT NULL,
-    p_session_id TEXT DEFAULT 'anonymous',
-    p_chat_id TEXT DEFAULT 'kruthika_chat'
-)
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    INSERT INTO public.daily_activity_log (
-        date, 
-        user_id, 
-        session_id, 
-        chat_id, 
-        activity_count,
-        first_visit_timestamp,
-        last_visit_timestamp
-    )
-    VALUES (
-        CURRENT_DATE, 
-        p_user_id, 
-        p_session_id, 
-        p_chat_id, 
-        1,
-        NOW(),
-        NOW()
-    )
-    ON CONFLICT (date, user_id)
-    DO UPDATE SET 
-        activity_count = daily_activity_log.activity_count + 1,
-        last_visit_timestamp = NOW(),
-        session_id = p_session_id;
-END;
-$$;
-
--- Function to get daily message counts for analytics
-CREATE OR REPLACE FUNCTION get_daily_message_counts(start_date DATE)
-RETURNS TABLE(date DATE, messages BIGINT)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        DATE_TRUNC('day', ml.created_at AT TIME ZONE 'UTC')::DATE AS date,
-        COUNT(ml.id) AS messages
-    FROM public.messages_log ml
-    WHERE (ml.created_at AT TIME ZONE 'UTC')::DATE >= start_date
-    GROUP BY DATE_TRUNC('day', ml.created_at AT TIME ZONE 'UTC')
-    ORDER BY date ASC;
-END;
-$$;
-
--- Function to get daily active user counts for analytics
-CREATE OR REPLACE FUNCTION get_daily_active_user_counts(start_date DATE)
-RETURNS TABLE(date DATE, active_users BIGINT)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        dal.date AS date,
-        COUNT(DISTINCT dal.user_id) AS active_users
-    FROM public.daily_activity_log dal
-    WHERE dal.date >= start_date
-    GROUP BY dal.date
-    ORDER BY date ASC;
-END;
-$$;
-
--- STEP 8: Grant permissions for functions
--- =============================================================================
-GRANT EXECUTE ON FUNCTION log_daily_activity(TEXT, TEXT, TEXT) TO anon;
-GRANT EXECUTE ON FUNCTION get_daily_message_counts(DATE) TO anon;
-GRANT EXECUTE ON FUNCTION get_daily_active_user_counts(DATE) TO anon;
-
--- STEP 9: Insert default configurations
--- =============================================================================
-
--- Insert default AI profile configuration
-INSERT INTO public.app_configurations (id, settings) 
-VALUES ('ai_profile', '{
-  "name": "Kruthika",
-  "status": "🌸 Living my best life! Let''s chat! 🌸",
-  "avatarUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
-  "statusStoryText": "Ask me anything! 💬",
-  "statusStoryImageUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
-  "statusStoryHasUpdate": true
-}') 
-ON CONFLICT (id) DO UPDATE SET 
-    settings = EXCLUDED.settings,
-    updated_at = NOW();
-
--- Insert default ad settings configuration
-INSERT INTO public.app_configurations (id, settings) 
-VALUES ('ad_settings_kruthika_chat_v1', '{
-  "adsEnabledGlobally": true,
-  "maxDirectLinkAdsPerDay": 6,
-  "maxDirectLinkAdsPerSession": 3,
-  "adsterraDirectLinkEnabled": true,
-  "monetagDirectLinkEnabled": true,
-  "adsterraDirectLink": "https://judicialphilosophical.com/zd46rhxy0?key=3dad0e700ddba4c8c8ace4396dd31e8a",
-  "monetagDirectLink": "https://otieu.com/4/9403276",
-  "adsterraBannerEnabled": true,
-  "adsterraBannerCode": "<!-- Adsterra Banner: Replace with actual script -->",
-  "adsterraNativeBannerEnabled": true,
-  "adsterraNativeBannerCode": "<!-- Adsterra Native Banner: Replace with actual script -->",
-  "adsterraSocialBarEnabled": false,
-  "adsterraSocialBarCode": "<!-- Adsterra Social Bar: Replace with actual script -->",
-  "adsterraPopunderEnabled": true,
-  "adsterraPopunderCode": "<script type=\"text/javascript\">\n    atOptions = {\n        ''key'' : ''your-adsterra-key'',\n        ''format'' : ''iframe'',\n        ''height'' : 50,\n        ''width'' : 320,\n        ''params'' : {}\n    };\n    document.write(''<scr'' + ''ipt type=\"text/javascript\" src=\"//www.topcreativeformat.com/'' + atOptions.key + ''/invoke.js\"></scr'' + ''ipt>'');\n</script>",
-  "monetagBannerEnabled": false,
-  "monetagBannerCode": "<!-- Monetag Banner: Replace with actual script -->",
-  "monetagNativeBannerEnabled": false,
-  "monetagNativeBannerCode": "<!-- Monetag Native Banner: Replace with actual script -->",
-  "monetagSocialBarEnabled": false,
-  "monetagSocialBarCode": "<!-- Monetag Social Bar: Replace with actual script -->",
-  "monetagPopunderEnabled": false,
-  "monetagPopunderCode": "<!-- Monetag Popunder: Replace with actual script -->"
-}') 
-ON CONFLICT (id) DO UPDATE SET 
-    settings = EXCLUDED.settings,
-    updated_at = NOW();
-
--- STEP 10: Verify setup
--- =============================================================================
--- Run these queries to verify everything is working:
-
--- Check if all tables exist
-SELECT 
-    table_name, 
-    table_type 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-    AND table_name IN ('messages_log', 'daily_activity_log', 'app_configurations');
-
--- Check if all functions exist
-SELECT 
-    routine_name, 
-    routine_type 
-FROM information_schema.routines 
-WHERE routine_schema = 'public' 
-    AND routine_name IN ('log_daily_activity', 'get_daily_message_counts', 'get_daily_active_user_counts');
-
--- Check if configurations are loaded
-SELECT id, settings FROM public.app_configurations;
-
--- =============================================================================
--- SETUP COMPLETE!
--- =============================================================================
--- Your database is now ready for the Vertex AI chatbot application.
--- Make sure to update your environment variables in .env.local:
--- NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
--- NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
--- =============================================================================
+-- Success message
+SELECT 'Database setup completed successfully! All tables created with proper schema.' as result;

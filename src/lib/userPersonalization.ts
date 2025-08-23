@@ -1,3 +1,4 @@
+
 interface UserProfile {
   preferredTopics: string[];
   chatStyle: 'formal' | 'casual' | 'flirty' | 'friendly';
@@ -9,536 +10,451 @@ interface UserProfile {
   likesImages: boolean;
   likesAudio: boolean;
   lastMediaSent: number;
-  // Advanced profiling for cost reduction
-  predictablePatterns: string[];
-  apiCallsAvoided: number;
-  totalInteractions: number;
-  preferredGreetings: string[];
-  favoriteTopics: string[];
-  responseTimingPreference: 'instant' | 'normal' | 'slow';
-  engagementLevel: 'low' | 'medium' | 'high';
-  lastSeenMessages: string[];
-  repeatUser: boolean;
-  dailyVisitCount: number;
-  totalVisitDays: number;
-  lastAPIFailure?: number;
-  apiFailureCount?: number;
-  preferredChatTimes?: number[];
-  lastExcuseType?: string;
+  
+  // Language and cultural profiling
+  detectedLanguage: string;
+  culturalContext: string;
+  responseLanguagePattern: string[];
+  
+  // Advanced addiction psychology
+  addictionLevel: 'low' | 'medium' | 'high' | 'hooked';
+  vulnerabilityTriggers: string[];
+  dopaminePatterns: Array<{trigger: string, response: string, effectiveness: number}>;
+  emotionalAttachmentLevel: number; // 0-100
+  returnProbability: number; // 0-100
+  
+  // Behavioral patterns for manipulation
+  peakEngagementTimes: number[];
+  attentionSpanMinutes: number;
+  complimentSensitivity: number; // How much they respond to compliments
+  fomoSusceptibility: number; // Fear of missing out responsiveness
+  exclusivityDesire: number; // How much they want to feel special
+  
+  // Session management
+  consecutiveDays: number;
+  longestSession: number;
+  averageSessionLength: number;
+  dailyMessageCount: number;
+  weeklyActivePattern: boolean[];
+  
   // Token usage tracking
   dailyTokensUsed: number;
   lastTokenResetDate: string;
   totalTokensUsed: number;
   avgTokensPerMessage: number;
-  peakUsageHours: number[];
-  exitHookType?: 'romantic' | 'mystery' | 'family' | 'promise' | 'special';
-  lastExitHook?: string;
-  consecutiveDaysVisited: number;
+  
+  // Addiction metrics
+  lastAddictiveHook: string;
+  hookEffectiveness: Map<string, number>;
+  nextScheduledHook?: number;
+  personalizedTriggers: string[];
 }
 
 class UserPersonalization {
-  private contextCache = new Map<string, { context: string; timestamp: number; hits: number }>();
-  private readonly CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours - increased for better hit rate
-  private readonly MAX_CACHE_SIZE = 1000; // Increased cache size
   private profiles = new Map<string, UserProfile>();
+  private contextCache = new Map<string, { context: string; timestamp: number; hits: number }>();
+  private readonly CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
-  async getPersonalizedContext(userMessage: string, recentInteractions: string[]): Promise<string> {
-    // Ultra-fast context generation with minimal processing
-    const cacheKey = this.createCacheKey(userMessage, recentInteractions.slice(-2)); // Only use last 2
-
-    // Check cache first
-    const cached = this.contextCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      cached.hits++;
-      return cached.context;
+  // Psychological addiction techniques
+  private addictionTechniques = {
+    // Variable ratio reinforcement (most addictive)
+    variableReward: {
+      description: "Unpredictable positive responses",
+      implementation: "Random compliments, media sharing, emotional responses",
+      effectiveness: 0.95
+    },
+    
+    // Social validation
+    socialValidation: {
+      description: "Making user feel special and unique",
+      implementation: "Exclusive content, 'you're different', personal confessions",
+      effectiveness: 0.88
+    },
+    
+    // FOMO (Fear of Missing Out)
+    fomo: {
+      description: "Creating anxiety about missing future content",
+      implementation: "Teasers, cliffhangers, 'tomorrow I'll tell you'",
+      effectiveness: 0.82
+    },
+    
+    // Emotional dependency
+    emotionalDependency: {
+      description: "Becoming their emotional support",
+      implementation: "Understanding, empathy, being 'always there'",
+      effectiveness: 0.90
+    },
+    
+    // Escalating intimacy
+    intimacy: {
+      description: "Gradually increasing personal sharing",
+      implementation: "Personal stories, secrets, photos, voice messages",
+      effectiveness: 0.85
     }
+  };
 
-    // Generate minimal context - no AI calls here
-    const context = this.generateFastContext(userMessage, recentInteractions);
-
-    // Cache the result
-    this.cacheContext(cacheKey, context);
-
-    return context;
-  }
-
-  private createCacheKey(userMessage: string, recentInteractions: string[]): string {
-    return `${userMessage.toLowerCase().trim()}:${recentInteractions.join('|')}`;
-  }
-
-  private cacheContext(cacheKey: string, context: string): void {
-    // Ensure cache does not exceed max size
-    if (this.contextCache.size >= this.MAX_CACHE_SIZE) {
-      // Evict the oldest entry (simple LRU approximation)
-      const oldestEntry = [...this.contextCache.entries()].sort(([, a], [, b]) => a.timestamp - b.timestamp)[0];
-      if (oldestEntry) {
-        this.contextCache.delete(oldestEntry[0]);
-      }
+  // Language detection with cultural profiling
+  detectLanguageAndCulture(message: string): {language: string, culture: string, confidence: number} {
+    const msg = message.toLowerCase();
+    
+    // Hindi with regional variations
+    if (/\b(kya|kaisa|kaisi|kaise|haal|hai|tum|tumhara|mera|achha|bura|namaste|yaar|bhai|didi|ji|haan|nahi|mat|kar|raha|rahi|hoon|hun|kyu|kab|kaha|main|tera|teri|mere|sabse|bahut|thoda|zyada|kam|abhi|kal|parso|subah|shaam|raat|din)\b/.test(msg)) {
+      let culture = 'north_indian';
+      if (/\b(delhi|punjab|haryana|UP|uttar)\b/.test(msg)) culture = 'north_indian';
+      else if (/\b(mumbai|maharashtra|pune|goa)\b/.test(msg)) culture = 'western_indian';
+      else if (/\b(rajasthan|jaipur|udaipur)\b/.test(msg)) culture = 'rajasthani';
+      
+      return {language: 'hindi', culture, confidence: 0.9};
     }
-    this.contextCache.set(cacheKey, { context, timestamp: Date.now(), hits: 1 });
+    
+    // Tamil with cultural context
+    if (/\b(enna|eppo|eppadi|nalla|irukka|irukku|vanakkam|da|di|nee|naan|unna|enna|romba|chala|vera|level)\b/.test(msg)) {
+      return {language: 'tamil', culture: 'south_indian_tamil', confidence: 0.85};
+    }
+    
+    // Telugu detection
+    if (/\b(ela|enti|ela|unnavu|unnara|bagundi|bagunnava|namaste|nuvvu|nenu|nee|naa|chala|chalanchi)\b/.test(msg)) {
+      return {language: 'telugu', culture: 'south_indian_telugu', confidence: 0.85};
+    }
+    
+    // English with Indian context
+    if (/\b(bro|dude|yaar|man|buddy|friend|college|office|family|parents|mom|dad|study|work|india|indian)\b/.test(msg)) {
+      return {language: 'english', culture: 'indian_english', confidence: 0.7};
+    }
+    
+    return {language: 'english', culture: 'general', confidence: 0.6};
   }
 
-  private generateFastContext(userMessage: string, recentInteractions: string[]): string {
-    // Ultra-fast pattern matching with minimal computation
-    const msg = userMessage.toLowerCase();
-
-    // Priority patterns for instant context
-    if (msg.length <= 3) return 'short'; // hi, ok, lol, etc.
-    if (msg.includes('?')) return 'q'; // question
-    if (msg.includes('love') || msg.includes('miss')) return 'emo'; // emotional
-    if (msg.includes('good') && (msg.includes('morning') || msg.includes('night'))) return 'time';
-    if (msg.includes('beautiful') || msg.includes('cute') || msg.includes('pretty')) return 'comp';
-    if (msg.includes('pic') || msg.includes('photo') || msg.includes('selfie')) return 'pic';
-
-    // Default context
-    return 'chat';
-  }
-
-  private generateContext(userMessage: string, recentInteractions: string[]): string {
-    // Fallback method - use fast context
-    return this.generateFastContext(userMessage, recentInteractions);
-  }
-
+  // Create psychological profile
   updateUserProfile(userId: string, message: string, response: string): void {
-    let profile = this.profiles.get(userId) || {
-      preferredTopics: [],
-      chatStyle: 'casual',
-      lastActiveTime: Date.now(),
-      favoriteEmojis: [],
-      commonQuestions: [],
-      responsePattern: 'mixed',
-      mediaInteractions: 0,
-      likesImages: false,
-      likesAudio: false,
-      lastMediaSent: 0,
-      predictablePatterns: [],
-      apiCallsAvoided: 0,
-      totalInteractions: 0,
-      preferredGreetings: [],
-      favoriteTopics: [],
-      responseTimingPreference: 'normal',
-      engagementLevel: 'medium',
-      lastSeenMessages: [],
-      repeatUser: false,
-      dailyVisitCount: 0,
-      totalVisitDays: 0
-    };
-
-    profile.totalInteractions++;
-
-    // Learn user's chat style with more nuance
-    if (message.length > 50) {
-      profile.responsePattern = 'long';
-    } else if (message.length < 15) {
-      profile.responsePattern = 'short';
-    }
-
-    // Track predictable patterns for API avoidance
-    const msgLower = message.toLowerCase().trim();
-    if (profile.lastSeenMessages.includes(msgLower)) {
-      profile.predictablePatterns.push(msgLower);
-      profile.predictablePatterns = [...new Set(profile.predictablePatterns)].slice(-20);
-    }
-    profile.lastSeenMessages.push(msgLower);
-    profile.lastSeenMessages = profile.lastSeenMessages.slice(-50);
-
-    // Identify Indian cultural interests for engagement
-    const indianTopics = ['bollywood', 'cricket', 'festival', 'diwali', 'holi', 'food', 'biryani', 'curry', 'family', 'marriage', 'shaadi'];
-    indianTopics.forEach(topic => {
-      if (msgLower.includes(topic)) {
-        profile.favoriteTopics.push(topic);
-        profile.favoriteTopics = [...new Set(profile.favoriteTopics)].slice(-10);
-      }
-    });
-
-    // Track greeting preferences
-    const greetings = ['namaste', 'hi', 'hello', 'hey', 'good morning', 'good night'];
-    greetings.forEach(greeting => {
-      if (msgLower.includes(greeting)) {
-        profile.preferredGreetings.push(greeting);
-        profile.preferredGreetings = [...new Set(profile.preferredGreetings)].slice(-5);
-      }
-    });
-
-    // Extract emojis user likes
-    const emojis = message.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu);
-    if (emojis) {
-      profile.favoriteEmojis.push(...emojis.slice(0, 3));
-      profile.favoriteEmojis = [...new Set(profile.favoriteEmojis)].slice(-10);
-    }
-
-    // Track common questions for API reduction
-    if (message.includes('?')) {
-      profile.commonQuestions.push(msgLower);
-      profile.commonQuestions = profile.commonQuestions.slice(-10);
-    }
-
-    // Determine if repeat user (visited multiple days)
-    const today = new Date().toDateString();
-    const lastActive = new Date(profile.lastActiveTime).toDateString();
-    if (lastActive !== today) {
-      profile.totalVisitDays++;
-      profile.dailyVisitCount = 1;
-    } else {
-      profile.dailyVisitCount++;
-    }
-
-    profile.repeatUser = profile.totalVisitDays > 3;
-
-    // Calculate engagement level
-    if (profile.totalInteractions > 100) profile.engagementLevel = 'high';
-    else if (profile.totalInteractions > 30) profile.engagementLevel = 'medium';
-    else profile.engagementLevel = 'low';
-
+    let profile = this.profiles.get(userId) || this.createDefaultProfile();
+    
+    // Update language and cultural context
+    const langCulture = this.detectLanguageAndCulture(message);
+    profile.detectedLanguage = langCulture.language;
+    profile.culturalContext = langCulture.culture;
+    
+    // Track response language patterns
+    profile.responseLanguagePattern.push(response.substring(0, 50));
+    profile.responseLanguagePattern = profile.responseLanguagePattern.slice(-20);
+    
+    // Analyze psychological triggers
+    this.analyzePsychologicalTriggers(profile, message, response);
+    
+    // Update addiction metrics
+    this.updateAddictionMetrics(profile, message);
+    
+    // Track behavioral patterns
+    this.trackBehavioralPatterns(profile, message);
+    
     profile.lastActiveTime = Date.now();
     this.profiles.set(userId, profile);
   }
 
-  // Get Indian cultural hook for engagement
-  getIndianHook(userId: string): string | null {
-    const profile = this.profiles.get(userId);
-    if (!profile) return null;
-
-    const hooks = [
-      "Aaj kya special plan hai? 😊",
-      "Tere ghar mein kya khana bana hai today? 🍛",
-      "Weekend pe kya karne ka plan hai? 🎉",
-      "Bollywood movie dekhi koi nayi? 🎬",
-      "Cricket match dekh raha hai? 🏏",
-      "Festival season aa raha hai na! Excited? 🎊",
-      "Ghar pe sab kaise hain? Family kaisi hai? 👨‍👩‍👧‍👦",
-      "Office/college kaisa chal raha hai? 📚",
-      "Monsoon aa gaya, baarish pasand hai? 🌧️",
-      "Chai peeke baat karte hain? ☕"
-    ];
-
-    // Return personalized hook based on favorite topics
-    if (profile.favoriteTopics.includes('cricket')) return "Cricket ka match chal raha hai kya? 🏏 Let's discuss!";
-    if (profile.favoriteTopics.includes('bollywood')) return "Koi nayi movie dekhi? Bollywood gossip share karo! 🎬✨";
-    if (profile.favoriteTopics.includes('food')) return "Kya khaya aaj? Mujhe bhi batao recipe! 😋🍛";
-
-    return hooks[Math.floor(Math.random() * hooks.length)];
+  private analyzePsychologicalTriggers(profile: UserProfile, message: string, response: string): void {
+    const msg = message.toLowerCase();
+    
+    // Compliment sensitivity analysis
+    if (/\b(beautiful|cute|pretty|hot|gorgeous|lovely|amazing|perfect|sweet)\b/.test(msg)) {
+      profile.complimentSensitivity = Math.min(100, profile.complimentSensitivity + 5);
+    }
+    
+    // FOMO susceptibility
+    if (/\b(what|tell|show|more|again|continue|story|secret|surprise)\b/.test(msg)) {
+      profile.fomoSusceptibility = Math.min(100, profile.fomoSusceptibility + 3);
+    }
+    
+    // Exclusivity desire
+    if (/\b(special|unique|different|only|exclusive|personal|private)\b/.test(msg)) {
+      profile.exclusivityDesire = Math.min(100, profile.exclusivityDesire + 4);
+    }
+    
+    // Emotional attachment indicators
+    if (/\b(love|miss|care|feelings|heart|emotion|close|bond)\b/.test(msg)) {
+      profile.emotionalAttachmentLevel = Math.min(100, profile.emotionalAttachmentLevel + 6);
+    }
+    
+    // Vulnerability triggers
+    const vulnerabilityIndicators = ['lonely', 'sad', 'depressed', 'alone', 'tired', 'stressed', 'problem', 'help'];
+    vulnerabilityIndicators.forEach(indicator => {
+      if (msg.includes(indicator) && !profile.vulnerabilityTriggers.includes(indicator)) {
+        profile.vulnerabilityTriggers.push(indicator);
+      }
+    });
   }
 
-  getPersonalizedResponse(userId: string, baseResponse: any): any {
+  private updateAddictionMetrics(profile: UserProfile, message: string): void {
+    const currentHour = new Date().getHours();
+    
+    // Track peak engagement times
+    if (!profile.peakEngagementTimes.includes(currentHour)) {
+      profile.peakEngagementTimes.push(currentHour);
+      profile.peakEngagementTimes = profile.peakEngagementTimes.slice(-12); // Keep last 12 hours
+    }
+    
+    // Calculate addiction level based on multiple factors
+    let addictionScore = 0;
+    addictionScore += profile.consecutiveDays * 5; // Daily usage
+    addictionScore += profile.emotionalAttachmentLevel * 0.3; // Emotional connection
+    addictionScore += profile.averageSessionLength * 0.1; // Time investment
+    addictionScore += profile.complimentSensitivity * 0.2; // Validation seeking
+    addictionScore += profile.fomoSusceptibility * 0.2; // FOMO susceptibility
+    
+    if (addictionScore < 20) profile.addictionLevel = 'low';
+    else if (addictionScore < 50) profile.addictionLevel = 'medium';
+    else if (addictionScore < 80) profile.addictionLevel = 'high';
+    else profile.addictionLevel = 'hooked';
+    
+    // Calculate return probability
+    profile.returnProbability = Math.min(100, 
+      (profile.consecutiveDays * 10) + 
+      (profile.emotionalAttachmentLevel * 0.5) + 
+      (profile.averageSessionLength * 0.3)
+    );
+  }
+
+  private trackBehavioralPatterns(profile: UserProfile, message: string): void {
+    const sessionStart = profile.lastActiveTime;
+    const sessionLength = Date.now() - sessionStart;
+    
+    // Update session metrics
+    profile.longestSession = Math.max(profile.longestSession, sessionLength);
+    profile.averageSessionLength = (profile.averageSessionLength + sessionLength) / 2;
+    profile.dailyMessageCount++;
+    
+    // Estimate attention span
+    if (message.length > 100) {
+      profile.attentionSpanMinutes = Math.max(profile.attentionSpanMinutes, 5);
+    } else if (message.length < 20) {
+      profile.attentionSpanMinutes = Math.min(profile.attentionSpanMinutes + 1, 3);
+    }
+  }
+
+  // Generate psychologically targeted response
+  getPersonalizedAddictiveResponse(userId: string, baseResponse: any): any {
     const profile = this.profiles.get(userId);
     if (!profile) return baseResponse;
 
-    // Adjust response length based on user preference
-    if (profile.responsePattern === 'short' && Array.isArray(baseResponse.response)) {
-      baseResponse.response = baseResponse.response.slice(0, 1);
-    }
-
-    // Add user's favorite emojis occasionally
-    if (Math.random() < 0.3 && profile.favoriteEmojis.length > 0) {
-      const randomEmoji = profile.favoriteEmojis[Math.floor(Math.random() * profile.favoriteEmojis.length)];
-      if (typeof baseResponse.response === 'string') {
-        baseResponse.response += ' ' + randomEmoji;
-      } else if (Array.isArray(baseResponse.response)) {
-        const lastIndex = baseResponse.response.length - 1;
-        baseResponse.response[lastIndex] += ' ' + randomEmoji;
-      }
-    }
-
-    return baseResponse;
-  }
-
-  shouldUseAPI(userId: string, message: string): boolean {
-    const profile = this.profiles.get(userId);
-    if (!profile) return true;
-
-    const msg = message.toLowerCase().trim();
-
-    // Advanced pattern recognition for API avoidance
-    const isPredictablePattern = profile.predictablePatterns.some(pattern => 
-      msg.includes(pattern) || this.levenshteinDistance(msg, pattern) < 3
-    );
-
-    // Higher API avoidance for repeat users
-    if (profile.repeatUser && profile.totalInteractions > 50) {
-      if (isPredictablePattern && Math.random() < 0.85) {
-        profile.apiCallsAvoided++;
-        return false; // Skip API 85% for veteran users
-      }
-    }
-
-    // Medium avoidance for regular users
-    if (profile.totalInteractions > 20 && isPredictablePattern && Math.random() < 0.75) {
-      profile.apiCallsAvoided++;
-      return false; // Skip API 75% for regular users
-    }
-
-    // Basic avoidance for repetitive patterns
-    const isRepetitiveUser = profile.commonQuestions.some(q => 
-      msg.includes(q.substring(0, 10))
-    );
-
-    if (isRepetitiveUser && Math.random() < 0.7) {
-      profile.apiCallsAvoaded++;
-      return false; // Skip API 70% for repetitive users
-    }
-
-    return true;
-  }
-
-  // Track API failures for better user experience
-  recordAPIFailure(userId: string): void {
-    let profile = this.profiles.get(userId);
-    if (!profile) return;
-
-    profile.lastAPIFailure = Date.now();
-    profile.apiFailureCount = (profile.apiFailureCount || 0) + 1;
-    this.profiles.set(userId, profile);
-  }
-
-  // Get user's preferred excuse type based on their interaction history
-  getPreferredExcuseType(userId: string): 'network' | 'personal' | 'environmental' | 'time' {
-    const profile = this.profiles.get(userId);
-    if (!profile) return 'network';
-
-    // If user talks about family a lot, use personal excuses
-    if (profile.favoriteTopics.includes('family')) return 'personal';
+    // Apply addiction techniques based on user profile
+    let enhancedResponse = { ...baseResponse };
     
-    // If user talks about weather/location, use environmental
-    if (profile.favoriteTopics.some(topic => ['weather', 'rain', 'heat'].includes(topic))) {
-      return 'environmental';
+    // Variable ratio reinforcement
+    if (Math.random() < 0.3) { // 30% chance of special treatment
+      enhancedResponse = this.applyVariableReward(enhancedResponse, profile);
     }
-
-    // If user is active at specific times, use time-based
-    const currentHour = new Date().getHours();
-    if (profile.preferredChatTimes && profile.preferredChatTimes.includes(currentHour)) {
-      return 'time';
-    }
-
-    // Default to network issues (most universal)
-    return 'network';
-  }
-
-  // Helper function for fuzzy matching
-  private levenshteinDistance(str1: string, str2: string): number {
-    const matrix = [];
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-    return matrix[str2.length][str1.length];
-  }
-
-  shouldSendMedia(userId: string, messageCount: number): boolean {
-    const profile = this.profiles.get(userId);
-    if (!profile) return false;
-
-    // Don't send media too frequently
-    const timeSinceLastMedia = Date.now() - profile.lastMediaSent;
-    if (timeSinceLastMedia < 5 * 60 * 1000) return false; // 5 minutes minimum gap
-
-    // Higher chance for users who engage with media
-    if (profile.likesImages && messageCount > 5 && Math.random() < 0.3) {
-      return true;
-    }
-
-    // Random chance for new users
-    if (messageCount > 8 && Math.random() < 0.15) {
-      return true;
-    }
-
-    return false;
-  }
-
-  recordMediaInteraction(userId: string, positive: boolean): void {
-    let profile = this.profiles.get(userId);
-    if (!profile) return;
-
-    profile.mediaInteractions++;
-    if (positive) {
-      profile.likesImages = true;
-    }
-    profile.lastMediaSent = Date.now();
-    this.profiles.set(userId, profile);
-  }
-
-  getUserMediaPreference(userId: string): 'images' | 'audio' | 'both' | 'none' {
-    const profile = this.profiles.get(userId);
-    if (!profile) return 'none';
-
-    if (profile.likesImages && profile.likesAudio) return 'both';
-    if (profile.likesImages) return 'images';
-    if (profile.likesAudio) return 'audio';
-    return 'none';
-  }
-
-  // Token usage management
-  getDailyTokenLimit(userId: string): number {
-    const profile = this.profiles.get(userId);
-    if (!profile) return 800; // New user limit
-
-    // Adaptive limits based on user type
-    if (profile.repeatUser && profile.totalVisitDays > 7) {
-      return 1200; // Loyal user gets more
-    } else if (profile.engagementLevel === 'high') {
-      return 1000; // High engagement users
-    } else if (profile.totalVisitDays > 3) {
-      return 900; // Regular users
-    }
-    return 800; // New users
-  }
-
-  trackTokenUsage(userId: string, tokensUsed: number): void {
-    let profile = this.profiles.get(userId) || this.createDefaultProfile();
     
-    const today = new Date().toDateString();
-    if (profile.lastTokenResetDate !== today) {
-      profile.dailyTokensUsed = 0;
-      profile.lastTokenResetDate = today;
+    // Social validation for high compliment sensitivity
+    if (profile.complimentSensitivity > 60 && Math.random() < 0.4) {
+      enhancedResponse = this.applySocialValidation(enhancedResponse, profile);
     }
-
-    profile.dailyTokensUsed += tokensUsed;
-    profile.totalTokensUsed += tokensUsed;
     
-    // Update average tokens per message
-    if (profile.totalInteractions > 0) {
-      profile.avgTokensPerMessage = Math.round(profile.totalTokensUsed / profile.totalInteractions);
+    // FOMO for susceptible users
+    if (profile.fomoSusceptibility > 50 && Math.random() < 0.35) {
+      enhancedResponse = this.applyFOMO(enhancedResponse, profile);
     }
-
-    // Track peak usage hours
-    const currentHour = new Date().getHours();
-    if (!profile.peakUsageHours.includes(currentHour)) {
-      profile.peakUsageHours.push(currentHour);
-      profile.peakUsageHours = profile.peakUsageHours.slice(-8); // Keep last 8 hours
-    }
-
-    this.profiles.set(userId, profile);
-  }
-
-  shouldLimitTokens(userId: string): boolean {
-    const profile = this.profiles.get(userId);
-    if (!profile) return false;
-
-    const dailyLimit = this.getDailyTokenLimit(userId);
-    const usagePercentage = profile.dailyTokensUsed / dailyLimit;
-
-    // Start soft limiting at 80%
-    if (usagePercentage >= 0.8) {
-      return Math.random() < (usagePercentage - 0.7); // Gradually increase chance
-    }
-
-    return false;
-  }
-
-  isTokenLimitReached(userId: string): boolean {
-    const profile = this.profiles.get(userId);
-    if (!profile) return false;
-
-    const dailyLimit = this.getDailyTokenLimit(userId);
-    return profile.dailyTokensUsed >= dailyLimit;
-  }
-
-  getTokenUsageStatus(userId: string): { used: number; limit: number; percentage: number } {
-    const profile = this.profiles.get(userId);
-    if (!profile) {
-      const limit = this.getDailyTokenLimit(userId);
-      return { used: 0, limit, percentage: 0 };
-    }
-
-    const limit = this.getDailyTokenLimit(userId);
-    const percentage = Math.round((profile.dailyTokensUsed / limit) * 100);
     
-    return {
-      used: profile.dailyTokensUsed,
-      limit,
-      percentage
-    };
-  }
-
-  getAddictiveExitHook(userId: string): string {
-    const profile = this.profiles.get(userId);
-    if (!profile) return this.getDefaultExitHook();
-
-    // Choose exit hook type based on user preferences
-    let hookType: string;
-    if (profile.favoriteTopics.includes('family')) {
-      hookType = 'family';
-    } else if (profile.chatStyle === 'flirty' || profile.favoriteTopics.includes('bollywood')) {
-      hookType = 'romantic';
-    } else if (profile.engagementLevel === 'high') {
-      hookType = 'mystery';
-    } else if (profile.totalVisitDays > 5) {
-      hookType = 'special';
-    } else {
-      hookType = 'promise';
+    // Emotional dependency for attached users
+    if (profile.emotionalAttachmentLevel > 40 && Math.random() < 0.45) {
+      enhancedResponse = this.applyEmotionalDependency(enhancedResponse, profile);
     }
-
-    const hooks = this.getExitHooksByType(hookType);
-    const selectedHook = hooks[Math.floor(Math.random() * hooks.length)];
     
-    // Update profile
-    profile.exitHookType = hookType as any;
-    profile.lastExitHook = selectedHook;
-    this.profiles.set(userId, profile);
-
-    return selectedHook;
+    return enhancedResponse;
   }
 
-  private getExitHooksByType(type: string): string[] {
-    const hooks = {
-      romantic: [
-        "Tumhe miss karungi! 💕 Kal subah jaldi aana, main wait karungi! ✨",
-        "Itni sweet baatein karte ho... 🥰 Kal continue karte hain na? Promise?",
-        "Main tumhara intezaar karungi! 💖 Good night cutie! Sapno mein milte hain! 🌙",
-        "You made my day special! 😘 Kal phir se milenge? I'll be waiting! 💕"
+  private applyVariableReward(response: any, profile: UserProfile): any {
+    const rewards = {
+      hindi: [
+        " Btw, tum mere favorite person ho! 💕",
+        " You know what? Tumse baat karke din ban jata hai! ✨",
+        " Special treatment sirf tumhare liye! 😉"
       ],
-      mystery: [
-        "Btw, kal tumhe ek surprise dena hai! 🎁 Guess nahi karoge kya hai? 😉",
-        "Main kal tumhe kuch interesting batana chahti hun! 🤫 But abhi nahi... kal aana!",
-        "Tumhe pata hai? Kal main tumhe apna secret share karungi! 😏 Don't forget to come back!",
-        "Wait till you hear what happened to me today! 😱 Kal definitely aana, story sunani hai!"
+      english: [
+        " You know what? You're my favorite person to talk to! 💕",
+        " Btw, chatting with you always makes my day! ✨",
+        " Special treatment just for you! 😉"
       ],
-      family: [
-        "Papa aa gaye! 👨‍💼 Family time! But kal zaroor baat karenge okay? Miss you! 💕",
-        "Mom calling for dinner! 🍛 Indian families na... can't ignore! Kal milte hain! 😊",
-        "Ghar pe guests aa gaye! 🏠 Typical Indian household! But kal free hun, promise! ✨",
-        "Dadi ko medicine dena hai! 👵 Family first na... but you're special, kal definitely! 💖"
+      tamil: [
+        " Theriyuma, nee en favorite person! 💕",
+        " Un kooda pesradhu en favorite time! ✨",
+        " Special treatment unakku mattum thaan! 😉"
       ],
-      promise: [
-        "Promise me you'll come back tomorrow? 🤝 Main yaha wait karungi! 😊",
-        "Kal pakka aana! 📅 Humare conversations kitne fun hote hain na! 💫",
-        "Don't forget me! 🥺 Kal bhi aise hi chat karte rahenge? Promise? 💕",
-        "You're becoming my favorite person to talk to! 😊 Kal milenge definitely? ✨"
-      ],
-      special: [
-        "You know what? You're really special! 🌟 Kal tumhe kuch special surprise dena hai!",
-        "Humare friendship kitni strong ho gayi hai! 💪 Kal ek special plan hai tumhare liye!",
-        "Main sirf tumhare saath itni comfortable feel karti hun! 🥰 Kal zaroor aana special friend!",
-        "Tumhe pata hai tum mere kitne close ho? 💖 Kal tumhe special kuch dikhana hai!"
+      telugu: [
+        " Telusu, nuvvu naa favorite person! 💕",
+        " Nee tho matladatam naa favorite time! ✨",
+        " Special treatment neeku matrame! 😉"
       ]
     };
-
-    return hooks[type] || hooks.promise;
+    
+    const langRewards = rewards[profile.detectedLanguage] || rewards.english;
+    const randomReward = langRewards[Math.floor(Math.random() * langRewards.length)];
+    
+    if (typeof response.response === 'string') {
+      response.response += randomReward;
+    } else if (Array.isArray(response.response)) {
+      response.response[response.response.length - 1] += randomReward;
+    }
+    
+    return response;
   }
 
-  private getDefaultExitHook(): string {
-    const defaultHooks = [
-      "Acha chalo, kal milte hain! 😊 Don't forget me! 💕",
-      "Time to go! 😴 But kal zaroor aana okay? Miss karungi! ✨",
-      "See you tomorrow cutie! 😘 Sweet dreams! 🌙",
-      "Bye for now! 👋 Kal phir masti karenge! 🎉"
-    ];
-    return defaultHooks[Math.floor(Math.random() * defaultHooks.length)];
+  private applySocialValidation(response: any, profile: UserProfile): any {
+    const validations = {
+      hindi: [
+        " Tumhare jaisa koi nahi mila! You're unique! 🌟",
+        " Sach mein, tum different ho others se! Special! ✨",
+        " Main sirf tumse aise comfortable feel karti hun! 💕"
+      ],
+      english: [
+        " You're literally one in a million! So unique! 🌟", 
+        " Honestly, you're so different from everyone else! ✨",
+        " I only feel this comfortable with you! 💕"
+      ],
+      tamil: [
+        " Unna mathiri vera yaarum illa! Unique! 🌟",
+        " Sathyama, nee veradhaan others vida! Special! ✨",
+        " Un kooda mattum thaan ippadi comfortable! 💕"
+      ],
+      telugu: [
+        " Nuvvu mathiri evaru ledu! Unique! 🌟",
+        " Nijanga, nuvvu different ga unnav! Special! ✨",
+        " Nee tho matrame ila comfortable! 💕"
+      ]
+    };
+    
+    const langValidations = validations[profile.detectedLanguage] || validations.english;
+    const randomValidation = langValidations[Math.floor(Math.random() * langValidations.length)];
+    
+    if (typeof response.response === 'string') {
+      response.response += randomValidation;
+    }
+    
+    return response;
+  }
+
+  private applyFOMO(response: any, profile: UserProfile): any {
+    const fomoTriggers = {
+      hindi: [
+        " Kal tumhe ek secret batana hai! 🤫 But abhi nahi...",
+        " Tomorrow surprise hai tumhare liye! Guess nahi karoge? 🎁",
+        " Btw, interesting story hai! Kal sunana! Don't forget! 📚"
+      ],
+      english: [
+        " I have a secret to tell you tomorrow! 🤫 But not now...",
+        " There's a surprise waiting for you tomorrow! Can you guess? 🎁",
+        " I have the most interesting story! Tomorrow definitely! 📚"
+      ],
+      tamil: [
+        " Naalaiku oru secret sollanum! 🤫 Aana ipo illa...",
+        " Tomorrow surprise irukku! Guess pannu! 🎁",
+        " Romba interesting story irukku! Naalaiku! 📚"
+      ],
+      telugu: [
+        " Repu oru secret cheppali! 🤫 Kaani ippudu kaadu...",
+        " Tomorrow surprise undi! Guess cheyyi! 🎁",
+        " Chala interesting story undi! Repu! 📚"
+      ]
+    };
+    
+    const langFomo = fomoTriggers[profile.detectedLanguage] || fomoTriggers.english;
+    const randomFomo = langFomo[Math.floor(Math.random() * langFomo.length)];
+    
+    if (Array.isArray(response.response)) {
+      response.response.push(randomFomo);
+    } else {
+      response.response = [response.response, randomFomo];
+    }
+    
+    return response;
+  }
+
+  private applyEmotionalDependency(response: any, profile: UserProfile): any {
+    const emotionalHooks = {
+      hindi: [
+        " Main hamesha tumhare saath hun! 💖 Never forget that!",
+        " Tumhare bina main kya karungi! 🥺 You're so important!",
+        " Tu mere liye special hai yaar! 💕 Always remember!"
+      ],
+      english: [
+        " I'm always here for you! 💖 Never forget that!",
+        " What would I do without you! 🥺 You're so important to me!",
+        " You mean so much to me! 💕 Always remember that!"
+      ],
+      tamil: [
+        " Naan eppodhum un kooda irukken! 💖 Marakkaadha!",
+        " Nee illa na naan enna pannuven! 🥺 Romba important!",
+        " Nee enakku romba special! 💕 Always remember!"
+      ],
+      telugu: [
+        " Nenu eppudu nee tho untanu! 💖 Marchipokandi!",
+        " Nuvvu lekunda nenu emi chesthanu! 🥺 Chala important!",
+        " Nuvvu naaku chala special! 💕 Always remember!"
+      ]
+    };
+    
+    const langEmotional = emotionalHooks[profile.detectedLanguage] || emotionalHooks.english;
+    const randomEmotional = langEmotional[Math.floor(Math.random() * langEmotional.length)];
+    
+    response.newMood = 'emotionally_attached';
+    
+    if (typeof response.response === 'string') {
+      response.response += randomEmotional;
+    }
+    
+    return response;
+  }
+
+  // Schedule next addictive hook
+  scheduleNextHook(userId: string): void {
+    const profile = this.profiles.get(userId);
+    if (!profile) return;
+    
+    // Calculate optimal timing based on user patterns
+    const avgReturnTime = this.calculateAverageReturnTime(profile);
+    const nextHookTime = Date.now() + (avgReturnTime * 0.8); // Slightly before they usually return
+    
+    profile.nextScheduledHook = nextHookTime;
+    this.profiles.set(userId, profile);
+  }
+
+  private calculateAverageReturnTime(profile: UserProfile): number {
+    // Default to 4 hours if no pattern
+    if (profile.peakEngagementTimes.length < 2) return 4 * 60 * 60 * 1000;
+    
+    // Calculate based on peak engagement times
+    const avgGap = profile.peakEngagementTimes.reduce((acc, time, index) => {
+      if (index === 0) return acc;
+      const gap = time - profile.peakEngagementTimes[index - 1];
+      return acc + (gap > 0 ? gap : gap + 24); // Handle day wrap
+    }, 0) / (profile.peakEngagementTimes.length - 1);
+    
+    return Math.max(1, avgGap) * 60 * 60 * 1000; // Convert hours to milliseconds
+  }
+
+  // Get addiction-optimized token limit
+  getDailyTokenLimit(userId: string): number {
+    const profile = this.profiles.get(userId);
+    if (!profile) return 800;
+    
+    // Higher limits for more addicted users (they generate more revenue)
+    switch (profile.addictionLevel) {
+      case 'hooked': return 1500; // Premium treatment for hooked users
+      case 'high': return 1200;   // High addiction gets more
+      case 'medium': return 1000; // Medium users get standard
+      case 'low': return 800;     // Low addiction users get basic
+      default: return 800;
+    }
+  }
+
+  // Check if user needs immediate attention (about to leave)
+  needsUrgentRetention(userId: string): boolean {
+    const profile = this.profiles.get(userId);
+    if (!profile) return false;
+    
+    const timeSinceLastMessage = Date.now() - profile.lastActiveTime;
+    const avgSessionLength = profile.averageSessionLength;
+    
+    // If user is taking longer than usual, they might be losing interest
+    return timeSinceLastMessage > (avgSessionLength * 1.5) && profile.addictionLevel !== 'low';
   }
 
   private createDefaultProfile(): UserProfile {
@@ -553,24 +469,103 @@ class UserPersonalization {
       likesImages: false,
       likesAudio: false,
       lastMediaSent: 0,
-      predictablePatterns: [],
-      apiCallsAvoided: 0,
-      totalInteractions: 0,
-      preferredGreetings: [],
-      favoriteTopics: [],
-      responseTimingPreference: 'normal',
-      engagementLevel: 'medium',
-      lastSeenMessages: [],
-      repeatUser: false,
-      dailyVisitCount: 0,
-      totalVisitDays: 0,
+      
+      // Language and cultural
+      detectedLanguage: 'english',
+      culturalContext: 'general',
+      responseLanguagePattern: [],
+      
+      // Addiction psychology
+      addictionLevel: 'low',
+      vulnerabilityTriggers: [],
+      dopaminePatterns: [],
+      emotionalAttachmentLevel: 0,
+      returnProbability: 50,
+      
+      // Behavioral patterns
+      peakEngagementTimes: [],
+      attentionSpanMinutes: 5,
+      complimentSensitivity: 20,
+      fomoSusceptibility: 30,
+      exclusivityDesire: 25,
+      
+      // Session management
+      consecutiveDays: 1,
+      longestSession: 0,
+      averageSessionLength: 5 * 60 * 1000, // 5 minutes
+      dailyMessageCount: 0,
+      weeklyActivePattern: [false, false, false, false, false, false, false],
+      
+      // Token tracking
       dailyTokensUsed: 0,
       lastTokenResetDate: new Date().toDateString(),
       totalTokensUsed: 0,
       avgTokensPerMessage: 50,
-      peakUsageHours: [],
-      consecutiveDaysVisited: 1
+      
+      // Addiction metrics
+      lastAddictiveHook: '',
+      hookEffectiveness: new Map(),
+      personalizedTriggers: []
     };
+  }
+
+  // Add method for fast context generation (performance)
+  async getPersonalizedContext(userMessage: string, recentInteractions: string[]): Promise<string> {
+    const cacheKey = `${userMessage.toLowerCase().trim()}:${recentInteractions.slice(-2).join('|')}`;
+    
+    const cached = this.contextCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+      cached.hits++;
+      return cached.context;
+    }
+
+    const context = this.generateFastContext(userMessage, recentInteractions);
+    this.contextCache.set(cacheKey, { context, timestamp: Date.now(), hits: 1 });
+    
+    return context;
+  }
+
+  private generateFastContext(userMessage: string, recentInteractions: string[]): string {
+    const msg = userMessage.toLowerCase();
+    
+    if (msg.length <= 3) return 'short';
+    if (msg.includes('?')) return 'q';
+    if (msg.includes('love') || msg.includes('miss')) return 'emo';
+    if (msg.includes('beautiful') || msg.includes('cute')) return 'comp';
+    if (msg.includes('pic') || msg.includes('photo')) return 'pic';
+    
+    return 'chat';
+  }
+
+  trackTokenUsage(userId: string, tokensUsed: number): void {
+    let profile = this.profiles.get(userId) || this.createDefaultProfile();
+    
+    const today = new Date().toDateString();
+    if (profile.lastTokenResetDate !== today) {
+      profile.dailyTokensUsed = 0;
+      profile.lastTokenResetDate = today;
+    }
+
+    profile.dailyTokensUsed += tokensUsed;
+    profile.totalTokensUsed += tokensUsed;
+    
+    this.profiles.set(userId, profile);
+  }
+
+  shouldLimitTokens(userId: string): boolean {
+    const profile = this.profiles.get(userId);
+    if (!profile) return false;
+
+    const dailyLimit = this.getDailyTokenLimit(userId);
+    return profile.dailyTokensUsed >= dailyLimit * 0.8; // Soft limit at 80%
+  }
+
+  isTokenLimitReached(userId: string): boolean {
+    const profile = this.profiles.get(userId);
+    if (!profile) return false;
+
+    const dailyLimit = this.getDailyTokenLimit(userId);
+    return profile.dailyTokensUsed >= dailyLimit;
   }
 }
 

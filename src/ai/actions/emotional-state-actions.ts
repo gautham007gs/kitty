@@ -4,6 +4,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import {chatCache} from '@/lib/chatCache';
 import { userPersonalization } from '@/lib/userPersonalization';
+import { multilingualPersonality, addictionTriggers } from '@/config/ai';
+import type { EmotionalStateInput, EmotionalStateOutput } from '@/ai/flows/emotional-state-simulation';
+
 
 const EmotionalStateInputSchema = z.object({
   userMessage: z.string().describe('The latest message from the user.'),
@@ -12,7 +15,7 @@ const EmotionalStateInputSchema = z.object({
   mood: z.string().optional().describe('The current mood of the AI, if any. This can evolve based on the conversation.'),
   recentInteractions: z.array(z.string()).max(10).describe('The list of up to 10 previous messages and responses in the conversation. Pay VERY CLOSE attention to these to understand the current topic, maintain context, adapt your style to the user, and remember what was discussed to avoid sounding forgetful. If you need to refer to a specific point the user made earlier, you can say something like "About what you said earlier regarding [topic]..." or "When you mentioned [something], I was thinking...".'),
   availableImages: z.array(z.string()).optional().describe('A list of publicly accessible image URLs that Kruthika can choose to "share" if the conversation naturally leads to it. If empty, Kruthika cannot send images proactively.'),
-  availableAudio: z.array(z.string()).optional().describe("A list of audio file paths (e.g., /media/laugh.mp3) that Kruthika can choose to 'share'. These files must exist in the app's public/media/ directory. If empty, Kruthika cannot send audio proactively."),
+  availableAudio: z.array(z.string()).optional().describe("A list of audio file paths (e.g., /media/laugh.mp3) that Kruthika can choose to 'share'. These files must exist in the app's public/media/directory. If empty, Kruthika cannot send audio proactively."),
 });
 export type EmotionalStateInput = z.infer<typeof EmotionalStateInputSchema>;
 
@@ -32,8 +35,34 @@ const MOOD_SHORTCUTS = {
 };
 
 const TIME_SHORTCUTS = {
-  morning: 'm', afternoon: 'a', evening: 'e', night: 'n'
+  morning: 'm',
+  afternoon: 'a',
+  evening: 'e',
+  night: 'n'
 };
+
+// Language and cultural detection
+function detectLanguageAndCulture(message: string): {language: string, culture: string, confidence: number} {
+  const msg = message.toLowerCase();
+
+  // Hindi detection with regional variations
+  if (/\b(kya|kaisa|kaisi|kaise|haal|hai|tum|tumhara|mera|achha|bura|namaste|yaar|bhai|didi|ji|haan|nahi|mat|kar|raha|rahi|hoon|hun|kyu|kab|kaha|main|tera|teri|mere|sabse|bahut|thoda|zyada|kam|abhi|kal|parso|subah|shaam|raat|din)\b/.test(msg)) {
+    return {language: 'hindi', culture: 'north_indian', confidence: 0.9};
+  }
+
+  // Tamil detection
+  if (/\b(enna|eppo|eppadi|nalla|irukka|irukku|vanakkam|da|di|nee|naan|unna|enna|romba|chala|vera|level)\b/.test(msg)) {
+    return {language: 'tamil', culture: 'south_indian_tamil', confidence: 0.85};
+  }
+
+  // Telugu detection
+  if (/\b(ela|enti|ela|unnavu|unnara|bagundi|bagunnava|namaste|nuvvu|nenu|nee|naa|chala|chalanchi)\b/.test(msg)) {
+    return {language: 'telugu', culture: 'south_indian_telugu', confidence: 0.85};
+  }
+
+  // English (default)
+  return {language: 'english', culture: 'indian_english', confidence: 0.7};
+}
 
 export async function generateResponse(input: EmotionalStateInput, userId?: string): Promise<EmotionalStateOutput> {
   // Step 0: Check token limits first (if userId provided)
@@ -52,12 +81,7 @@ export async function generateResponse(input: EmotionalStateInput, userId?: stri
 
     // Soft limit - occasionally suggest taking a break with hooks
     if (userPersonalization.shouldLimitTokens(userId) && Math.random() < 0.3) {
-      const softExitHooks = [
-        "Itna time ho gaya chatting! 😅 Thoda break lene ka time hai... but kal zaroor milenge! 💕",
-        "Wow! Kitni der se baat kar rahe hain! 🕒 Eyes rest karo... kal phir se chat karenge? 😊",
-        "Mujhe lagta hai we should take a small break! 😌 Kal fresh mind se baat karenge! ✨",
-        "Phone ka battery bhi low ho raha hoga! 📱 Charge karo... main kal wait karungi! 💖"
-      ];
+      const softExitHooks = addictionTriggers.softExitHooks;
       const randomHook = softExitHooks[Math.floor(Math.random() * softExitHooks.length)];
       return {
         response: randomHook,
@@ -65,6 +89,10 @@ export async function generateResponse(input: EmotionalStateInput, userId?: stri
       };
     }
   }
+
+  // Detect language and tailor personality
+  const {language, culture} = detectLanguageAndCulture(input.userMessage);
+  const personality = multilingualPersonality[language] || multilingualPersonality['english'];
 
   // Step 2: Smart cache with similarity matching
   const cachedResponse = chatCache.get(input.userMessage, input.mood, input.timeOfDay);
@@ -86,11 +114,11 @@ export async function generateResponse(input: EmotionalStateInput, userId?: stri
     const timeCode = TIME_SHORTCUTS[input.timeOfDay as keyof typeof TIME_SHORTCUTS] || 'n';
 
     // Add addictive elements to prompt for engagement
-    const addictivePrompt = userId && userPersonalization.isTokenLimitReached(userId) ? 
-      'Make exit romantic/addictive.' : 
+    const addictivePrompt = userId && userPersonalization.isTokenLimitReached(userId) ?
+      'Make exit romantic/addictive.' :
       'Be engaging, addictive, make user want to chat more.';
 
-    const prompt = `Kruthika, 22yo Indian girl. ${addictivePrompt} <50 words.
+    const prompt = `${personality.persona}. ${addictivePrompt} <50 words.
 M:${moodCode} T:${timeCode}
 Context: ${personalizedContext}
 Recent: ${recentContext}
