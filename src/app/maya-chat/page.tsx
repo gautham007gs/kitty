@@ -193,6 +193,7 @@ const KruthikaChatPage: NextPage = () => {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const interstitialAdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const userSentMediaThisTurnRef = useRef(false);
+  const typingIndicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for managing typing indicator timeout
 
   // User session tracking and personalization
   const userIdRef = useRef<string | null>(null);
@@ -482,6 +483,25 @@ const KruthikaChatPage: NextPage = () => {
     };
   }, [messages, resetInactivityTimer, checkFirstDailyVisit, showOptionsMenu]);
 
+  const addMessage = (content: string, isUser: boolean, status: Message['status'] = 'sent') => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: content, // Changed from 'content' to 'text' to match Message type
+      sender: isUser ? 'user' : 'ai',
+      timestamp: new Date(),
+      status: isUser ? status : undefined,
+    };
+    setMessages(prev => [...prev, newMessage]);
+    return newMessage.id;
+  };
+
+  const updateMessageStatus = (messageId: string, status: Message['status']) => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId ? { ...msg, status } : msg
+      )
+    );
+  };
 
   const handleSendMessage = async (text: string, userImageUriFromInput?: string) => {
     let currentImageUri = userImageUriFromInput;
@@ -489,7 +509,6 @@ const KruthikaChatPage: NextPage = () => {
 
     if (!text.trim() && !currentImageUri) return;
 
-    // Skip loading checks for better performance - use defaults if needed
     resetInactivityTimer();
 
     let imageAttemptedAndAllowed = false;
@@ -518,54 +537,32 @@ const KruthikaChatPage: NextPage = () => {
     }
     userSentMediaThisTurnRef.current = !!currentImageUri;
 
-
-    const newUserMessage: Message = {
-      id: Date.now().toString(),
-      text,
-      sender: 'user',
-      timestamp: new Date(),
-      status: 'sent',
-      userImageUrl: currentImageUri,
-    };
-    setMessages(prev => [...prev, newUserMessage]);
-    if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
-
-    if (supabase && userIdRef.current) {
-        try {
-          const { error: userLogError } = await supabase
-            .from('messages_log')
-            .insert([{
-              message_id: newUserMessage.id,
-              sender_type: 'user',
-              chat_id: 'kruthika_chat',
-              user_id: userIdRef.current,
-              text_content: newUserMessage.text.substring(0, 500),
-              has_image: !!newUserMessage.userImageUrl,
-            }]);
-          if (userLogError) console.error('Supabase error logging user message:', userLogError.message);
-        } catch (e: any) { console.error('Supabase user message logging failed (catch block):', e?.message || String(e));}
+    const newUserMessageId = addMessage(text, true, 'sending');
+    if (currentImageUri) {
+        // Add a separate message for the image if text is also present
+        if (text.trim()) {
+            const userImageMessageId = addMessage('[Image Sent]', true, 'sending');
+            // We'll update the status for both the text and image message
+        } else {
+             // If only image, update the ID of the main message to reflect image sending
+             // For simplicity, let's assume the text message ID also carries the image intent.
+             // A more robust solution would be to have separate message objects or a flag.
+        }
     }
+    
+    // Simulate message status progression
+    setTimeout(() => updateMessageStatus(newUserMessageId, 'sent'), 500);
+    setTimeout(() => updateMessageStatus(newUserMessageId, 'delivered'), 1000);
 
-    const interactionMessage = currentImageUri ? (text ? `User: ${text} [sent an image]` : `User: [sent an image]`) : `User: ${text}`;
-    const updatedRecentInteractions = [...recentInteractions, interactionMessage].slice(-10);
-    setRecentInteractions(updatedRecentInteractions);
-
-    // Automatically progress message status
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg =>
-        msg.id === newUserMessage.id ? { ...msg, status: 'delivered' as MessageStatus } : msg
-      ));
-    }, 1000); // Mark as delivered after 1 second
-
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg =>
-        msg.id === newUserMessage.id ? { ...msg, status: 'read' as MessageStatus } : msg
-      ));
-    }, 3000); // Mark as read after 3 seconds
-
-    // Faster typing indicator for better responsiveness
-    const typingAppearDelay = 200 + Math.random() * 300;
-    setTimeout(() => setIsAiTyping(true), typingAppearDelay);
+    // Add typing indicator
+    if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+    const typingId = addMessage('', false);
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === typingId ? { ...msg, isTyping: true } : msg
+      )
+    );
+    typingIndicatorTimeoutRef.current = setTimeout(() => setIsAiTyping(false), 2000 + Math.random() * 1000); // Keep typing for a bit
 
     try {
       // Get available media from database/config
@@ -577,7 +574,7 @@ const KruthikaChatPage: NextPage = () => {
         userImageUri: currentImageUri,
         timeOfDay: getTimeOfDay(),
         mood: aiMood,
-        recentInteractions: updatedRecentInteractions,
+        recentInteractions: recentInteractions, // Use the current state directly
         availableImages,
         availableAudio,
       };
@@ -616,7 +613,6 @@ const KruthikaChatPage: NextPage = () => {
       };
 
       const processAiTextMessage = async (responseText: string, messageIdSuffix: string = '') => {
-        // Much faster typing simulation for better perceived performance
         const typingDuration = Math.min(Math.max(responseText.length * 20, 300), 1200);
         await new Promise<void>(resolve => setTimeout(resolve, typingDuration));
 
@@ -629,10 +625,11 @@ const KruthikaChatPage: NextPage = () => {
           status: 'read',
         };
         setMessages(prev => {
-          const userMessageRead = prev.map(msg =>
-            msg.id === newUserMessage.id && msg.status !== 'read' ? { ...msg, status: 'read' as MessageStatus } : msg
-          );
-          return [...userMessageRead, newAiMessage];
+          const updatedMessages = prev.map(msg => msg.id === newUserMessageId ? { ...msg, status: 'read' as MessageStatus } : msg);
+          if (typingId) { // Remove typing indicator if it exists
+            return [...updatedMessages.filter(msg => msg.id !== typingId), newAiMessage];
+          }
+          return [...updatedMessages, newAiMessage];
         });
         if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
         setRecentInteractions(prevInteractions => [...prevInteractions, `AI: ${responseText}`].slice(-10));
@@ -653,13 +650,23 @@ const KruthikaChatPage: NextPage = () => {
             aiImageUrl: mediaType === 'image' ? url : undefined,
             audioUrl: mediaType === 'audio' ? url : undefined,
         };
-        setMessages(prev => [...prev, newAiMediaMessage]);
+        setMessages(prev => {
+          const updatedMessages = prev.map(msg => msg.id === newUserMessageId ? { ...msg, status: 'read' as MessageStatus } : msg);
+          if (typingId) { // Remove typing indicator if it exists
+            return [...updatedMessages.filter(msg => msg.id !== typingId), newAiMediaMessage];
+          }
+          return [...updatedMessages, newAiMediaMessage];
+        });
         if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
         setRecentInteractions(prevInteractions => [...prevInteractions, `AI: ${caption || ""}[Sent a ${mediaType}] ${url}`].slice(-10));
         await logAiMessageToSupabase(caption || `[Sent ${mediaType}]`, newAiMediaMessageId, mediaType === 'image', mediaType === 'audio');
       };
 
-      setIsAiTyping(true);
+      // Clear existing typing indicator if any
+      if (typingId) {
+          setMessages(prev => prev.filter(msg => msg.id !== typingId));
+          setIsAiTyping(false);
+      }
 
       if (aiResponse.proactiveImageUrl && aiResponse.mediaCaption) {
         await processAiMediaMessage('image', aiResponse.proactiveImageUrl, aiResponse.mediaCaption);
@@ -670,9 +677,19 @@ const KruthikaChatPage: NextPage = () => {
           for (let i = 0; i < aiResponse.response.length; i++) {
             const part = aiResponse.response[i];
             if (part.trim() === '') continue;
-            if (i > 0) setIsAiTyping(true);
+            
+            // For multi-part responses, re-introduce typing indicator briefly
+            if (i > 0) {
+                const nextTypingId = addMessage('', false);
+                setMessages(prev => prev.map(msg => msg.id === nextTypingId ? { ...msg, isTyping: true } : msg));
+                setIsAiTyping(true);
+                if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+            }
+
             await processAiTextMessage(part, `_part${i}`);
-            setIsAiTyping(false);
+            setIsAiTyping(false); // Ensure typing is false after processing a part
+            if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+
             if (i < aiResponse.response.length - 1) {
               const interMessageDelay = 500 + Math.random() * 500;
               await new Promise<void>(resolve => setTimeout(resolve, interMessageDelay));
@@ -683,7 +700,13 @@ const KruthikaChatPage: NextPage = () => {
         }
       }
 
-      setIsAiTyping(false);
+      // Ensure typing indicator is cleared at the end
+      if (typingId) {
+        setMessages(prev => prev.filter(msg => msg.id !== typingId));
+        setIsAiTyping(false);
+      }
+      if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+
       if (aiResponse.newMood) setAiMood(aiResponse.newMood);
 
       // Update token usage status
@@ -714,7 +737,6 @@ const KruthikaChatPage: NextPage = () => {
           localStorage.setItem(USER_IMAGE_UPLOAD_LAST_DATE_KRUTHIKA, todayStr);
       }
 
-
       if (userSentMediaThisTurnRef.current) {
         if (adSettings && adSettings.adsEnabledGlobally && Math.random() < USER_MEDIA_INTERSTITIAL_CHANCE) {
             tryShowAdAndMaybeInterstitial("Just a moment...");
@@ -724,6 +746,9 @@ const KruthikaChatPage: NextPage = () => {
 
     } catch (error: any) {
       console.error('Full error details:', error);
+
+      // Mark user message as read even on error
+      updateMessageStatus(newUserMessageId, 'read');
 
       // Show a natural, context-aware fallback response
       const fallbackResponses = [
@@ -736,19 +761,15 @@ const KruthikaChatPage: NextPage = () => {
 
       const randomFallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
 
-      const errorAiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: randomFallback,
-        sender: 'ai',
-        timestamp: new Date(),
-        status: 'read',
-      };
-      setMessages(prev => {
-        const updatedMessages = prev.map(msg => msg.id === newUserMessage.id ? { ...msg, status: 'read' as MessageStatus } : msg);
-        return [...updatedMessages, errorAiMessage];
-      });
-      if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
+      const errorAiMessageId = addMessage(randomFallback, false);
+      // Ensure typing indicator is cleared
+      if (typingId) {
+          setMessages(prev => prev.filter(msg => msg.id !== typingId));
+      }
       setIsAiTyping(false);
+      if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+
+      if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
   };
@@ -764,8 +785,10 @@ const KruthikaChatPage: NextPage = () => {
     const timeSinceLastInteraction = now - lastInteractionTime;
     let timeoutId: NodeJS.Timeout | undefined = undefined;
 
+    // Trigger offline message if user hasn't messaged in a while and it's during active hours
     if (messages.some(m => m.sender === 'user') && lastMessage && lastMessage.sender === 'user' && timeSinceLastInteraction > 2 * 60 * 60 * 1000 && Math.random() < 0.3) {
       const { hour: currentISTHour } = getISTTimeParts();
+      // Only send this type of ping during morning hours
       if (!(currentISTHour >= 5 && currentISTHour < 12)) return;
 
       const generateAndAddOfflineMessage = async () => {
@@ -978,8 +1001,8 @@ const KruthikaChatPage: NextPage = () => {
                   message={msg.text}
                   isUser={msg.sender === 'user'}
                   timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  isRead={msg.sender === 'user' ? true : undefined}
-                  isDelivered={msg.sender === 'user' ? true : undefined}
+                  isRead={msg.sender === 'user' ? msg.status === 'read' : undefined}
+                  isDelivered={msg.sender === 'user' ? msg.status !== 'sending' : undefined}
                   aiAvatarUrl={msg.sender === 'ai' ? displayAIProfile.avatarUrl : undefined}
                   userImageUrl={msg.userImageUrl}
                   aiImageUrl={msg.aiImageUrl}

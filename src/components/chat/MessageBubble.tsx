@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { Message } from '@/types';
 import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface MessageBubbleProps {
   message: Message;
