@@ -29,6 +29,7 @@ import SocialBarAdDisplay from '@/components/SocialBarAdDisplay';
 import GlobalAdScripts from '@/components/GlobalAdScripts';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import MessageBubble from '@/components/chat/MessageBubble';
+import { aiService } from '@/lib/aiService'; // Assuming aiService is imported from here
 
 const AI_DISCLAIMER_SHOWN_KEY = 'ai_disclaimer_shown_kruthika_chat_v2';
 const AI_DISCLAIMER_DURATION = 2000;
@@ -496,8 +497,8 @@ const KruthikaChatPage: NextPage = () => {
   };
 
   const updateMessageStatus = (messageId: string, status: Message['status']) => {
-    setMessages(prev => 
-      prev.map(msg => 
+    setMessages(prev =>
+      prev.map(msg =>
         msg.id === messageId ? { ...msg, status } : msg
       )
     );
@@ -549,7 +550,7 @@ const KruthikaChatPage: NextPage = () => {
              // A more robust solution would be to have separate message objects or a flag.
         }
     }
-    
+
     // Simulate message status progression
     setTimeout(() => updateMessageStatus(newUserMessageId, 'sent'), 500);
     setTimeout(() => updateMessageStatus(newUserMessageId, 'delivered'), 1000);
@@ -557,8 +558,8 @@ const KruthikaChatPage: NextPage = () => {
     // Add typing indicator
     if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
     const typingId = addMessage('', false);
-    setMessages(prev => 
-      prev.map(msg => 
+    setMessages(prev =>
+      prev.map(msg =>
         msg.id === typingId ? { ...msg, isTyping: true } : msg
       )
     );
@@ -677,7 +678,7 @@ const KruthikaChatPage: NextPage = () => {
           for (let i = 0; i < aiResponse.response.length; i++) {
             const part = aiResponse.response[i];
             if (part.trim() === '') continue;
-            
+
             // For multi-part responses, re-introduce typing indicator briefly
             if (i > 0) {
                 const nextTypingId = addMessage('', false);
