@@ -41,16 +41,17 @@ const vertexAI = new VertexAI({
 });
 
 const model = vertexAI.preview.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-pro',
   generationConfig: {
-    maxOutputTokens: 1024,
+    maxOutputTokens: 2048,
     temperature: 0.7,
     topP: 0.8,
-    topK: 40
+    topK: 40,
+    candidateCount: 1
   }
 });
 
-console.log('🚀 Direct Vertex AI initialized with Gemini 1.5 Flash model');
+console.log('🚀 Direct Vertex AI initialized with Gemini 1.5 Pro model');
 console.log('💰 Using Google Cloud $300 free credits');
 
 // AI Response Generation
@@ -89,4 +90,4 @@ Respond as Kruthika in a natural, friendly way:`;
 }
 
 console.log('🎉 Direct Vertex AI initialized - Compatible with Google Cloud free credits');
-console.log('📱 Using cheapest model: gemini-1.5-flash');
+console.log('📱 Using reliable model: gemini-1.5-pro');

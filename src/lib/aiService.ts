@@ -55,19 +55,20 @@ const initializeVertexAI = () => {
       }
     });
 
-    // Use the cheapest Gemini model - gemini-1.5-flash (best cost/performance ratio)
+    // Use Gemini 1.5 Pro - more reliable and widely available
     model = vertex.preview.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-pro',
       generationConfig: {
-        maxOutputTokens: 1024, // Reduced for cost optimization
+        maxOutputTokens: 2048, // Increased for better responses
         temperature: 0.7,      // Balanced creativity
         topP: 0.8,            // Good quality responses
-        topK: 40              // Diversity control
+        topK: 40,             // Diversity control
+        candidateCount: 1     // Single response for reliability
       }
     });
 
     console.log('🚀 Vertex AI initialized successfully!');
-    console.log('📱 Model: gemini-1.5-flash (cheapest option)');
+    console.log('📱 Model: gemini-1.5-pro (reliable option)');
     console.log('💰 Using Google Cloud $300 free credits');
     return true;
   } catch (error) {
@@ -214,7 +215,7 @@ export const generateChatResponse = async (message: string, history: any[] = [])
 export const aiConfig = {
   projectId: config.projectId,
   location: config.location,
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-pro',
   hasCredentials: !!config.credentialsJson,
   provider: 'Google Vertex AI',
   isInitialized: isInitialized,
@@ -224,4 +225,4 @@ export const aiConfig = {
 
 console.log('🚀 AI Service configured with Vertex AI');
 console.log('💰 Compatible with Google Cloud $300 free credits');
-console.log('📱 Using cheapest model: gemini-1.5-flash');
+console.log('📱 Using reliable model: gemini-1.5-pro');
