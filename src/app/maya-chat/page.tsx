@@ -673,7 +673,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization]);
+  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef]);
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 
