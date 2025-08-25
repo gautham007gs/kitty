@@ -8,6 +8,8 @@
 
 # Testing
 /coverage
+.env.local
+/attached_assets
 
 # Next.js build output
 /.next/
