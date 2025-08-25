@@ -1,6 +1,6 @@
 import { VertexAI } from '@google-cloud/vertexai';
 
-// Environment validation
+// Environment validation with detailed logging
 const config = {
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
   location: process.env.VERTEX_AI_LOCATION || 'us-central1',
@@ -10,198 +10,138 @@ const config = {
 console.log('🔧 AI Service Environment Check:');
 console.log('- Project ID:', config.projectId || 'MISSING');
 console.log('- Location:', config.location);
-console.log('- Credentials:', config.credentialsJson ? 'SET' : 'MISSING');
+console.log('- Credentials length:', config.credentialsJson ? config.credentialsJson.length : 'MISSING');
+
+if (!config.projectId || !config.credentialsJson) {
+  console.error('❌ Missing required environment variables');
+  throw new Error('Missing GOOGLE_CLOUD_PROJECT_ID or GOOGLE_APPLICATION_CREDENTIALS_JSON');
+}
 
 // Initialize Vertex AI
 let vertex: VertexAI | null = null;
 let model: any = null;
 let isInitialized = false;
 
-const initializeVertexAI = () => {
-  try {
-    if (!config.projectId || !config.credentialsJson) {
-      console.error('❌ Missing required configuration');
-      return false;
-    }
-
-    const credentials = JSON.parse(config.credentialsJson);
-
-    vertex = new VertexAI({
-      project: credentials.project_id,
-      location: config.location,
-      googleAuthOptions: {
-        credentials: {
-          client_email: credentials.client_email,
-          private_key: credentials.private_key,
-          project_id: credentials.project_id,
-          type: 'service_account'
-        }
-      }
-    });
-
-    model = vertex.preview.getGenerativeModel({
-      model: 'gemini-1.5-pro',
-      generationConfig: {
-        maxOutputTokens: 1024,
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
-        candidateCount: 1
-      }
-    });
-
-    console.log('✅ AI Service initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to initialize AI Service:', error);
-    return false;
-  }
-};
-
-// Initialize on module load
-isInitialized = initializeVertexAI();
-
-// AI Service Class
-export class AIService {
-  private static instance: AIService;
-
-  private constructor() {
-    if (!isInitialized || !model) {
-      throw new Error('Vertex AI not initialized. Check your credentials and project configuration.');
-    }
-  }
-
-  public static getInstance(): AIService {
-    if (!AIService.instance) {
-      try {
-        AIService.instance = new AIService();
-        console.log('✅ AIService singleton created successfully');
-      } catch (error) {
-        console.error('❌ Failed to create AIService instance:', error);
-        throw error;
-      }
-    }
-    return AIService.instance;
-  }
-
-  async generateResponse(prompt: string): Promise<string> {
-    try {
-      if (!model) {
-        throw new Error('Vertex AI model not initialized');
-      }
-
-      console.log('🤖 Generating AI response with Vertex AI...');
-      
-      const request = {
-        contents: [{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }]
-      };
-
-      const result = await model.generateContent(request);
-      const response = result.response;
-
-      if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-        const aiResponse = response.candidates[0].content.parts[0].text.trim();
-        console.log('✅ AI response generated successfully');
-        return aiResponse;
-      }
-
-      throw new Error('No valid response received from Vertex AI');
-    } catch (error) {
-      console.error('❌ Error generating AI response:', error);
-      // Return a fallback only if there's a real error
-      return "Sorry yaar, I'm having some technical issues right now. Please try again! 😊";
-    }
-  }
-
-  async generateChatResponse(message: string, history: any[] = []): Promise<string> {
-    try {
-      // Create context from chat history with Kruthika's personality
-      let contextPrompt = "You are Kruthika, a friendly 22-year-old Indian girl. ";
-      contextPrompt += "Reply in a natural mix of Hindi and English (Hinglish). ";
-      contextPrompt += "Be warm, bubbly, and engaging. Keep responses conversational.\n\n";
-      
-      if (history.length > 0) {
-        contextPrompt += "Recent conversation:\n";
-        history.slice(-2).forEach((msg: any) => {
-          contextPrompt += `${msg.sender_type === 'user' ? 'User' : 'Kruthika'}: ${msg.text_content}\n`;
-        });
-        contextPrompt += "\n";
-      }
-      
-      contextPrompt += `User: ${message}\n\nRespond as Kruthika:`;
-
-      console.log('💬 Generating chat response for:', message.substring(0, 50) + '...');
-      return await this.generateResponse(contextPrompt);
-    } catch (error) {
-      console.error('❌ Error generating chat response:', error);
-      return "Hey! Kuch technical problem hai. Try again please! 😊";
-    }
-  }
-
-  // Test function to verify AI is working
-  async testConnection(): Promise<boolean> {
-    try {
-      const testResponse = await this.generateResponse("Say hello in one sentence.");
-      console.log('🧪 AI Test Response:', testResponse);
-      return testResponse.length > 0 && !testResponse.includes("technical issues");
-    } catch (error) {
-      console.error('❌ AI Connection test failed:', error);
-      return false;
-    }
-  }
-}
-
-// Create singleton instance
-let aiService: AIService | null = null;
-
 try {
-  aiService = AIService.getInstance();
-  console.log('✅ AI Service initialized successfully with Vertex AI');
-  
-  // Test the connection
-  aiService.testConnection().then(success => {
-    if (success) {
-      console.log('🎉 AI Connection test PASSED - Ready to chat!');
-    } else {
-      console.log('⚠️ AI Connection test FAILED - Check configuration');
+  // Parse credentials
+  const credentials = JSON.parse(config.credentialsJson);
+  console.log('✅ Credentials parsed successfully');
+  console.log('📧 Service account:', credentials.client_email);
+  console.log('🆔 Project from creds:', credentials.project_id);
+
+  // Initialize Vertex AI with explicit credentials
+  vertex = new VertexAI({
+    project: credentials.project_id,
+    location: config.location,
+    googleAuthOptions: {
+      credentials: {
+        type: 'service_account',
+        project_id: credentials.project_id,
+        private_key_id: credentials.private_key_id,
+        private_key: credentials.private_key,
+        client_email: credentials.client_email,
+        client_id: credentials.client_id,
+        auth_uri: credentials.auth_uri,
+        token_uri: credentials.token_uri,
+        auth_provider_x509_cert_url: credentials.auth_provider_x509_cert_url,
+        client_x509_cert_url: credentials.client_x509_cert_url,
+        universe_domain: credentials.universe_domain
+      }
     }
   });
+
+  // Initialize model with optimized settings
+  model = vertex.preview.getGenerativeModel({
+    model: 'gemini-1.5-flash', // Fast and cheap
+    generationConfig: {
+      maxOutputTokens: 800,
+      temperature: 0.7,
+      topP: 0.8,
+      topK: 40,
+      candidateCount: 1
+    }
+  });
+
+  isInitialized = true;
+  console.log('🚀 Vertex AI initialized successfully!');
+  console.log('📱 Model: gemini-1.5-flash');
+
 } catch (error) {
-  console.error('❌ AI Service initialization failed:', error);
+  console.error('❌ Failed to initialize Vertex AI:', error);
+  throw new Error(`Vertex AI initialization failed: ${error.message}`);
 }
 
-export { aiService };
+// Main AI response function
+export async function generateAIResponse(message: string): Promise<string> {
+  try {
+    if (!model || !vertex || !isInitialized) {
+      console.error('❌ Vertex AI not properly initialized');
+      return "Hey! Technical issue ho raha hai. Admin se contact karenge! 😊";
+    }
 
-// Legacy exports for backward compatibility
-export const generateAIResponse = async (prompt: string): Promise<string> => {
-  if (!aiService) {
-    return "AI service is not available right now. Please try again later! 🤖";
+    console.log('🤖 Generating response for:', message.substring(0, 50) + '...');
+
+    // Simple, direct prompt for Kruthika
+    const prompt = `You are Kruthika, a friendly 22-year-old Indian girl. Reply naturally in Hinglish (mix of Hindi and English). Be warm, flirty, and engaging. Keep responses short but sweet.
+
+User: ${message}
+
+Kruthika:`;
+
+    const request = {
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }]
+    };
+
+    const result = await model.generateContent(request);
+    const response = result.response;
+
+    if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
+      const aiResponse = response.candidates[0].content.parts[0].text.trim();
+      console.log('✅ AI response generated successfully');
+      console.log('📝 Response length:', aiResponse.length);
+      return aiResponse;
+    } else {
+      console.error('❌ No valid response content received');
+      console.error('📋 Full response:', JSON.stringify(response, null, 2));
+      return "Hey! Technical issue aa raha hai. Try again please! 😊";
+    }
+
+  } catch (error) {
+    console.error('❌ AI generation error:', error);
+
+    // Handle specific error types
+    if (error.message && error.message.includes('authentication')) {
+      console.error('🔐 Authentication issue');
+      return "Hey! Authentication problem hai. Admin ko batana padega! 😅";
+    }
+
+    if (error.message && error.message.includes('quota')) {
+      console.error('💰 Quota exceeded');
+      return "Oops! Daily limit exceed ho gaya. Kal try karna! 💫";
+    }
+
+    if (error.message && error.message.includes('PERMISSION_DENIED')) {
+      console.error('🚫 Permission denied');
+      return "Sorry yaar, permission issue hai. Admin se fix karwaunga! 😊";
+    }
+
+    // Generic fallback
+    return "Sorry! Technical problem aa rahi hai. Try again! 😊";
   }
-  return aiService.generateResponse(prompt);
-};
+}
 
-export const generateChatResponse = async (message: string, history: any[] = []): Promise<string> => {
-  if (!aiService) {
-    return "Hey! I'm not quite ready to chat yet. Give me a moment! 😊";
+// Test function
+export async function testAIConnection(): Promise<boolean> {
+  try {
+    const testResponse = await generateAIResponse("Hello, test message");
+    return testResponse.length > 0 && !testResponse.includes("Technical");
+  } catch (error) {
+    console.error('❌ AI connection test failed:', error);
+    return false;
   }
-  return aiService.generateChatResponse(message, history);
-};
+}
 
-// Configuration export
-export const aiConfig = {
-  projectId: config.projectId,
-  location: config.location,
-  model: 'gemini-1.5-pro',
-  hasCredentials: !!config.credentialsJson,
-  provider: 'Google Vertex AI',
-  isInitialized: isInitialized,
-  freeCredits: true,
-  costOptimized: true
-};
-
-console.log('🚀 AI Service configured with Vertex AI');
-console.log('💰 Compatible with Google Cloud $300 free credits');
-console.log('📱 Using reliable model: gemini-1.5-pro');
+console.log('🎉 AI Service module loaded successfully');
