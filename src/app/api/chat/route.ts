@@ -6,18 +6,29 @@ export async function POST(request: NextRequest) {
   try {
     const { message } = await request.json();
     
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      return NextResponse.json({ error: 'Valid message is required' }, { status: 400 });
     }
 
-    const response = await generateAIResponse(message);
+    console.log('💬 Chat API: Processing message:', message.substring(0, 50) + '...');
+
+    const response = await generateAIResponse(message.trim());
     
-    return NextResponse.json({ response });
+    if (!response || response.trim() === '') {
+      throw new Error('Empty response from AI service');
+    }
+
+    console.log('✅ Chat API: Successful response generated');
+    return NextResponse.json({ response: response.trim() });
   } catch (error: any) {
-    console.error('Chat API error:', error);
+    console.error('❌ Chat API error:', error);
+    
+    // Return a simple fallback only when there's a real error
+    const fallback = "Hey! Technical issues aa rahe hain. Try again please! 😊";
+    
     return NextResponse.json(
-      { error: 'Failed to generate response', details: error.message },
-      { status: 500 }
+      { response: fallback, error: true, details: error.message },
+      { status: 200 } // Still return 200 so the frontend shows the fallback
     );
   }
 }

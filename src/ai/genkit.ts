@@ -1,88 +1,60 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 
-// -----------------------------------------------------------------------------
-// Vertex AI with Service Account Credentials (Free $300 Credits Compatible)
-// -----------------------------------------------------------------------------
-
 // Environment variable validation
-const validateEnvironment = () => {
-  const required = {
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    location: process.env.VERTEX_AI_LOCATION || 'us-central1',
-    credentialsJson: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-  };
+const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
+const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
-  console.log('Genkit Vertex AI Environment Check:');
-  console.log('- Project ID:', required.projectId || 'MISSING');
-  console.log('- Location:', required.location);
-  console.log('- Credentials JSON:', required.credentialsJson ? 'SET' : 'MISSING');
+console.log('Direct Vertex AI Environment Check:');
+console.log('- Project ID:', projectId || 'MISSING');
+console.log('- Location:', location);
+console.log('- Credentials JSON:', credentialsJson ? 'SET' : 'MISSING');
 
-  return required;
-};
-
-const config = validateEnvironment();
-
-// Initialize Vertex AI
-let vertex: VertexAI | null = null;
-let model: any = null;
-
-if (config.projectId && config.credentialsJson) {
-  try {
-    let credentials;
-    
-    try {
-      // Direct JSON parsing - no base64 decoding needed
-      credentials = JSON.parse(config.credentialsJson);
-      console.log('✅ Genkit Vertex AI: Successfully parsed JSON credentials');
-    } catch (parseError) {
-      console.error('❌ Genkit Vertex AI: Failed to parse credentials JSON');
-      console.error('Parse error:', parseError.message);
-      throw new Error('Invalid credentials JSON format');
-    }
-    
-    vertex = new VertexAI({
-      project: credentials.project_id, // Use project_id from credentials
-      location: config.location,
-      googleAuthOptions: {
-        credentials: credentials
-      }
-    });
-
-    // Get the generative model (Gemini 1.5 Flash - cheapest and fastest)
-    model = vertex.preview.getGenerativeModel({
-      model: 'gemini-1.5-flash-001',
-      generationConfig: {
-        maxOutputTokens: 1024,
-        temperature: 0.7,
-        topP: 0.8,
-      }
-    });
-
-    console.log('🚀 Genkit Vertex AI initialized with Gemini 1.5 Flash model');
-    console.log('💰 Using Google Cloud $300 free credits');
-  } catch (error) {
-    console.error('❌ Failed to initialize Genkit Vertex AI:', error);
-    console.error('Please check your GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable');
-  }
-} else {
-  console.error('❌ Missing required Genkit Vertex AI configuration');
-  console.error('Required: GOOGLE_CLOUD_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS_JSON');
+if (!projectId || !credentialsJson) {
+  throw new Error('Missing required Vertex AI configuration');
 }
 
-// Get the Vertex AI model instance
-export const getVertexModel = () => {
-  if (!model) {
-    throw new Error('Vertex AI not initialized. Check your project ID and credentials.');
-  }
-  return model;
-};
+let credentials;
+try {
+  credentials = JSON.parse(credentialsJson);
+  console.log('✅ Direct Vertex AI: Successfully parsed JSON credentials');
+} catch (error) {
+  throw new Error('Invalid credentials JSON format');
+}
 
-// AI chat function for compatibility with existing code
-export const generateAIResponse = async (prompt: string): Promise<string> => {
+// Initialize Vertex AI directly
+const vertexAI = new VertexAI({
+  project: credentials.project_id,
+  location: location,
+  googleAuthOptions: {
+    credentials: credentials
+  }
+});
+
+const model = vertexAI.preview.getGenerativeModel({
+  model: 'gemini-1.5-flash-001',
+  generationConfig: {
+    maxOutputTokens: 1024,
+    temperature: 0.7,
+    topP: 0.8,
+    topK: 40
+  }
+});
+
+console.log('🚀 Direct Vertex AI initialized with Gemini 1.5 Flash model');
+console.log('💰 Using Google Cloud $300 free credits');
+
+// AI Response Generation
+export async function generateAIResponse(message: string): Promise<string> {
   try {
-    const vertexModel = getVertexModel();
-    
+    console.log('🤖 Generating response with Direct Vertex AI for message:', message.substring(0, 50) + '...');
+
+    const prompt = `You are Kruthika, a friendly 22-year-old Indian girl who loves chatting. You speak in a natural mix of Hindi and English like young Indians do (Hinglish). You're warm, friendly, engaging, and have a bubbly personality. Use emojis occasionally but don't overdo it. Keep responses conversational and not too long.
+
+User message: ${message}
+
+Respond as Kruthika in a natural, friendly way:`;
+
     const request = {
       contents: [{
         role: 'user',
@@ -90,35 +62,22 @@ export const generateAIResponse = async (prompt: string): Promise<string> => {
       }]
     };
 
-    const result = await vertexModel.generateContent(request);
+    const result = await model.generateContent(request);
     const response = result.response;
-    
+
     if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-      return response.candidates[0].content.parts[0].text;
+      const aiResponse = response.candidates[0].content.parts[0].text.trim();
+      console.log('✅ Direct Vertex AI response generated successfully');
+      console.log('📝 Response preview:', aiResponse.substring(0, 100) + '...');
+      return aiResponse;
     }
-    
-    throw new Error('No valid response received');
+
+    throw new Error('No valid response received from Direct Vertex AI');
   } catch (error) {
-    console.error('❌ Error generating AI response:', error);
-    throw new Error('Failed to generate AI response');
+    console.error('❌ Direct Vertex AI error:', error);
+    throw error; // Don't return fallback here, let the calling code handle it
   }
-};
+}
 
-// Export configuration for monitoring
-export const vertexConfig = {
-  projectId: config.projectId,
-  location: config.location,
-  model: 'gemini-1.5-flash-001',
-  hasCredentials: !!config.credentialsJson,
-  provider: 'Google Vertex AI',
-  freeCredits: true
-};
-
-// Legacy exports for backward compatibility
-export const ai = {
-  generate: generateAIResponse,
-  model: 'gemini-1.5-flash-001'
-};
-
-console.log('🎉 Genkit Vertex AI initialized - Compatible with Google Cloud free credits');
+console.log('🎉 Direct Vertex AI initialized - Compatible with Google Cloud free credits');
 console.log('📱 Using cheapest model: gemini-1.5-flash-001');

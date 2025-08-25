@@ -580,13 +580,8 @@ const KruthikaChatPage: NextPage = () => {
         availableAudio,
       };
 
-      // Try enhanced client-side response first
-      let aiResponse = getEnhancedResponse(inputData, userIdRef.current || undefined);
-
-      // If no enhanced response, use server action
-      if (!aiResponse) {
-        aiResponse = await generateResponse(inputData, userIdRef.current || undefined);
-      }
+      // Use server-side AI response directly (no enhanced client-side response to avoid duplicates)
+      const aiResponse = await generateResponse(inputData, userIdRef.current || undefined);
 
       if (aiResponse.proactiveImageUrl || aiResponse.proactiveAudioUrl) {
         if (adSettings && adSettings.adsEnabledGlobally) {

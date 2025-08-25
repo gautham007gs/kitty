@@ -159,12 +159,9 @@ Reply:`;
 
     return output;
   } catch (error) {
-    console.error('AI generation error:', error);
-
-    // Import the fallback function here to avoid circular dependencies
-    const { getAPIFailureFallback } = await import('@/ai/flows/emotional-state-simulation');
-    const fallbackResponse = await getAPIFailureFallback(input);
-    if (userId) userPersonalization.trackTokenUsage(userId, 10); // Minimal tokens for fallback
-    return fallbackResponse;
+    console.error('❌ Emotional state action error:', error);
+    
+    // Don't use complex fallback, throw error so it can be handled upstream
+    throw error;
   }
 }
