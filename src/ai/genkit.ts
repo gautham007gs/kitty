@@ -13,7 +13,7 @@ const validateEnvironment = () => {
     credentialsJson: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
   };
 
-  console.log('Vertex AI Environment Check:');
+  console.log('Genkit Vertex AI Environment Check:');
   console.log('- Project ID:', required.projectId || 'MISSING');
   console.log('- Location:', required.location);
   console.log('- Credentials JSON:', required.credentialsJson ? 'SET' : 'MISSING');
@@ -31,51 +31,42 @@ if (config.projectId && config.credentialsJson) {
   try {
     let credentials;
     
-    // Try to parse as base64 first, then as direct JSON
     try {
-      // First check if it looks like base64
-      if (config.credentialsJson.includes('{') && config.credentialsJson.includes('}')) {
-        // Looks like direct JSON
-        credentials = JSON.parse(config.credentialsJson);
-        console.log('Vertex AI: Successfully parsed direct JSON credentials');
-      } else {
-        // Try base64 decode
-        const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
-        credentials = JSON.parse(decodedCredentials);
-        console.log('Vertex AI: Successfully parsed base64 encoded credentials');
-      }
+      // Direct JSON parsing - no base64 decoding needed
+      credentials = JSON.parse(config.credentialsJson);
+      console.log('✅ Genkit Vertex AI: Successfully parsed JSON credentials');
     } catch (parseError) {
-      console.error('Vertex AI: Failed to parse credentials');
+      console.error('❌ Genkit Vertex AI: Failed to parse credentials JSON');
       console.error('Parse error:', parseError.message);
-      console.error('Credentials preview:', config.credentialsJson.substring(0, 100) + '...');
-      throw new Error('Invalid credentials format - please check your GOOGLE_APPLICATION_CREDENTIALS_JSON');
+      throw new Error('Invalid credentials JSON format');
     }
     
     vertex = new VertexAI({
-      project: config.projectId,
+      project: credentials.project_id, // Use project_id from credentials
       location: config.location,
       googleAuthOptions: {
         credentials: credentials
       }
     });
 
-    // Get the generative model (Gemini 1.5 Flash - most cost-effective)
+    // Get the generative model (Gemini 1.5 Flash - cheapest and fastest)
     model = vertex.preview.getGenerativeModel({
       model: 'gemini-1.5-flash-001',
       generationConfig: {
-        maxOutputTokens: 2048,
-        temperature: 0.9,
-        topP: 1,
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+        topP: 0.8,
       }
     });
 
-    console.log('Vertex AI initialized with Gemini 1.5 Flash model');
+    console.log('🚀 Genkit Vertex AI initialized with Gemini 1.5 Flash model');
+    console.log('💰 Using Google Cloud $300 free credits');
   } catch (error) {
-    console.error('Failed to initialize Vertex AI:', error);
+    console.error('❌ Failed to initialize Genkit Vertex AI:', error);
     console.error('Please check your GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable');
   }
 } else {
-  console.error('Missing required Vertex AI configuration');
+  console.error('❌ Missing required Genkit Vertex AI configuration');
   console.error('Required: GOOGLE_CLOUD_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS_JSON');
 }
 
@@ -108,7 +99,7 @@ export const generateAIResponse = async (prompt: string): Promise<string> => {
     
     throw new Error('No valid response received');
   } catch (error) {
-    console.error('Error generating AI response:', error);
+    console.error('❌ Error generating AI response:', error);
     throw new Error('Failed to generate AI response');
   }
 };
@@ -119,7 +110,8 @@ export const vertexConfig = {
   location: config.location,
   model: 'gemini-1.5-flash-001',
   hasCredentials: !!config.credentialsJson,
-  provider: 'Google Vertex AI'
+  provider: 'Google Vertex AI',
+  freeCredits: true
 };
 
 // Legacy exports for backward compatibility
@@ -128,4 +120,5 @@ export const ai = {
   model: 'gemini-1.5-flash-001'
 };
 
-console.log('Vertex AI initialized - Compatible with Google Cloud free credits');
+console.log('🎉 Genkit Vertex AI initialized - Compatible with Google Cloud free credits');
+console.log('📱 Using cheapest model: gemini-1.5-flash-001');

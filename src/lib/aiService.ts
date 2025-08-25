@@ -33,47 +33,45 @@ const initializeVertexAI = () => {
   try {
     let credentials;
     
-    // Try to parse as base64 first, then as direct JSON
     try {
-      // First check if it looks like base64
-      if (config.credentialsJson.includes('{') && config.credentialsJson.includes('}')) {
-        // Looks like direct JSON
-        credentials = JSON.parse(config.credentialsJson);
-        console.log('Vertex AI: Successfully parsed direct JSON credentials');
-      } else {
-        // Try base64 decode
-        const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
-        credentials = JSON.parse(decodedCredentials);
-        console.log('Vertex AI: Successfully parsed base64 encoded credentials');
-      }
+      // Direct JSON parsing - no base64 decoding needed
+      credentials = JSON.parse(config.credentialsJson);
+      console.log('✅ Vertex AI: Successfully parsed JSON credentials');
+      console.log('✅ Project ID from credentials:', credentials.project_id);
+      console.log('✅ Service account email:', credentials.client_email);
     } catch (parseError) {
-      console.error('Vertex AI: Failed to parse credentials');
+      console.error('❌ Vertex AI: Failed to parse credentials JSON');
       console.error('Parse error:', parseError.message);
-      throw new Error('Invalid credentials format - please check your GOOGLE_APPLICATION_CREDENTIALS_JSON');
+      console.error('Credentials preview:', config.credentialsJson.substring(0, 100) + '...');
+      throw new Error('Invalid credentials JSON format');
     }
 
+    // Initialize Vertex AI with proper authentication
     vertex = new VertexAI({
-      project: config.projectId,
+      project: credentials.project_id, // Use project_id from credentials
       location: config.location,
       googleAuthOptions: {
         credentials: credentials
       }
     });
 
-    // Get the generative model (using Gemini 1.5 Flash - cheapest option)
+    // Use the cheapest Gemini model - gemini-1.5-flash (best cost/performance ratio)
     model = vertex.preview.getGenerativeModel({
       model: 'gemini-1.5-flash-001',
       generationConfig: {
-        maxOutputTokens: 2048,
-        temperature: 0.9,
-        topP: 1,
+        maxOutputTokens: 1024, // Reduced for cost optimization
+        temperature: 0.7,      // Balanced creativity
+        topP: 0.8,            // Good quality responses
+        topK: 40              // Diversity control
       }
     });
 
-    console.log('Vertex AI initialized successfully with Gemini 1.5 Flash');
+    console.log('🚀 Vertex AI initialized successfully!');
+    console.log('📱 Model: gemini-1.5-flash-001 (cheapest option)');
+    console.log('💰 Using Google Cloud $300 free credits');
     return true;
   } catch (error) {
-    console.error('Failed to initialize Vertex AI:', error);
+    console.error('❌ Failed to initialize Vertex AI:', error);
     return false;
   }
 };
@@ -95,8 +93,9 @@ export class AIService {
     if (!AIService.instance) {
       try {
         AIService.instance = new AIService();
+        console.log('✅ AIService singleton created successfully');
       } catch (error) {
-        console.error('Failed to create AIService instance:', error);
+        console.error('❌ Failed to create AIService instance:', error);
         throw error;
       }
     }
@@ -109,6 +108,8 @@ export class AIService {
         throw new Error('Vertex AI model not initialized');
       }
 
+      console.log('🤖 Generating AI response with Vertex AI...');
+      
       const request = {
         contents: [{
           role: 'user',
@@ -120,37 +121,55 @@ export class AIService {
       const response = result.response;
 
       if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-        return response.candidates[0].content.parts[0].text;
+        const aiResponse = response.candidates[0].content.parts[0].text;
+        console.log('✅ AI response generated successfully');
+        return aiResponse;
       }
 
       throw new Error('No valid response received from Vertex AI');
     } catch (error) {
-      console.error('Error generating AI response:', error);
-      return "I'm having trouble connecting right now. Please try again in a moment! 😊";
+      console.error('❌ Error generating AI response:', error);
+      // Return a fallback only if there's a real error
+      return "Sorry yaar, I'm having some technical issues right now. Please try again! 😊";
     }
   }
 
   async generateChatResponse(message: string, history: any[] = []): Promise<string> {
     try {
-      // Create context from chat history
-      let contextPrompt = "You are Kruthika, a friendly Indian girl who loves chatting. ";
-      contextPrompt += "Respond naturally in a mix of Hindi and English like young Indians do. ";
-      contextPrompt += "Be warm, friendly, and engaging.\n\n";
+      // Create context from chat history with Kruthika's personality
+      let contextPrompt = "You are Kruthika, a friendly 22-year-old Indian girl who loves chatting. ";
+      contextPrompt += "You speak in a natural mix of Hindi and English like young Indians do (Hinglish). ";
+      contextPrompt += "You're warm, friendly, engaging, and have a bubbly personality. ";
+      contextPrompt += "Use emojis occasionally but don't overdo it. ";
+      contextPrompt += "Keep responses conversational and not too long.\n\n";
       
       if (history.length > 0) {
         contextPrompt += "Recent conversation:\n";
-        history.slice(-5).forEach((msg: any) => {
-          contextPrompt += `${msg.sender_type === 'user' ? 'User' : 'You'}: ${msg.text_content}\n`;
+        history.slice(-3).forEach((msg: any) => {
+          contextPrompt += `${msg.sender_type === 'user' ? 'User' : 'Kruthika'}: ${msg.text_content}\n`;
         });
         contextPrompt += "\n";
       }
       
-      contextPrompt += `User just said: ${message}\n\nRespond as Kruthika:`;
+      contextPrompt += `User just said: ${message}\n\nRespond as Kruthika in a natural, friendly way:`;
 
+      console.log('💬 Generating chat response for:', message.substring(0, 50) + '...');
       return await this.generateResponse(contextPrompt);
     } catch (error) {
-      console.error('Error generating chat response:', error);
-      return "Hey! I'm not quite ready to chat yet. Give me a moment! 😊";
+      console.error('❌ Error generating chat response:', error);
+      return "Hey! Technical problems ho rahe hain. Try again please! 😊";
+    }
+  }
+
+  // Test function to verify AI is working
+  async testConnection(): Promise<boolean> {
+    try {
+      const testResponse = await this.generateResponse("Say hello in one sentence.");
+      console.log('🧪 AI Test Response:', testResponse);
+      return testResponse.length > 0 && !testResponse.includes("technical issues");
+    } catch (error) {
+      console.error('❌ AI Connection test failed:', error);
+      return false;
     }
   }
 }
@@ -160,9 +179,18 @@ let aiService: AIService | null = null;
 
 try {
   aiService = AIService.getInstance();
-  console.log('AI Service initialized successfully with Vertex AI');
+  console.log('✅ AI Service initialized successfully with Vertex AI');
+  
+  // Test the connection
+  aiService.testConnection().then(success => {
+    if (success) {
+      console.log('🎉 AI Connection test PASSED - Ready to chat!');
+    } else {
+      console.log('⚠️ AI Connection test FAILED - Check configuration');
+    }
+  });
 } catch (error) {
-  console.error('AI Service initialization failed:', error);
+  console.error('❌ AI Service initialization failed:', error);
 }
 
 export { aiService };
@@ -189,7 +217,11 @@ export const aiConfig = {
   model: 'gemini-1.5-flash-001',
   hasCredentials: !!config.credentialsJson,
   provider: 'Google Vertex AI',
-  isInitialized: isInitialized
+  isInitialized: isInitialized,
+  freeCredits: true,
+  costOptimized: true
 };
 
-console.log('AI Service configured with Vertex AI - Free Google Cloud credits compatible');
+console.log('🚀 AI Service configured with Vertex AI');
+console.log('💰 Compatible with Google Cloud $300 free credits');
+console.log('📱 Using cheapest model: gemini-1.5-flash-001');
