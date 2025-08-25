@@ -1,7 +1,7 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { generateAIResponse } from '@/ai/genkit';
+import { z } from 'zod';
 import {chatCache} from '@/lib/chatCache';
 import { userPersonalization } from '@/lib/userPersonalization';
 import { multilingualPersonality, addictionTriggers } from '@/config/ai';
@@ -125,18 +125,7 @@ Recent: ${recentContext}
 User: ${input.userMessage}
 Reply:`;
 
-    const result = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
-      prompt: prompt,
-      config: {
-        temperature: 0.9,
-        maxOutputTokens: 60, // Further reduced for cost
-        topP: 0.9,
-        topK: 30,
-      },
-    });
-
-    const response = result.text || "Sorry, my mind went blank! 😅";
+    const response = await generateAIResponse(prompt);
 
     // Estimate and track token usage
     const estimatedTokens = Math.ceil((prompt.length + response.length) / 3); // Rough estimation
