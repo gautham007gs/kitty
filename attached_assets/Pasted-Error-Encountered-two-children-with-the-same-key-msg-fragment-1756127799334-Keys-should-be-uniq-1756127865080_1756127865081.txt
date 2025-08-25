@@ -1,0 +1,24 @@
+Error: Encountered two children with the same key, `msg-fragment-1756127799334`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at createUnhandledError (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_client_43e3ffb8._.js:879:71)
+    at handleClientError (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_client_43e3ffb8._.js:1052:56)
+    at console.error (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_client_43e3ffb8._.js:1191:56)
+    at https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:6688:33
+    at runWithFiberInDEV (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:3501:74)
+    at warnOnInvalidKey (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:6687:21)
+    at reconcileChildrenArray (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:6704:29)
+    at reconcileChildFibersImpl (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:6819:117)
+    at https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:6846:39
+    at reconcileChildren (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:7068:119)
+    at beginWork (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:7841:24)
+    at runWithFiberInDEV (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:3501:74)
+    at performUnitOfWork (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:10168:97)
+    at workLoopSync (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:10060:40)
+    at renderRootSync (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:10043:13)
+    at performWorkOnRoot (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:9784:212)
+    at performWorkOnRootViaSchedulerTask (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:10796:9)
+    at MessagePort.performWorkUntilDeadline (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js:1952:64)
+    at https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/src_b3474b9b._.js:687:249
+    at Array.map (<anonymous>)
+    at ChatView (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/src_b3474b9b._.js:687:29)
+    at KruthikaChatPage (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/src_b3474b9b._.js:3067:223)
+    at ClientPageRoot (https://1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev:5000/_next/static/chunks/node_modules_next_dist_1a6ee436._.js:2053:50)
