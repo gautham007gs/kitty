@@ -567,6 +567,21 @@ class UserPersonalization {
     const dailyLimit = this.getDailyTokenLimit(userId);
     return profile.dailyTokensUsed >= dailyLimit;
   }
+
+  getTokenUsageStatus(userId: string): { used: number; limit: number; remaining: number; percentage: number } {
+    const profile = this.profiles.get(userId) || this.createDefaultProfile();
+    const dailyLimit = this.getDailyTokenLimit(userId);
+    const used = profile.dailyTokensUsed;
+    const remaining = Math.max(0, dailyLimit - used);
+    const percentage = Math.round((used / dailyLimit) * 100);
+
+    return {
+      used,
+      limit: dailyLimit,
+      remaining,
+      percentage
+    };
+  }
 }
 
 export const userPersonalization = new UserPersonalization();
