@@ -52,7 +52,7 @@ try {
 
   // Initialize model with optimized settings
   model = vertex.preview.getGenerativeModel({
-    model: 'gemini-1.5-flash-002', // Latest version
+    model: 'gemini-2.0-flash-lite', // Latest Gemini 2.0 model
     generationConfig: {
       maxOutputTokens: 800,
       temperature: 0.7,
@@ -64,7 +64,7 @@ try {
 
   isInitialized = true;
   console.log('🚀 Vertex AI initialized successfully!');
-  console.log('📱 Model: gemini-1.5-flash-002 (latest)');
+  console.log('📱 Model: gemini-2.0-flash-lite (latest)');
 
 } catch (error) {
   console.error('❌ Failed to initialize Vertex AI:', error);

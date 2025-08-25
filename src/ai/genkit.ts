@@ -1,4 +1,3 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 
 // Environment variable validation
@@ -25,7 +24,7 @@ try {
   console.log('✅ Successfully parsed JSON credentials');
   console.log('📧 Service account email:', credentials.client_email);
   console.log('🆔 Project ID from credentials:', credentials.project_id);
-  
+
   // Validate essential fields
   if (!credentials.private_key || !credentials.client_email || !credentials.project_id) {
     throw new Error('Incomplete credentials: missing private_key, client_email, or project_id');
@@ -61,7 +60,7 @@ try {
 
   // Initialize the model with optimized settings
   model = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-1.5-flash-002', // Using correct model name
+    model: 'gemini-2.0-flash-lite', // Latest Gemini 2.0 model
     generationConfig: {
       maxOutputTokens: 800,
       temperature: 0.7,
@@ -72,7 +71,7 @@ try {
   });
 
   console.log('🚀 Vertex AI initialized successfully!');
-  console.log('📱 Model: gemini-1.5-flash-002 (latest version)');
+  console.log('📱 Model: gemini-2.0-flash-lite (latest)');
 
 } catch (error) {
   console.error('❌ Failed to initialize Vertex AI:', error);
@@ -116,21 +115,21 @@ Kruthika:`;
 
   } catch (error) {
     console.error('❌ Vertex AI generation error:', error);
-    
+
     // Check specific error types
     if (error.message && error.message.includes('authentication')) {
       console.error('🔐 Authentication issue - credentials problem');
       return "Hey! Meri authentication mein problem hai. Admin ko batana padega! 😅";
     }
-    
+
     if (error.message && error.message.includes('quota')) {
       console.error('💰 Quota exceeded');
       return "Oops! Daily limit ho gaya. Kal try karna! 💫";
     }
-    
+
     // Generic fallback
     return "Sorry yaar, technical issues aa rahe hain. Try again! 😊";
   }
 }
 
-console.log('🎉 Vertex AI module ready with Gemini 1.5 Flash 002 (latest)');
+console.log('🎉 Vertex AI module ready with Gemini 2.0 Flash Lite (latest)');
