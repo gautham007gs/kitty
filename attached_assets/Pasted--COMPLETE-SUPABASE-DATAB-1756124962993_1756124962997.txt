@@ -1,0 +1,335 @@
+
+-- ===================================================================
+-- COMPLETE SUPABASE DATABASE SETUP FOR MAYA CHAT APPLICATION
+-- Copy this entire script to your Supabase SQL Editor and run it
+-- ===================================================================
+
+-- Drop all existing tables and functions for clean setup
+DROP TABLE IF EXISTS messages_log CASCADE;
+DROP TABLE IF EXISTS ai_profile_settings CASCADE;
+DROP TABLE IF EXISTS ad_settings CASCADE;
+DROP TABLE IF EXISTS ai_media_assets CASCADE;
+DROP TABLE IF EXISTS daily_activity_log CASCADE;
+DROP TABLE IF EXISTS app_configurations CASCADE;
+
+-- Drop existing functions
+DROP FUNCTION IF EXISTS get_daily_message_counts(DATE);
+DROP FUNCTION IF EXISTS get_daily_active_user_counts(DATE);
+DROP FUNCTION IF EXISTS log_daily_activity(TEXT, TEXT, TEXT);
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ===================================================================
+-- CREATE MAIN TABLES
+-- ===================================================================
+
+-- Messages log table (fixed schema)
+CREATE TABLE messages_log (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    message_id TEXT,
+    sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'ai')),
+    chat_id TEXT NOT NULL DEFAULT 'kruthika_chat',
+    text_content TEXT NOT NULL,
+    message_content TEXT, -- Added for compatibility
+    content TEXT, -- Additional compatibility column
+    has_image BOOLEAN DEFAULT FALSE,
+    message_type TEXT DEFAULT 'text',
+    media_url TEXT,
+    media_caption TEXT,
+    mood TEXT,
+    user_agent TEXT,
+    ip_address INET,
+    session_id TEXT,
+    user_pseudo_id TEXT,
+    user_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- AI profile settings table
+CREATE TABLE ai_profile_settings (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ad settings table
+CREATE TABLE ad_settings (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- AI media assets table
+CREATE TABLE ai_media_assets (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    assets JSONB NOT NULL DEFAULT '{"assets": []}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Daily activity log table
+CREATE TABLE daily_activity_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_pseudo_id TEXT NOT NULL,
+    activity_date DATE NOT NULL,
+    chat_id TEXT DEFAULT 'kruthika_chat',
+    session_id TEXT,
+    activity_count INTEGER DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT unique_user_activity_per_day_per_chat UNIQUE (user_pseudo_id, activity_date, chat_id)
+);
+
+-- App configurations table (for backward compatibility)
+CREATE TABLE app_configurations (
+    id TEXT PRIMARY KEY,
+    settings JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===================================================================
+-- CREATE INDEXES FOR PERFORMANCE
+-- ===================================================================
+
+CREATE INDEX idx_messages_log_chat_id ON messages_log(chat_id);
+CREATE INDEX idx_messages_log_sender_type ON messages_log(sender_type);
+CREATE INDEX idx_messages_log_created_at ON messages_log(created_at DESC);
+CREATE INDEX idx_messages_log_session_id ON messages_log(session_id);
+CREATE INDEX idx_daily_activity_date ON daily_activity_log(activity_date);
+CREATE INDEX idx_daily_activity_chat ON daily_activity_log(chat_id);
+CREATE INDEX idx_daily_activity_user ON daily_activity_log(user_pseudo_id);
+
+-- ===================================================================
+-- ENABLE ROW LEVEL SECURITY
+-- ===================================================================
+
+ALTER TABLE messages_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_profile_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ad_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_media_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_activity_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_configurations ENABLE ROW LEVEL SECURITY;
+
+-- ===================================================================
+-- CREATE RLS POLICIES (DEVELOPMENT - ADJUST FOR PRODUCTION)
+-- ===================================================================
+
+-- Messages log policies
+CREATE POLICY "Allow public read access on messages_log" 
+ON messages_log FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on messages_log" 
+ON messages_log FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow public update on messages_log" 
+ON messages_log FOR UPDATE USING (true);
+
+-- AI profile settings policies
+CREATE POLICY "Allow public read access on ai_profile_settings" 
+ON ai_profile_settings FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on ai_profile_settings" 
+ON ai_profile_settings FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow public update on ai_profile_settings" 
+ON ai_profile_settings FOR UPDATE USING (true);
+
+-- Ad settings policies
+CREATE POLICY "Allow public read access on ad_settings" 
+ON ad_settings FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on ad_settings" 
+ON ad_settings FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow public update on ad_settings" 
+ON ad_settings FOR UPDATE USING (true);
+
+-- AI media assets policies
+CREATE POLICY "Allow public read access on ai_media_assets" 
+ON ai_media_assets FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on ai_media_assets" 
+ON ai_media_assets FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow public update on ai_media_assets" 
+ON ai_media_assets FOR UPDATE USING (true);
+
+-- Daily activity log policies
+CREATE POLICY "Allow public read access on daily_activity_log" 
+ON daily_activity_log FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on daily_activity_log" 
+ON daily_activity_log FOR INSERT WITH CHECK (true);
+
+-- App configurations policies
+CREATE POLICY "Allow public read access on app_configurations" 
+ON app_configurations FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert on app_configurations" 
+ON app_configurations FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow public update on app_configurations" 
+ON app_configurations FOR UPDATE USING (true);
+
+-- ===================================================================
+-- CREATE HELPER FUNCTIONS
+-- ===================================================================
+
+-- Function to get daily message counts
+CREATE OR REPLACE FUNCTION get_daily_message_counts(start_date DATE)
+RETURNS TABLE(date DATE, messages BIGINT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    DATE_TRUNC('day', ml.created_at AT TIME ZONE 'UTC')::DATE AS date,
+    COUNT(ml.id) AS messages
+  FROM messages_log ml
+  WHERE (ml.created_at AT TIME ZONE 'UTC')::DATE >= start_date
+  GROUP BY DATE_TRUNC('day', ml.created_at AT TIME ZONE 'UTC')
+  ORDER BY date ASC;
+END;
+$$;
+
+-- Function to get daily active user counts
+CREATE OR REPLACE FUNCTION get_daily_active_user_counts(start_date DATE)
+RETURNS TABLE(date DATE, active_users BIGINT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    dal.activity_date AS date,
+    COUNT(DISTINCT dal.user_pseudo_id) AS active_users
+  FROM daily_activity_log dal
+  WHERE dal.activity_date >= start_date
+  AND dal.chat_id = 'kruthika_chat'
+  GROUP BY dal.activity_date
+  ORDER BY date ASC;
+END;
+$$;
+
+-- Function to log daily activity with upsert
+CREATE OR REPLACE FUNCTION log_daily_activity(
+  p_user_id TEXT,
+  p_session_id TEXT DEFAULT 'anonymous',
+  p_chat_id TEXT DEFAULT 'kruthika_chat'
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  INSERT INTO daily_activity_log (user_pseudo_id, activity_date, chat_id, session_id, activity_count)
+  VALUES (p_user_id, CURRENT_DATE, p_chat_id, p_session_id, 1)
+  ON CONFLICT (user_pseudo_id, activity_date, chat_id)
+  DO UPDATE SET 
+    activity_count = daily_activity_log.activity_count + 1,
+    session_id = EXCLUDED.session_id;
+END;
+$$;
+
+-- ===================================================================
+-- GRANT PERMISSIONS
+-- ===================================================================
+
+GRANT EXECUTE ON FUNCTION get_daily_message_counts(DATE) TO anon;
+GRANT EXECUTE ON FUNCTION get_daily_active_user_counts(DATE) TO anon;
+GRANT EXECUTE ON FUNCTION log_daily_activity(TEXT, TEXT, TEXT) TO anon;
+
+-- ===================================================================
+-- INSERT DEFAULT DATA
+-- ===================================================================
+
+-- Insert default AI profile settings
+INSERT INTO ai_profile_settings (id, settings) 
+VALUES ('default', '{
+    "name": "Kruthika",
+    "avatarUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    "status": "🌸 Living my best life! Let''s chat! 🌸",
+    "statusStoryText": "Ask me anything! 💬",
+    "statusStoryImageUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    "statusStoryHasUpdate": true,
+    "personality": "friendly",
+    "language": "multilingual",
+    "responseStyle": "casual"
+}') 
+ON CONFLICT (id) DO UPDATE SET 
+  settings = EXCLUDED.settings,
+  updated_at = NOW();
+
+-- Insert default ad settings
+INSERT INTO ad_settings (id, settings)
+VALUES ('default', '{
+    "adsEnabledGlobally": true,
+    "adsterraDirectLink": "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
+    "adsterraDirectLinkEnabled": true,
+    "adsterraBannerEnabled": true,
+    "adsterraNativeBannerEnabled": false,
+    "adsterraSocialBarEnabled": false,
+    "adsterraPopunderEnabled": true,
+    "adsterraPopunderCode": "<script type=\"text/javascript\">\\natOptions = {\\n\\t''key'' : ''2dc1e58e3be02dd1e015a64b5d1d7d69'',\\n\\t''format'' : ''iframe'',\\n\\t''height'' : 50,\\n\\t''width'' : 320,\\n\\t''params'' : {}\\n};\\n</script>\\n<script type=\"text/javascript\" src=\"//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js\"></script>",
+    "monetagDirectLink": "https://www.profitablecpmgate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
+    "monetagDirectLinkEnabled": false,
+    "monetagBannerEnabled": false,
+    "monetagNativeBannerEnabled": false,
+    "monetagSocialBarEnabled": false,
+    "monetagPopunderEnabled": false,
+    "maxDirectLinkAdsPerDay": 6,
+    "maxDirectLinkAdsPerSession": 3,
+    "adFrequency": "moderate",
+    "targetAudience": "global"
+}')
+ON CONFLICT (id) DO UPDATE SET 
+  settings = EXCLUDED.settings,
+  updated_at = NOW();
+
+-- Insert default AI media assets
+INSERT INTO ai_media_assets (id, assets)
+VALUES ('default', '{
+    "assets": [
+        {
+            "id": "profile_img_1",
+            "type": "image",
+            "url": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+            "description": "Main profile photo",
+            "category": "profile",
+            "mood": "happy"
+        },
+        {
+            "id": "status_img_1",
+            "type": "image", 
+            "url": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+            "description": "Status story image",
+            "category": "status",
+            "mood": "cheerful"
+        }
+    ],
+    "metadata": {
+        "totalAssets": 2,
+        "lastUpdated": "2024-01-01",
+        "version": "1.0"
+    }
+}')
+ON CONFLICT (id) DO UPDATE SET 
+  assets = EXCLUDED.assets,
+  updated_at = NOW();
+
+-- Insert default app configurations (for backward compatibility)
+INSERT INTO app_configurations (id, settings)
+VALUES ('ad_settings_kruthika_chat_v1', '{
+    "adsEnabledGlobally": true,
+    "adsterraDirectLink": "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
+    "adsterraDirectLinkEnabled": true,
+    "maxDirectLinkAdsPerDay": 6,
+    "maxDirectLinkAdsPerSession": 3,
+    "version": "v1",
+    "environment": "production"
+}')
+ON CONFLICT (id) DO UPDATE SET 
+  settings = EXCLUDED.settings,
+  updated_at = NOW();
