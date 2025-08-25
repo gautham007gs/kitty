@@ -103,7 +103,9 @@ const ChatView: React.FC<ChatViewProps> = ({
           )}
         </React.Fragment>
       ))}
-      {isAiTyping && <TypingIndicator avatarUrl={aiAvatarUrl} />}
+      {isAiTyping && (
+          <TypingIndicator avatarUrl={aiAvatarUrl} aiName={aiName} />
+        )}
       <div ref={messagesEndRef} />
     </div>
   );

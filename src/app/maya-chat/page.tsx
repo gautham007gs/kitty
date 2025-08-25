@@ -503,6 +503,57 @@ const KruthikaChatPage: NextPage = () => {
     );
   };
 
+  // Helper function to chunk AI responses into realistic message parts
+  const chunkResponse = (response: string): string[] => {
+    // Split by natural breaking points
+    const sentences = response.split(/(?<=[.!?])\s+/);
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    for (const sentence of sentences) {
+      // If adding this sentence would make the chunk too long, start a new chunk
+      if (currentChunk && (currentChunk.length + sentence.length) > 80) {
+        chunks.push(currentChunk.trim());
+        currentChunk = sentence;
+      } else {
+        currentChunk += (currentChunk ? ' ' : '') + sentence;
+      }
+    }
+
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+
+    // If no natural breaks found, split by length
+    if (chunks.length === 0 && response.length > 80) {
+      const words = response.split(' ');
+      currentChunk = '';
+      
+      for (const word of words) {
+        if (currentChunk && (currentChunk.length + word.length + 1) > 80) {
+          chunks.push(currentChunk.trim());
+          currentChunk = word;
+        } else {
+          currentChunk += (currentChunk ? ' ' : '') + word;
+        }
+      }
+      
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+    }
+
+    return chunks.length > 0 ? chunks : [response];
+  };
+
+  // Calculate realistic typing delay based on message length
+  const calculateTypingDelay = (message: string): number => {
+    const baseDelay = 1000; // 1 second minimum
+    const charsPerSecond = 3; // Realistic typing speed
+    const readingTime = message.length * 30; // Time to "think" about response
+    return baseDelay + (message.length * charsPerSecond * 100) + readingTime;
+  };
+
   const handleSendMessage = useCallback(async (text: string, imageUri?: string) => {
     if (!text.trim() && !imageUri) return;
 
@@ -527,19 +578,18 @@ const KruthikaChatPage: NextPage = () => {
     const newInteraction = text.substring(0, 50);
     setRecentInteractions(prev => [...prev.slice(-4), newInteraction]);
 
-    // Add typing indicator after a short delay
-    const typingDelay = 800 + Math.random() * 1200;
-    let typingIndicatorTimeout: NodeJS.Timeout;
-
-    typingIndicatorTimeout = setTimeout(() => {
+    // Realistic delay before showing typing indicator
+    const initialDelay = 500 + Math.random() * 800; // 0.5-1.3 seconds
+    
+    const typingIndicatorTimeout = setTimeout(() => {
       setIsAiTyping(true);
-    }, typingDelay);
+    }, initialDelay);
 
     try {
       updateMessageStatus(userMessageId, 'sent');
       resetInactivityTimer();
 
-      // Call the chat API directly
+      // Call the chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -560,12 +610,32 @@ const KruthikaChatPage: NextPage = () => {
       }
 
       const result = await response.json();
-      clearTimeout(typingIndicatorTimeout);
-      setIsAiTyping(false);
 
       if (result.response) {
-        const aiMessageId = addMessage(result.response, false);
-        if (result.newMood) setAiMood(result.newMood);
+        // Calculate total typing time based on response length
+        const totalTypingTime = calculateTypingDelay(result.response);
+        
+        // Keep typing indicator for the calculated time
+        setTimeout(() => {
+          setIsAiTyping(false);
+          
+          // Chunk the response for realistic delivery
+          const chunks = chunkResponse(result.response);
+          
+          // Send chunks with realistic delays between them
+          chunks.forEach((chunk, index) => {
+            setTimeout(() => {
+              const aiMessageId = addMessage(chunk, false);
+              updateMessageStatus(aiMessageId, 'read');
+              
+              // Update mood only after the last chunk
+              if (index === chunks.length - 1 && result.newMood) {
+                setAiMood(result.newMood);
+              }
+            }, index * 800); // 800ms delay between chunks
+          });
+          
+        }, totalTypingTime);
 
         userPersonalization.incrementMessageCount();
         if (tokenUsageStatus) {
@@ -575,7 +645,6 @@ const KruthikaChatPage: NextPage = () => {
             percentage: Math.round(((prev.used + 1) / prev.limit) * 100)
           } : null);
         }
-        updateMessageStatus(aiMessageId, 'read');
       } else {
         throw new Error('No response received from API');
       }
@@ -591,11 +660,11 @@ const KruthikaChatPage: NextPage = () => {
 
       // Show a natural, context-aware fallback response
       const fallbackResponses = [
-        "Sorry, I was thinking about something else! What were you saying? 😊",
-        "Oops, my mind wandered for a second! Can you repeat that?",
-        "I think I missed that - network issues maybe? Tell me again! 💭",
-        "Sorry, I was distracted! What did you want to talk about?",
-        "My connection seems slow today! Can you say that again? 🙈"
+        "Arre yaar! Technical problem aa rahi hai 😅",
+        "Sorry! Internet slow hai, try again? 🙈",
+        "Oops! Kuch gadbad hui, repeat karo please 😊",
+        "Connection issue hai yaar! Once more? 💭",
+        "Sorry! Network problem, try again please! 🙈"
       ];
 
       const randomFallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];

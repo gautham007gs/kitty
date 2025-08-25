@@ -3,28 +3,51 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface TypingIndicatorProps {
   avatarUrl: string;
+  aiName?: string;
 }
 
-const TypingIndicator: React.FC<TypingIndicatorProps> = ({ avatarUrl }) => {
+const TypingIndicator: React.FC<TypingIndicatorProps> = ({ avatarUrl, aiName = "Kruthika" }) => {
   return (
-    <div className="flex items-center space-x-2 p-2">
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={avatarUrl} alt="AI Avatar" data-ai-hint="profile woman" />
-        <AvatarFallback>AI</AvatarFallback>
+    <div className="flex items-start space-x-3 p-3 animate-fade-in">
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarImage src={avatarUrl} alt={`${aiName}'s Avatar`} data-ai-hint="profile woman" />
+        <AvatarFallback className="bg-pink-100 text-pink-600">
+          {aiName.charAt(0)}
+        </AvatarFallback>
       </Avatar>
-      <div className="flex items-center space-x-1 bg-chat-bg-ai text-chat-text-ai rounded-full px-3 py-2 shadow-md">
-        <span className="typing-dot animate-bounce [animation-delay:-0.3s]"></span>
-        <span className="typing-dot animate-bounce [animation-delay:-0.15s]"></span>
-        <span className="typing-dot animate-bounce"></span>
+      
+      <div className="flex items-center space-x-1 bg-white text-gray-600 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border max-w-20">
+        <div className="flex space-x-1">
+          <div className="typing-dot bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+          <div className="typing-dot bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+          <div className="typing-dot bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+        </div>
       </div>
+      
       <style jsx>{`
         .typing-dot {
           display: inline-block;
-          width: 6px;
-          height: 6px;
-          background-color: currentColor;
+          width: 4px;
+          height: 4px;
           border-radius: 50%;
-          opacity: 0.7;
+          animation-duration: 1.2s;
+          animation-iteration-count: infinite;
+          animation-timing-function: ease-in-out;
+        }
+        
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
         }
       `}</style>
     </div>
