@@ -1,7 +1,5 @@
-
 -- ===================================================================
 -- COMPLETE SUPABASE DATABASE SETUP FOR MAYA CHAT APPLICATION
--- WITH VERTEX AI INTEGRATION AND REAL-TIME ADMIN PANEL
 -- Copy this entire script to your Supabase SQL Editor and run it
 -- ===================================================================
 

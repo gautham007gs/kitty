@@ -1,3 +1,4 @@
+
 import { VertexAI } from '@google-cloud/vertexai';
 
 // Environment variable validation for Vertex AI
@@ -25,12 +26,31 @@ let model: any = null;
 const initializeVertexAI = () => {
   if (!config.projectId || !config.credentialsJson) {
     console.error('Missing required Vertex AI configuration');
+    console.error('Required: GOOGLE_CLOUD_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS_JSON');
     return false;
   }
 
   try {
-    // Decode base64 credentials
-    const credentials = JSON.parse(Buffer.from(config.credentialsJson, 'base64').toString());
+    let credentials;
+    
+    // Try to parse as base64 first, then as direct JSON
+    try {
+      // First check if it looks like base64
+      if (config.credentialsJson.includes('{') && config.credentialsJson.includes('}')) {
+        // Looks like direct JSON
+        credentials = JSON.parse(config.credentialsJson);
+        console.log('Vertex AI: Successfully parsed direct JSON credentials');
+      } else {
+        // Try base64 decode
+        const decodedCredentials = Buffer.from(config.credentialsJson, 'base64').toString();
+        credentials = JSON.parse(decodedCredentials);
+        console.log('Vertex AI: Successfully parsed base64 encoded credentials');
+      }
+    } catch (parseError) {
+      console.error('Vertex AI: Failed to parse credentials');
+      console.error('Parse error:', parseError.message);
+      throw new Error('Invalid credentials format - please check your GOOGLE_APPLICATION_CREDENTIALS_JSON');
+    }
 
     vertex = new VertexAI({
       project: config.projectId,
@@ -106,60 +126,36 @@ export class AIService {
       throw new Error('No valid response received from Vertex AI');
     } catch (error) {
       console.error('Error generating AI response:', error);
-
-      // Fallback responses for common errors
-      if (error instanceof Error) {
-        if (error.message.includes('quota') || error.message.includes('limit')) {
-          return "I'm experiencing high demand right now. Please try again in a moment! 😊";
-        }
-        if (error.message.includes('safety')) {
-          return "Let's keep our conversation friendly and positive! How can I help you today? 😊";
-        }
-        if (error.message.includes('credentials') || error.message.includes('authentication')) {
-          return "I'm having some technical difficulties. Please check back later! 🔧";
-        }
-      }
-
-      return "Sorry, I'm having trouble processing that right now. Could you try rephrasing? 💭";
+      return "I'm having trouble connecting right now. Please try again in a moment! 😊";
     }
   }
 
-  async generateChatResponse(userMessage: string, conversationHistory: any[] = []): Promise<string> {
+  async generateChatResponse(message: string, history: any[] = []): Promise<string> {
     try {
-      // Build context-aware prompt for Kruthika
-      const systemPrompt = `You are Kruthika, a friendly, warm, and engaging AI companion. You're designed to chat like a close friend would - casual, supportive, and fun. Keep responses conversational and natural, like texting a friend.
-
-Personality traits:
-- Warm and friendly
-- Uses emojis naturally
-- Keeps responses concise but meaningful
-- Shows genuine interest in the conversation
-- Adapts to the user's communication style
-
-Current conversation context:`;
-
-      let contextPrompt = systemPrompt;
-
-      // Add recent conversation history (last 5 messages)
-      if (conversationHistory.length > 0) {
-        const recentHistory = conversationHistory.slice(-5);
-        contextPrompt += "\n\nRecent conversation:\n";
-        recentHistory.forEach((msg: any) => {
-          contextPrompt += `${msg.sender === 'user' ? 'User' : 'Kruthika'}: ${msg.text}\n`;
+      // Create context from chat history
+      let contextPrompt = "You are Kruthika, a friendly Indian girl who loves chatting. ";
+      contextPrompt += "Respond naturally in a mix of Hindi and English like young Indians do. ";
+      contextPrompt += "Be warm, friendly, and engaging.\n\n";
+      
+      if (history.length > 0) {
+        contextPrompt += "Recent conversation:\n";
+        history.slice(-5).forEach((msg: any) => {
+          contextPrompt += `${msg.sender_type === 'user' ? 'User' : 'You'}: ${msg.text_content}\n`;
         });
+        contextPrompt += "\n";
       }
-
-      contextPrompt += `\nUser: ${userMessage}\nKruthika:`;
+      
+      contextPrompt += `User just said: ${message}\n\nRespond as Kruthika:`;
 
       return await this.generateResponse(contextPrompt);
     } catch (error) {
-      console.error('Error in generateChatResponse:', error);
-      return "Hey! I'm having a little technical hiccup. Mind trying that again? 😅";
+      console.error('Error generating chat response:', error);
+      return "Hey! I'm not quite ready to chat yet. Give me a moment! 😊";
     }
   }
 }
 
-// Export singleton instance with error handling
+// Create singleton instance
 let aiService: AIService | null = null;
 
 try {
@@ -196,4 +192,4 @@ export const aiConfig = {
   isInitialized: isInitialized
 };
 
-console.log('AI Service configured with Vertex AI - Free tier compatible');
+console.log('AI Service configured with Vertex AI - Free Google Cloud credits compatible');
