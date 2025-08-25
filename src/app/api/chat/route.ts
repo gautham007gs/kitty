@@ -1,11 +1,10 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAIResponse } from '@/ai/genkit';
 
 export async function POST(request: NextRequest) {
   try {
     const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = await request.json();
-    
+
     if (!message || typeof message !== 'string' || message.trim() === '') {
       return NextResponse.json({ error: 'Valid message is required' }, { status: 400 });
     }
@@ -21,25 +20,33 @@ User says: ${message}
 Respond as Kruthika naturally:`;
 
     const response = await generateAIResponse(contextualPrompt);
-    
+
     if (!response || response.trim() === '') {
       throw new Error('Empty response from AI service');
     }
 
     console.log('✅ Chat API: Successful response generated');
-    return NextResponse.json({ 
+    return NextResponse.json({
       response: response.trim(),
       newMood: mood // You can enhance this to detect mood changes
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Chat API error:', error);
-    
-    // Return a simple fallback only when there's a real error
-    const fallback = "Hey! Technical issues aa rahe hain. Try again please! 😊";
-    
-    return NextResponse.json(
-      { response: fallback, error: true, details: error.message },
-      { status: 200 } // Still return 200 so the frontend shows the fallback
-    );
+
+    // Different fallback responses to avoid repetition
+    const fallbackResponses = [
+      "Hey! Technical problems ho rahe hain. Try again please! 😊",
+      "Sorry yaar, server issues chal rahe hain. Ek minute baad try karo! 🤗",
+      "Oops! Kuch technical problem hai. Please try again! 💖",
+      "System restart ho raha hai. Thoda wait karo please! 😅"
+    ];
+
+    const randomFallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+
+    return NextResponse.json({
+      response: randomFallback,
+      error: true,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 200 });
   }
 }

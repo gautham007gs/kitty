@@ -18,8 +18,17 @@ let credentials;
 try {
   credentials = JSON.parse(credentialsJson);
   console.log('✅ Direct Vertex AI: Successfully parsed JSON credentials');
+  console.log('📧 Service account email:', credentials.client_email);
+  console.log('🆔 Project ID from credentials:', credentials.project_id);
+  
+  // Validate required fields
+  if (!credentials.client_email || !credentials.private_key || !credentials.project_id) {
+    throw new Error('Missing required fields in service account credentials');
+  }
 } catch (error) {
-  throw new Error('Invalid credentials JSON format');
+  console.error('❌ Credential parsing error:', error);
+  console.error('🔍 Credentials preview:', credentialsJson.substring(0, 200) + '...');
+  throw new Error('Invalid credentials JSON format: ' + error.message);
 }
 
 // Initialize Vertex AI directly
