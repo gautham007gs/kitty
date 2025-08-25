@@ -61,7 +61,7 @@ try {
 
   // Initialize the model with optimized settings
   model = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-1.5-flash', // Using faster, cheaper model
+    model: 'gemini-1.5-flash-002', // Using correct model name
     generationConfig: {
       maxOutputTokens: 800,
       temperature: 0.7,
@@ -72,7 +72,7 @@ try {
   });
 
   console.log('🚀 Vertex AI initialized successfully!');
-  console.log('📱 Model: gemini-1.5-flash (fast & cheap)');
+  console.log('📱 Model: gemini-1.5-flash-002 (latest version)');
 
 } catch (error) {
   console.error('❌ Failed to initialize Vertex AI:', error);
@@ -133,4 +133,4 @@ Kruthika:`;
   }
 }
 
-console.log('🎉 Vertex AI module ready with Gemini 1.5 Flash');
+console.log('🎉 Vertex AI module ready with Gemini 1.5 Flash 002 (latest)');
