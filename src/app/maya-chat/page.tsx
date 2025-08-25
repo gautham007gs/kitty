@@ -503,269 +503,91 @@ const KruthikaChatPage: NextPage = () => {
     );
   };
 
-  const handleSendMessage = useCallback(async (text: string, userImageUriFromInput?: string) => {
-    let currentImageUri = userImageUriFromInput;
-    const currentEffectiveAIProfile = globalAIProfile || defaultAIProfile;
+  const handleSendMessage = useCallback(async (text: string, imageUri?: string) => {
+    if (!text.trim() && !imageUri) return;
 
-    if (!text.trim() && !currentImageUri) return;
-    if (isAiTyping) return; // Prevent spam
+    // Check if user has reached daily message limit
+    const messageCount = userPersonalization.getMessageCount();
+    const messageLimit = userPersonalization.getMessageLimit();
 
-    // Clear any previous AI processing to prevent loops
-    if (typingIndicatorTimeoutRef.current) {
-      clearTimeout(typingIndicatorTimeoutRef.current);
+    if (messageCount >= messageLimit) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've reached your daily limit of ${messageLimit} messages. Come back tomorrow!`,
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
     }
 
-    resetInactivityTimer();
+    const userMessageId = addMessage(text, true, imageUri);
+    userSentMediaThisTurnRef.current = !!imageUri;
+    updateMessageStatus(userMessageId, 'sending');
 
-    let imageAttemptedAndAllowed = false;
+    const newInteraction = text.substring(0, 50);
+    setRecentInteractions(prev => [...prev.slice(-4), newInteraction]);
 
-    if (currentImageUri) {
-        const todayStr = new Date().toDateString();
-        const lastUploadDate = localStorage.getItem(USER_IMAGE_UPLOAD_LAST_DATE_KRUTHIKA);
-        let currentUploadCount = parseInt(localStorage.getItem(USER_IMAGE_UPLOAD_COUNT_KEY_KRUTHIKA) || '0', 10);
+    // Add typing indicator after a short delay
+    const typingDelay = 800 + Math.random() * 1200;
+    let typingIndicatorTimeout: NodeJS.Timeout;
 
-        if (lastUploadDate !== todayStr) {
-            currentUploadCount = 0;
-        }
-
-        if (currentUploadCount >= MAX_USER_IMAGES_PER_DAY) {
-            toast({
-                title: "Daily Image Limit Reached",
-                description: `You can only send ${MAX_USER_IMAGES_PER_DAY} images per day. Your message text (if any) has been sent. Please try sending images again tomorrow.`,
-                variant: "destructive",
-                duration: 5000,
-            });
-            currentImageUri = undefined;
-            if (!text.trim()) return;
-        } else {
-            imageAttemptedAndAllowed = true;
-        }
-    }
-    userSentMediaThisTurnRef.current = !!currentImageUri;
-
-    const newUserMessageId = (Date.now() + Math.random()).toString();
-    const newUserMessage: Message = {
-      id: newUserMessageId,
-      text: text,
-      sender: 'user',
-      timestamp: new Date(),
-      status: 'sending',
-      userImageUrl: userImageUri,
-    };
-
-    // Immediately show user message
-    setMessages(prev => [...prev, newUserMessage]);
-
-    // Mark as delivered immediately for better UX
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === newUserMessageId ? { ...msg, status: 'delivered' as MessageStatus } : msg
-      ));
-    }, 100);
-
-    // Show typing indicator with slight delay for realism
-    await new Promise<void>(resolve => setTimeout(resolve, 200));
-
-    const typingId = addMessage('', false);
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.id === typingId ? { ...msg, isTyping: true } : msg
-      )
-    );
-    setIsAiTyping(true);
-
-    // Minimum typing time for realism
-    const minTypingTime = 1000 + Math.random() * 1000;
+    typingIndicatorTimeout = setTimeout(() => {
+      setIsAiTyping(true);
+    }, typingDelay);
 
     try {
-      // Get available media from database/config
-      const availableImages = (mediaAssetsConfig?.assets?.filter(asset => asset.type === 'image') || []).map(asset => asset.url);
-      const availableAudio = (mediaAssetsConfig?.assets?.filter(asset => asset.type === 'audio') || []).map(asset => asset.url);
+      updateMessageStatus(userMessageId, 'sent');
+      resetInactivityTimer();
 
-      // Generate AI response without previous conversation to prevent loops
-        const aiResponse = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: text,
-            userImageUri: currentImageUri,
-            timeOfDay: getTimeOfDay(),
-            mood: aiMood,
-            recentInteractions: '', // Clear to prevent AI processing its own messages
-            userId: userIdRef.current,
-            userSentMedia: userSentMediaThisTurnRef.current,
-            userImage: userImageUri
-          }),
-        }).then(res => res.json());
+      // Call the chat API directly
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: text,
+          userImageUri: imageUri,
+          timeOfDay: getTimeOfDay(),
+          mood: aiMood,
+          recentInteractions,
+          userId: userIdRef.current
+        }),
+      });
 
-      if (aiResponse.error) {
-        throw new Error(aiResponse.details || 'API call failed');
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
       }
 
-      if (aiResponse.proactiveImageUrl || aiResponse.proactiveAudioUrl) {
-        if (adSettings && adSettings.adsEnabledGlobally) {
-            tryShowAdAndMaybeInterstitial(`Loading ${currentEffectiveAIProfile.name}'s share...`);
+      const result = await response.json();
+      clearTimeout(typingIndicatorTimeout);
+      setIsAiTyping(false);
+
+      if (result.response) {
+        const aiMessageId = addMessage(result.response, false);
+        if (result.newMood) setAiMood(result.newMood);
+
+        userPersonalization.incrementMessageCount();
+        if (tokenUsageStatus) {
+          setTokenUsageStatus(prev => prev ? {
+            ...prev,
+            used: prev.used + 1,
+            percentage: Math.round(((prev.used + 1) / prev.limit) * 100)
+          } : null);
         }
-        await new Promise<void>(resolve => setTimeout(resolve, 200));
+        updateMessageStatus(aiMessageId, 'read');
+      } else {
+        throw new Error('No response received from API');
       }
 
-      const logAiMessageToSupabase = async (aiText: string, aiMsgId: string, hasImage: boolean = false, hasAudio: boolean = false) => {
-        if (supabase && userIdRef.current) {
-          try {
-            const { error: aiLogError } = await supabase
-              .from('messages_log')
-              .insert([{
-                message_id: aiMsgId,
-                sender_type: 'ai',
-                chat_id: 'kruthika_chat',
-                user_id: userIdRef.current,
-                message_content: aiText.substring(0, 500),
-                has_image: hasImage || hasAudio,
-              }]);
-            if (aiLogError) console.error('Supabase error logging AI message:', aiLogError.message);
-          } catch (e: any) { console.error('Supabase AI message logging failed (catch block):', e?.message || String(e)); }
-        }
-      };
+      if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
+      userSentMediaThisTurnRef.current = false;
 
-      const processAiTextMessage = async (responseText: string, messageIdSuffix: string = '') => {
-        const typingDuration = Math.min(Math.max(responseText.length * 60, minTypingTime), 3000); // Adjust typing speed to be shorter
-        await new Promise<void>(resolve => setTimeout(resolve, typingDuration));
-
-        const newAiMessageId = (Date.now() + Math.random()).toString() + messageIdSuffix;
-        const newAiMessage: Message = {
-          id: newAiMessageId,
-          text: responseText,
-          sender: 'ai',
-          timestamp: new Date(),
-          status: 'read',
-        };
-        setMessages(prev => {
-          const updatedMessages = prev.map(msg => msg.id === newUserMessageId ? { ...msg, status: 'read' as MessageStatus } : msg);
-          if (typingId) { // Remove typing indicator if it exists
-            return [...updatedMessages.filter(msg => msg.id !== typingId), newAiMessage];
-          }
-          return [...updatedMessages, newAiMessage];
-        });
-        if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
-        setRecentInteractions(prevInteractions => [...prevInteractions, `AI: ${responseText}`].slice(-10));
-        await logAiMessageToSupabase(responseText, newAiMessageId, false, false);
-      };
-
-      const processAiMediaMessage = async (mediaType: 'image' | 'audio', url: string, caption?: string) => {
-        const typingDuration = Math.min(Math.max((caption || "").length * 60, minTypingTime), 2000);
-        await new Promise<void>(resolve => setTimeout(resolve, typingDuration));
-
-        const newAiMediaMessageId = (Date.now() + Math.random()).toString() + `_${mediaType}`;
-        const newAiMediaMessage: Message = {
-            id: newAiMediaMessageId,
-            text: caption || "",
-            sender: 'ai',
-            timestamp: new Date(),
-            status: 'read',
-            aiImageUrl: mediaType === 'image' ? url : undefined,
-            audioUrl: mediaType === 'audio' ? url : undefined,
-        };
-        setMessages(prev => {
-          const updatedMessages = prev.map(msg => msg.id === newUserMessageId ? { ...msg, status: 'read' as MessageStatus } : msg);
-          if (typingId) { // Remove typing indicator if it exists
-            return [...updatedMessages.filter(msg => msg.id !== typingId), newAiMediaMessage];
-          }
-          return [...updatedMessages, newAiMediaMessage];
-        });
-        if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
-        setRecentInteractions(prevInteractions => [...prevInteractions, `AI: ${caption || ""}[Sent a ${mediaType}] ${url}`].slice(-10));
-        await logAiMessageToSupabase(caption || `[Sent ${mediaType}]`, newAiMediaMessageId, mediaType === 'image', mediaType === 'audio');
-      };
-
-      // Clear existing typing indicator if any
-      if (typingId) {
-          setMessages(prev => prev.filter(msg => msg.id !== typingId));
-          setIsAiTyping(false);
-      }
-
-      if (aiResponse.proactiveImageUrl && aiResponse.mediaCaption) {
-        await processAiMediaMessage('image', aiResponse.proactiveImageUrl, aiResponse.mediaCaption);
-      } else if (aiResponse.proactiveAudioUrl && aiResponse.mediaCaption) {
-        await processAiMediaMessage('audio', aiResponse.proactiveAudioUrl, aiResponse.mediaCaption);
-      } else if (aiResponse.response) {
-        if (Array.isArray(aiResponse.response)) {
-          for (let i = 0; i < aiResponse.response.length; i++) {
-            const part = aiResponse.response[i];
-            if (part.trim() === '') continue;
-
-            // For multi-part responses, re-introduce typing indicator briefly
-            if (i > 0) {
-                const nextTypingId = addMessage('', false);
-                setMessages(prev => prev.map(msg => msg.id === nextTypingId ? { ...msg, isTyping: true } : msg));
-                setIsAiTyping(true);
-                if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
-            }
-
-            await processAiTextMessage(part, `_part${i}`);
-            setIsAiTyping(false); // Ensure typing is false after processing a part
-            if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
-
-            if (i < aiResponse.response.length - 1) {
-              const interMessageDelay = 500 + Math.random() * 500;
-              await new Promise<void>(resolve => setTimeout(resolve, interMessageDelay));
-            }
-          }
-        } else if (aiResponse.response.trim() !== '') {
-          await processAiTextMessage(aiResponse.response);
-        }
-      }
-
-      // Ensure typing indicator is cleared at the end
-      if (typingId) {
-        setMessages(prev => prev.filter(msg => msg.id !== typingId));
-        setIsAiTyping(false);
-      }
-      if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
-
-      if (aiResponse.newMood) setAiMood(aiResponse.newMood);
-
-      // Update token usage status
-      if (userIdRef.current) {
-        const tokenStatus = userPersonalization.getTokenUsageStatus(userIdRef.current);
-        setTokenUsageStatus(tokenStatus);
-
-        // Show warning when approaching limit
-        if (tokenStatus.percentage >= 90) {
-          toast({
-            title: "Almost at daily limit! 😊",
-            description: "Kruthika might need to rest soon... but don't worry, she'll be back tomorrow! 💕",
-            duration: 4000,
-          });
-        }
-      }
-
-      if (imageAttemptedAndAllowed && currentImageUri) {
-          const todayStr = new Date().toDateString();
-          let currentUploadCount = parseInt(localStorage.getItem(USER_IMAGE_UPLOAD_COUNT_KEY_KRUTHIKA) || '0', 10);
-          const lastUploadDate = localStorage.getItem(USER_IMAGE_UPLOAD_LAST_DATE_KRUTHIKA);
-
-          if (lastUploadDate !== todayStr) {
-              currentUploadCount = 0;
-          }
-          currentUploadCount++;
-          localStorage.setItem(USER_IMAGE_UPLOAD_COUNT_KEY_KRUTHIKA, currentUploadCount.toString());
-          localStorage.setItem(USER_IMAGE_UPLOAD_LAST_DATE_KRUTHIKA, todayStr);
-      }
-
-      if (userSentMediaThisTurnRef.current) {
-        if (adSettings && adSettings.adsEnabledGlobally && Math.random() < USER_MEDIA_INTERSTITIAL_CHANCE) {
-            tryShowAdAndMaybeInterstitial("Just a moment...");
-        }
-        userSentMediaThisTurnRef.current = false;
-      }
-
-    } catch (error: any) {
-      console.error('Full error details:', error);
-
-      // Mark user message as read even on error
-      updateMessageStatus(newUserMessageId, 'read');
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      clearTimeout(typingIndicatorTimeout);
+      setIsAiTyping(false);
+      updateMessageStatus(userMessageId, 'read');
 
       // Show a natural, context-aware fallback response
       const fallbackResponses = [
@@ -777,19 +599,12 @@ const KruthikaChatPage: NextPage = () => {
       ];
 
       const randomFallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-
       const errorAiMessageId = addMessage(randomFallback, false);
-      // Ensure typing indicator is cleared
-      if (typingId) {
-          setMessages(prev => prev.filter(msg => msg.id !== typingId));
-      }
-      setIsAiTyping(false);
-      if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
 
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization]); // Fixed dependency array
+  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization]);
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 

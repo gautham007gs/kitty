@@ -74,12 +74,13 @@ try {
 // Main AI response function
 export async function generateAIResponse(message: string): Promise<string> {
   try {
+    console.log('🤖 Starting AI response generation for:', message.substring(0, 50) + '...');
+    
     if (!model || !vertex || !isInitialized) {
       console.error('❌ Vertex AI not properly initialized');
-      return "Hey! Technical issue ho raha hai. Admin se contact karenge! 😊";
+      console.error('🔍 Debug info:', { model: !!model, vertex: !!vertex, isInitialized });
+      return "Hey! Technical issue ho raha hai. Try again please! 😊";
     }
-
-    console.log('🤖 Generating response for:', message.substring(0, 50) + '...');
 
     // Ultra-short Indian girl prompt for addictive responses
     const prompt = `You are Kruthika, 22yr Indian girl. Reply in Hinglish. Max 15 words. Be flirty, cute, use emojis. Sound real, not robotic.
@@ -87,6 +88,8 @@ export async function generateAIResponse(message: string): Promise<string> {
 User: ${message}
 
 Reply:`;
+
+    console.log('🔄 Sending request to Vertex AI...');
 
     const request = {
       contents: [{
@@ -96,36 +99,54 @@ Reply:`;
     };
 
     const result = await model.generateContent(request);
+    console.log('📨 Received response from Vertex AI');
+    
     const response = result.response;
 
-    if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
+    if (response && response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
       const aiResponse = response.candidates[0].content.parts[0].text.trim();
       console.log('✅ AI response generated successfully');
       console.log('📝 Response length:', aiResponse.length);
+      console.log('💬 Response preview:', aiResponse.substring(0, 30) + '...');
       return aiResponse;
     } else {
       console.error('❌ No valid response content received');
-      console.error('📋 Full response:', JSON.stringify(response, null, 2));
+      console.error('📋 Response structure:', {
+        hasResponse: !!response,
+        hasCandidates: !!(response?.candidates),
+        candidatesLength: response?.candidates?.length || 0,
+        firstCandidate: response?.candidates?.[0] || null
+      });
       return "Hey! Technical issue aa raha hai. Try again please! 😊";
     }
 
   } catch (error) {
     console.error('❌ AI generation error:', error);
+    console.error('🔍 Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.substring(0, 200)
+    });
 
     // Handle specific error types
     if (error.message && error.message.includes('authentication')) {
-      console.error('🔐 Authentication issue');
-      return "Hey! Authentication problem hai. Admin ko batana padega! 😅";
+      console.error('🔐 Authentication issue detected');
+      return "Hey! Authentication problem hai. Try again! 😅";
     }
 
     if (error.message && error.message.includes('quota')) {
-      console.error('💰 Quota exceeded');
+      console.error('💰 Quota exceeded detected');
       return "Oops! Daily limit exceed ho gaya. Kal try karna! 💫";
     }
 
     if (error.message && error.message.includes('PERMISSION_DENIED')) {
-      console.error('🚫 Permission denied');
-      return "Sorry yaar, permission issue hai. Admin se fix karwaunga! 😊";
+      console.error('🚫 Permission denied detected');
+      return "Sorry yaar, permission issue hai. Try again! 😊";
+    }
+
+    if (error.message && error.message.includes('UNAUTHENTICATED')) {
+      console.error('🔑 Unauthenticated error detected');
+      return "Authentication issue hai! Try again! 😊";
     }
 
     // Generic fallback
