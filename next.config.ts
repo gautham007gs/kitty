@@ -24,9 +24,11 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
+        'localhost:5000',
         '*.replit.dev',
         '*.replit.co',
         '*.replit.com',
+        '1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev',
         'edb3d2f8-5baa-409a-bbeb-469cdd803722-00-x5fjipggwmfa.sisko.replit.dev'
       ]
     }
@@ -66,7 +68,16 @@ const nextConfig: NextConfig = {
     return config;
   },
   // Fix Server Actions CORS issue
-  allowedDevOrigins: ['*']
+  allowedDevOrigins: ['*'],
+  
+  // Add hostname matching
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: []
+    };
+  }
 };
 
 export default nextConfig;

@@ -10,7 +10,6 @@ import ChatInput from '@/components/chat/ChatInput';
 import type { Message, AIProfile, MessageStatus, AdSettings, AIMediaAssetsConfig } from '@/types';
 import { defaultAIProfile, defaultAdSettings, defaultAIMediaAssetsConfig, DEFAULT_ADSTERRA_DIRECT_LINK, DEFAULT_MONETAG_DIRECT_LINK } from '@/config/ai';
 import { getAPIFailureFallback, getEnhancedResponse, type EmotionalStateInput, type EmotionalStateOutput } from '@/ai/flows/emotional-state-simulation';
-import { generateResponse } from '@/ai/actions/emotional-state-actions';
 import { generateOfflineMessage } from '@/ai/actions/offline-message-actions';
 import type { OfflineMessageInput } from '@/ai/flows/offline-message-generation';
 import { userPersonalization } from '@/lib/userPersonalization';
@@ -580,8 +579,32 @@ const KruthikaChatPage: NextPage = () => {
         availableAudio,
       };
 
-      // Use server-side AI response directly (no enhanced client-side response to avoid duplicates)
-      const aiResponse = await generateResponse(inputData, userIdRef.current || undefined);
+      // Use API route instead of server action to avoid CORS issues
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: text,
+          userImageUri: currentImageUri,
+          timeOfDay: getTimeOfDay(),
+          mood: aiMood,
+          recentInteractions: recentInteractions,
+          userId: userIdRef.current
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.details || 'API call failed');
+      }
+
+      const aiResponse = {
+        response: data.response,
+        newMood: aiMood, // Keep current mood for now
+      };
 
       if (aiResponse.proactiveImageUrl || aiResponse.proactiveAudioUrl) {
         if (adSettings && adSettings.adsEnabledGlobally) {

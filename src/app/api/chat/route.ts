@@ -4,7 +4,7 @@ import { generateAIResponse } from '@/ai/genkit';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json();
+    const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = await request.json();
     
     if (!message || typeof message !== 'string' || message.trim() === '') {
       return NextResponse.json({ error: 'Valid message is required' }, { status: 400 });
@@ -12,14 +12,25 @@ export async function POST(request: NextRequest) {
 
     console.log('💬 Chat API: Processing message:', message.substring(0, 50) + '...');
 
-    const response = await generateAIResponse(message.trim());
+    // Create a more contextual prompt that includes conversation history
+    const contextualPrompt = `Previous conversation: ${recentInteractions?.slice(-3).join(' | ') || 'None'}
+Current mood: ${mood || 'neutral'}
+Time: ${timeOfDay || 'unknown'}
+User says: ${message}
+
+Respond as Kruthika naturally:`;
+
+    const response = await generateAIResponse(contextualPrompt);
     
     if (!response || response.trim() === '') {
       throw new Error('Empty response from AI service');
     }
 
     console.log('✅ Chat API: Successful response generated');
-    return NextResponse.json({ response: response.trim() });
+    return NextResponse.json({ 
+      response: response.trim(),
+      newMood: mood // You can enhance this to detect mood changes
+    });
   } catch (error: any) {
     console.error('❌ Chat API error:', error);
     
