@@ -508,6 +508,12 @@ const KruthikaChatPage: NextPage = () => {
     const currentEffectiveAIProfile = globalAIProfile || defaultAIProfile;
 
     if (!text.trim() && !currentImageUri) return;
+    if (isAiTyping) return; // Prevent spam
+
+    // Clear any previous AI processing to prevent loops
+    if (typingIndicatorTimeoutRef.current) {
+      clearTimeout(typingIndicatorTimeoutRef.current);
+    }
 
     resetInactivityTimer();
 
@@ -537,74 +543,66 @@ const KruthikaChatPage: NextPage = () => {
     }
     userSentMediaThisTurnRef.current = !!currentImageUri;
 
-    const newUserMessageId = addMessage(text, true, 'sending');
-    if (currentImageUri) {
-        // Add a separate message for the image if text is also present
-        if (text.trim()) {
-            const userImageMessageId = addMessage('[Image Sent]', true, 'sending');
-            // We'll update the status for both the text and image message
-        } else {
-             // If only image, update the ID of the main message to reflect image sending
-             // For simplicity, let's assume the text message ID also carries the image intent.
-             // A more robust solution would be to have separate message objects or a flag.
-        }
-    }
+    const newUserMessageId = (Date.now() + Math.random()).toString();
+    const newUserMessage: Message = {
+      id: newUserMessageId,
+      text: text,
+      sender: 'user',
+      timestamp: new Date(),
+      status: 'sending',
+      userImageUrl: userImageUri,
+    };
 
-    // Simulate message status progression
-    setTimeout(() => updateMessageStatus(newUserMessageId, 'sent'), 500);
-    setTimeout(() => updateMessageStatus(newUserMessageId, 'delivered'), 1000);
+    // Immediately show user message
+    setMessages(prev => [...prev, newUserMessage]);
 
-    // Add typing indicator
-    if (typingIndicatorTimeoutRef.current) clearTimeout(typingIndicatorTimeoutRef.current);
+    // Mark as delivered immediately for better UX
+    setTimeout(() => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === newUserMessageId ? { ...msg, status: 'delivered' as MessageStatus } : msg
+      ));
+    }, 100);
+
+    // Show typing indicator with slight delay for realism
+    await new Promise<void>(resolve => setTimeout(resolve, 200));
+
     const typingId = addMessage('', false);
     setMessages(prev =>
       prev.map(msg =>
         msg.id === typingId ? { ...msg, isTyping: true } : msg
       )
     );
-    typingIndicatorTimeoutRef.current = setTimeout(() => setIsAiTyping(false), 2000 + Math.random() * 1000); // Keep typing for a bit
+    setIsAiTyping(true);
+
+    // Minimum typing time for realism
+    const minTypingTime = 1000 + Math.random() * 1000;
 
     try {
       // Get available media from database/config
       const availableImages = (mediaAssetsConfig?.assets?.filter(asset => asset.type === 'image') || []).map(asset => asset.url);
       const availableAudio = (mediaAssetsConfig?.assets?.filter(asset => asset.type === 'audio') || []).map(asset => asset.url);
 
-      const inputData = {
-        userMessage: text,
-        userImageUri: currentImageUri,
-        timeOfDay: getTimeOfDay(),
-        mood: aiMood,
-        recentInteractions: recentInteractions, // Use the current state directly
-        availableImages,
-        availableAudio,
-      };
+      // Generate AI response without previous conversation to prevent loops
+        const aiResponse = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: text,
+            userImageUri: currentImageUri,
+            timeOfDay: getTimeOfDay(),
+            mood: aiMood,
+            recentInteractions: '', // Clear to prevent AI processing its own messages
+            userId: userIdRef.current,
+            userSentMedia: userSentMediaThisTurnRef.current,
+            userImage: userImageUri
+          }),
+        }).then(res => res.json());
 
-      // Use API route instead of server action to avoid CORS issues
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: text,
-          userImageUri: currentImageUri,
-          timeOfDay: getTimeOfDay(),
-          mood: aiMood,
-          recentInteractions: recentInteractions,
-          userId: userIdRef.current
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.details || 'API call failed');
+      if (aiResponse.error) {
+        throw new Error(aiResponse.details || 'API call failed');
       }
-
-      const aiResponse = {
-        response: data.response,
-        newMood: aiMood, // Keep current mood for now
-      };
 
       if (aiResponse.proactiveImageUrl || aiResponse.proactiveAudioUrl) {
         if (adSettings && adSettings.adsEnabledGlobally) {
@@ -632,7 +630,7 @@ const KruthikaChatPage: NextPage = () => {
       };
 
       const processAiTextMessage = async (responseText: string, messageIdSuffix: string = '') => {
-        const typingDuration = Math.min(Math.max(responseText.length * 20, 300), 1200);
+        const typingDuration = Math.min(Math.max(responseText.length * 60, minTypingTime), 3000); // Adjust typing speed to be shorter
         await new Promise<void>(resolve => setTimeout(resolve, typingDuration));
 
         const newAiMessageId = (Date.now() + Math.random()).toString() + messageIdSuffix;
@@ -656,7 +654,7 @@ const KruthikaChatPage: NextPage = () => {
       };
 
       const processAiMediaMessage = async (mediaType: 'image' | 'audio', url: string, caption?: string) => {
-        const typingDuration = Math.min(Math.max((caption || "").length * 60, 800), 2000);
+        const typingDuration = Math.min(Math.max((caption || "").length * 60, minTypingTime), 2000);
         await new Promise<void>(resolve => setTimeout(resolve, typingDuration));
 
         const newAiMediaMessageId = (Date.now() + Math.random()).toString() + `_${mediaType}`;
@@ -791,7 +789,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig]); // Fixed dependency array
+  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization]); // Fixed dependency array
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 
@@ -819,7 +817,7 @@ const KruthikaChatPage: NextPage = () => {
             aiName: currentAiNameForOfflineMsg,
           };
           const offlineResult = await generateOfflineMessage(offlineInput);
-          const typingDelay = Math.min(Math.max(offlineResult.message.length * 60, 700), 3500);
+          const typingDelay = Math.min(Math.max(offlineResult.message.length * 60, 1000), 3500); // Shorter typing time
           await new Promise<void>(resolve => setTimeout(resolve, typingDelay));
           const newOfflineMsgId = (Date.now() + Math.random()).toString();
           const offlineMessage: Message = {

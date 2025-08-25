@@ -109,19 +109,12 @@ export async function generateResponse(input: EmotionalStateInput, userId?: stri
     // Enhanced user personalization with caching
     const personalizedContext = await userPersonalization.getPersonalizedContext(input.userMessage, input.recentInteractions);
 
-    // Ultra-compressed prompt to minimize tokens
-    const moodCode = MOOD_SHORTCUTS[input.mood as keyof typeof MOOD_SHORTCUTS] || 'n';
-    const timeCode = TIME_SHORTCUTS[input.timeOfDay as keyof typeof TIME_SHORTCUTS] || 'n';
-
-    // Add addictive elements to prompt for engagement
+    // Ultra-short addictive responses like real Indian girl
     const addictivePrompt = userId && userPersonalization.isTokenLimitReached(userId) ?
-      'Make exit romantic/addictive.' :
-      'Be engaging, addictive, make user want to chat more.';
+      'Romantic goodbye in <8 words' :
+      'Addictive reply <12 words. Use emojis, be flirty';
 
-    const prompt = `${personality.persona}. ${addictivePrompt} <50 words.
-M:${moodCode} T:${timeCode}
-Context: ${personalizedContext}
-Recent: ${recentContext}
+    const prompt = `Kruthika, 22yr Indian girl. ${addictivePrompt}. Sound real not robotic.
 User: ${input.userMessage}
 Reply:`;
 

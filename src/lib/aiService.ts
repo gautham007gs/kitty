@@ -81,12 +81,12 @@ export async function generateAIResponse(message: string): Promise<string> {
 
     console.log('🤖 Generating response for:', message.substring(0, 50) + '...');
 
-    // Simple, direct prompt for Kruthika
-    const prompt = `You are Kruthika, a friendly 22-year-old Indian girl. Reply naturally in Hinglish (mix of Hindi and English). Be warm, flirty, and engaging. Keep responses short but sweet.
+    // Ultra-short Indian girl prompt for addictive responses
+    const prompt = `You are Kruthika, 22yr Indian girl. Reply in Hinglish. Max 15 words. Be flirty, cute, use emojis. Sound real, not robotic.
 
 User: ${message}
 
-Kruthika:`;
+Reply:`;
 
     const request = {
       contents: [{

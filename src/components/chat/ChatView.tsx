@@ -75,9 +75,9 @@ const ChatView: React.FC<ChatViewProps> = ({
       )}
 
       {displayMessages.map((msg, index) => (
-        <React.Fragment key={`msg-fragment-${msg.id || index}`}>
+        <React.Fragment key={`fragment-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}>
           <MessageBubble 
-            key={`msg-${msg.id || index}`}
+            key={`bubble-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}
             message={msg.text}
             isUser={msg.sender === 'user'}
             timestamp={msg.timestamp ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -91,7 +91,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           />
           {/* Show banner ad every 5 messages */}
           {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
-            <div key={`ad-${index}`} className="my-4">
+            <div key={`ad-${msg.id || index}-${index}`} className="my-4">
               <div className="mx-auto w-full max-w-md">
                 <BannerAdDisplay 
                   adType="standard" 
