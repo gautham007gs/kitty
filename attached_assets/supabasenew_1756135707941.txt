@@ -1,0 +1,9 @@
+NEXT_PUBLIC_SUPABASE_URL=https://bpuomibpspgjftzjrbap.supabase.co
+
+
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwdW9taWJwc3BnamZ0empyYmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMTk3MTksImV4cCI6MjA3MTY5NTcxOX0.CufFDa4WEgEflXRjxkx95HqomVbJZIlR_Ce6vhEteZI
+
+
+(this is not required as we r using vertex ai )
+GOOGLE_API_KEY=AIzaSyA89RNKk-cydJ9kgkomreCn85EnuX64YZo
