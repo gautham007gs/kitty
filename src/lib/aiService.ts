@@ -1,84 +1,65 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 
-// Environment variable validation for Vertex AI
-const validateEnvironment = () => {
-  const required = {
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    location: process.env.VERTEX_AI_LOCATION || 'us-central1',
-    credentialsJson: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-  };
-
-  console.log('Vertex AI Environment Check:');
-  console.log('- Project ID:', required.projectId || 'MISSING');
-  console.log('- Location:', required.location);
-  console.log('- Credentials JSON:', required.credentialsJson ? 'SET' : 'MISSING');
-
-  return required;
+// Environment validation
+const config = {
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  location: process.env.VERTEX_AI_LOCATION || 'us-central1',
+  credentialsJson: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
 };
 
-const config = validateEnvironment();
+console.log('🔧 AI Service Environment Check:');
+console.log('- Project ID:', config.projectId || 'MISSING');
+console.log('- Location:', config.location);
+console.log('- Credentials:', config.credentialsJson ? 'SET' : 'MISSING');
 
 // Initialize Vertex AI
 let vertex: VertexAI | null = null;
 let model: any = null;
+let isInitialized = false;
 
 const initializeVertexAI = () => {
-  if (!config.projectId || !config.credentialsJson) {
-    console.error('Missing required Vertex AI configuration');
-    console.error('Required: GOOGLE_CLOUD_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS_JSON');
-    return false;
-  }
-
   try {
-    let credentials;
-    
-    try {
-      // Direct JSON parsing - no base64 decoding needed
-      credentials = JSON.parse(config.credentialsJson);
-      console.log('✅ Vertex AI: Successfully parsed JSON credentials');
-      console.log('✅ Project ID from credentials:', credentials.project_id);
-      console.log('✅ Service account email:', credentials.client_email);
-    } catch (parseError) {
-      console.error('❌ Vertex AI: Failed to parse credentials JSON');
-      console.error('Parse error:', parseError.message);
-      console.error('Credentials preview:', config.credentialsJson.substring(0, 100) + '...');
-      throw new Error('Invalid credentials JSON format');
+    if (!config.projectId || !config.credentialsJson) {
+      console.error('❌ Missing required configuration');
+      return false;
     }
 
-    // Initialize Vertex AI with proper authentication
+    const credentials = JSON.parse(config.credentialsJson);
+
     vertex = new VertexAI({
-      project: credentials.project_id, // Use project_id from credentials
+      project: credentials.project_id,
       location: config.location,
       googleAuthOptions: {
-        credentials: credentials
+        credentials: {
+          client_email: credentials.client_email,
+          private_key: credentials.private_key,
+          project_id: credentials.project_id,
+          type: 'service_account'
+        }
       }
     });
 
-    // Use Gemini 1.5 Pro - more reliable and widely available
     model = vertex.preview.getGenerativeModel({
       model: 'gemini-1.5-pro',
       generationConfig: {
-        maxOutputTokens: 2048, // Increased for better responses
-        temperature: 0.7,      // Balanced creativity
-        topP: 0.8,            // Good quality responses
-        topK: 40,             // Diversity control
-        candidateCount: 1     // Single response for reliability
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+        candidateCount: 1
       }
     });
 
-    console.log('🚀 Vertex AI initialized successfully!');
-    console.log('📱 Model: gemini-1.5-pro (reliable option)');
-    console.log('💰 Using Google Cloud $300 free credits');
+    console.log('✅ AI Service initialized successfully');
     return true;
   } catch (error) {
-    console.error('❌ Failed to initialize Vertex AI:', error);
+    console.error('❌ Failed to initialize AI Service:', error);
     return false;
   }
 };
 
 // Initialize on module load
-const isInitialized = initializeVertexAI();
+isInitialized = initializeVertexAI();
 
 // AI Service Class
 export class AIService {
@@ -122,7 +103,7 @@ export class AIService {
       const response = result.response;
 
       if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-        const aiResponse = response.candidates[0].content.parts[0].text;
+        const aiResponse = response.candidates[0].content.parts[0].text.trim();
         console.log('✅ AI response generated successfully');
         return aiResponse;
       }
@@ -138,27 +119,25 @@ export class AIService {
   async generateChatResponse(message: string, history: any[] = []): Promise<string> {
     try {
       // Create context from chat history with Kruthika's personality
-      let contextPrompt = "You are Kruthika, a friendly 22-year-old Indian girl who loves chatting. ";
-      contextPrompt += "You speak in a natural mix of Hindi and English like young Indians do (Hinglish). ";
-      contextPrompt += "You're warm, friendly, engaging, and have a bubbly personality. ";
-      contextPrompt += "Use emojis occasionally but don't overdo it. ";
-      contextPrompt += "Keep responses conversational and not too long.\n\n";
+      let contextPrompt = "You are Kruthika, a friendly 22-year-old Indian girl. ";
+      contextPrompt += "Reply in a natural mix of Hindi and English (Hinglish). ";
+      contextPrompt += "Be warm, bubbly, and engaging. Keep responses conversational.\n\n";
       
       if (history.length > 0) {
         contextPrompt += "Recent conversation:\n";
-        history.slice(-3).forEach((msg: any) => {
+        history.slice(-2).forEach((msg: any) => {
           contextPrompt += `${msg.sender_type === 'user' ? 'User' : 'Kruthika'}: ${msg.text_content}\n`;
         });
         contextPrompt += "\n";
       }
       
-      contextPrompt += `User just said: ${message}\n\nRespond as Kruthika in a natural, friendly way:`;
+      contextPrompt += `User: ${message}\n\nRespond as Kruthika:`;
 
       console.log('💬 Generating chat response for:', message.substring(0, 50) + '...');
       return await this.generateResponse(contextPrompt);
     } catch (error) {
       console.error('❌ Error generating chat response:', error);
-      return "Hey! Technical problems ho rahe hain. Try again please! 😊";
+      return "Hey! Kuch technical problem hai. Try again please! 😊";
     }
   }
 
