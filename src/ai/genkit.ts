@@ -41,7 +41,7 @@ const vertexAI = new VertexAI({
 });
 
 const model = vertexAI.preview.getGenerativeModel({
-  model: 'gemini-1.5-flash-001',
+  model: 'gemini-1.5-flash',
   generationConfig: {
     maxOutputTokens: 1024,
     temperature: 0.7,
@@ -89,4 +89,4 @@ Respond as Kruthika in a natural, friendly way:`;
 }
 
 console.log('🎉 Direct Vertex AI initialized - Compatible with Google Cloud free credits');
-console.log('📱 Using cheapest model: gemini-1.5-flash-001');
+console.log('📱 Using cheapest model: gemini-1.5-flash');
