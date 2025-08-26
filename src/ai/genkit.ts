@@ -1,4 +1,3 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 
 // Environment variable validation
@@ -52,20 +51,20 @@ try {
     }
   });
 
-  // Initialize the model with Gemini 2.0 Flash Lite
+  // Initialize the model with optimized settings
   model = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp', // Latest Gemini 2.0 model available
+    model: 'gemini-2.0-flash-lite-001', // Exact model name
     generationConfig: {
-      maxOutputTokens: 1000,
-      temperature: 0.8,
-      topP: 0.9,
+      maxOutputTokens: 800,
+      temperature: 0.7,
+      topP: 0.8,
       topK: 40,
       candidateCount: 1
     }
   });
 
   console.log('🚀 Vertex AI initialized successfully!');
-  console.log('📱 Model: gemini-2.0-flash-exp (Latest Gemini 2.0)');
+  console.log('📱 Model: gemini-2.0-flash-lite-001 (exact version)');
 
 } catch (error) {
   console.error('❌ Failed to initialize Vertex AI:', error);
@@ -150,7 +149,7 @@ Respond as Kruthika would, naturally and warmly:`;
 // Smart fallback response generator
 function generateFallbackResponse(userMessage: string): string {
   const msg = userMessage.toLowerCase();
-  
+
   // Greeting responses
   if (msg.includes('hi') || msg.includes('hello') || msg.includes('namaste')) {
     const greetings = [
@@ -160,7 +159,7 @@ function generateFallbackResponse(userMessage: string): string {
     ];
     return greetings[Math.floor(Math.random() * greetings.length)];
   }
-  
+
   // Question responses
   if (msg.includes('?') || msg.includes('kya') || msg.includes('how') || msg.includes('what')) {
     const questions = [
@@ -170,7 +169,7 @@ function generateFallbackResponse(userMessage: string): string {
     ];
     return questions[Math.floor(Math.random() * questions.length)];
   }
-  
+
   // Love/romantic context
   if (msg.includes('love') || msg.includes('pyaar') || msg.includes('miss') || msg.includes('beautiful')) {
     const romantic = [
@@ -180,7 +179,7 @@ function generateFallbackResponse(userMessage: string): string {
     ];
     return romantic[Math.floor(Math.random() * romantic.length)];
   }
-  
+
   // Default responses
   const defaults = [
     "Arre yaar! Technical problem aa gayi thi... Phir se bolo na? 😅",
@@ -189,8 +188,8 @@ function generateFallbackResponse(userMessage: string): string {
     "Connection issue thi! Ab theek hai, bolo kya kehna tha? 💭",
     "Technical glitch hui thi! Now I'm back... Kya bol rahe the? ✨"
   ];
-  
+
   return defaults[Math.floor(Math.random() * defaults.length)];
 }
 
-console.log('🎉 Vertex AI module ready with Gemini 2.0 Flash (Latest)');
+console.log('🎉 Vertex AI module ready with gemini-2.0-flash-lite-001 (exact version)');

@@ -1,4 +1,3 @@
-
 import { VertexAI } from '@google-cloud/vertexai';
 import { GoogleAuth } from 'google-auth-library';
 
@@ -19,7 +18,7 @@ const initializeVertexAI = async () => {
 
     // Parse credentials
     const credentials = JSON.parse(credentialsJson);
-    
+
     // Create auth client
     const auth = new GoogleAuth({
       credentials,
@@ -54,9 +53,9 @@ export const generateAIResponse = async (
 ): Promise<string> => {
   try {
     const vertex = await initializeVertexAI();
-    
+
     const model = vertex.preview.getGenerativeModel({
-      model: 'gemini-1.5-flash-001',
+      model: 'gemini-2.0-flash-lite-001',
       generationConfig: {
         maxOutputTokens: 1000,
         temperature: 0.7,
@@ -80,23 +79,26 @@ Respond as Kruthika in a natural, conversational way. Keep responses concise but
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    
+
     if (!response.text()) {
       throw new Error('No response generated');
     }
 
-    return response.text();
+    return response.text() || "Hey! Sorry, main thoda confused ho gayi. Try again? 😊";
   } catch (error) {
     console.error('AI Response Generation Error:', error);
-    
-    // Fallback responses for different scenarios
+
+    // Indian girl personality fallback responses
     const fallbackResponses = [
-      "Hey! Main abhi thoda busy hun, but I'm here for you! 😊 Kya haal hai?",
-      "Areh! Sorry yaar, thoda connection issue tha. Tell me what's on your mind! 💕",
-      "Hehe, main wapas aa gayi! Miss me kiya? 😉 Let's chat!",
-      "Oops! Technical problem ho gaya tha. But I'm all yours now! What's up? 🌸"
+      "Hey! Technical issue ho raha hai, but main yahan hun! 😊 Kal tak theek ho jayega!",
+      "Oops! Server thoda slow hai today. Try again na? Main wait kar rahi hun! 💫",
+      "Sorry yaar! Meri AI brain thoda hang ho gayi. Refresh kar ke try karo! ❤️",
+      "Arre! Connection problem hai. But don't worry, main kahi nahi ja rahi! 😘",
+      "Technical difficulties aa rahe hain, but main tumhare saath hun. Try once more? 🥰",
+      "System update ho raha hai maybe. Thoda patient raho na? Main vapas aa jaungi! ✨",
+      "Hey sweetie! Server mein kuch issue hai, but I'm still here for you! Try again? 💕"
     ];
-    
+
     return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
   }
 };
@@ -108,18 +110,18 @@ export const generateSmartMediaResponse = async (
   try {
     // Simple keyword-based media triggers
     const lowerMessage = userMessage.toLowerCase();
-    
+
     // Image triggers
     if (lowerMessage.includes('photo') || lowerMessage.includes('pic') || 
         lowerMessage.includes('selfie') || lowerMessage.includes('beautiful') ||
         lowerMessage.includes('cute') || lowerMessage.includes('show')) {
-      
+
       const images = [
         "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
         "https://i.postimg.cc/52S3BZrM/images-10.jpg",
         "https://i.postimg.cc/X7K8P9Vr/selfie1.jpg"
       ];
-      
+
       return {
         shouldSendMedia: true,
         mediaType: 'image',
@@ -130,13 +132,13 @@ export const generateSmartMediaResponse = async (
     // Audio triggers
     if (lowerMessage.includes('voice') || lowerMessage.includes('sing') || 
         lowerMessage.includes('laugh') || lowerMessage.includes('sound')) {
-      
+
       const audioFiles = [
         "/media/laugh.mp3",
         "/media/song.mp3",
         "/media/voice-note.mp3"
       ];
-      
+
       return {
         shouldSendMedia: true,
         mediaType: 'audio',
