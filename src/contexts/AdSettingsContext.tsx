@@ -11,6 +11,7 @@ interface AdSettingsContextType {
   adSettings: AdSettings | null;
   isLoading: boolean;
   fetchAdSettings: () => Promise<void>; // Allow manual refetch if needed
+  refreshAdSettings: () => Promise<void>; // Force refresh from server
 }
 
 const AdSettingsContext = createContext<AdSettingsContextType | undefined>(undefined);
@@ -56,10 +57,39 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     fetchAdSettings();
+    
+    // Set up real-time subscription for ad settings changes
+    if (supabase && typeof supabase.channel === 'function') {
+      const channel = supabase
+        .channel('ad_settings_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'app_configurations',
+            filter: `id=eq.${AD_SETTINGS_CONFIG_KEY}`,
+          },
+          (payload) => {
+            console.log('Ad settings changed:', payload);
+            fetchAdSettings(); // Refetch when settings change
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
+  const refreshAdSettings = async () => {
+    console.log('[AdSettingsContext] Force refreshing ad settings...');
+    await fetchAdSettings();
+  };
+
   return (
-    <AdSettingsContext.Provider value={{ adSettings, isLoading: isLoadingAdSettings, fetchAdSettings }}>
+    <AdSettingsContext.Provider value={{ adSettings, isLoading: isLoadingAdSettings, fetchAdSettings, refreshAdSettings }}>
       {children}
     </AdSettingsContext.Provider>
   );

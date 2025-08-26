@@ -133,6 +133,30 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   useEffect(() => {
     fetchGlobalStatuses();
+    
+    // Set up real-time subscription for global status changes
+    if (supabase && typeof supabase.channel === 'function') {
+      const channel = supabase
+        .channel('global_status_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'app_configurations',
+            filter: `id=in.(${ADMIN_OWN_STATUS_CONFIG_KEY},${MANAGED_DEMO_CONTACTS_CONFIG_KEY})`,
+          },
+          (payload) => {
+            console.log('Global status changed:', payload);
+            fetchGlobalStatuses(); // Refetch when status changes
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [fetchGlobalStatuses]);
 
   return (

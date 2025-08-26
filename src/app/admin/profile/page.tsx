@@ -33,6 +33,7 @@ import { useAIMediaAssets } from '@/contexts/AIMediaAssetsContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { GlobalEventSystem, GLOBAL_EVENTS } from '@/lib/globalEventSystem';
 
 
 const ADMIN_AUTH_KEY = 'isAdminLoggedIn_KruthikaChat';
@@ -268,7 +269,12 @@ const AdminProfilePage: React.FC = () => {
       avatarUrl: updatedCoreProfileData.avatarUrl?.trim() === '' ? undefined : updatedCoreProfileData.avatarUrl,
     };
     console.log("[AdminProfilePage] handleSaveKruthikaCoreProfile - profileDataToUpdate before calling context update:", JSON.stringify(profileDataToUpdate, null, 2));
-    await updateAIProfile(profileDataToUpdate); 
+    await updateAIProfile(profileDataToUpdate);
+    
+    // Emit global event to notify all users
+    GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AI_PROFILE_UPDATED, profileDataToUpdate);
+    GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
+    
     setIsProfileEditorOpen(false);
   };
 
@@ -280,6 +286,10 @@ const AdminProfilePage: React.FC = () => {
     };
     console.log("[AdminProfilePage] handleSaveKruthikaStory - storyDataToUpdate before calling context update:", JSON.stringify(storyDataToUpdate, null, 2));
     await updateAIProfile(storyDataToUpdate);
+    
+    // Emit global event to notify all users
+    GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AI_PROFILE_UPDATED, storyDataToUpdate);
+    GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
   };
   
   const handleClearKruthikaStoryField = (field: 'statusStoryText' | 'statusStoryImageUrl') => {
@@ -307,7 +317,12 @@ const AdminProfilePage: React.FC = () => {
           { onConflict: 'id' }
         );
       if (error) throw error;
-      await fetchGlobalStatuses(); 
+      await fetchGlobalStatuses();
+      
+      // Emit global event to notify all users
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_STATUS_UPDATED, statusToSave);
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
+      
       toast({ title: "Global 'My Status' Saved!", description: "Your status for the Status Page has been updated universally." });
     } catch (error: any)
       {
@@ -361,7 +376,12 @@ const AdminProfilePage: React.FC = () => {
           { onConflict: 'id' }
         );
       if (error) throw error;
-      await fetchGlobalStatuses(); 
+      await fetchGlobalStatuses();
+      
+      // Emit global event to notify all users
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_DEMO_CONTACTS_UPDATED, managedContactStatuses);
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
+      
       toast({ title: "Global Demo Contacts Saved!", description: "Status details for demo contacts have been updated universally." });
     } catch (error: any) {
       console.error("Failed to save managed contact statuses to Supabase:", error);
@@ -408,6 +428,11 @@ const AdminProfilePage: React.FC = () => {
           { onConflict: 'id' }
         );
       if (error) throw error;
+      
+      // Emit global event to notify all users
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AD_SETTINGS_UPDATED, settingsToSave);
+      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
+      
       toast({ title: "Global Ad Settings Saved!", description: "Ad configurations have been saved to Supabase and will apply universally." });
     } catch (error: any) {
       console.error("Failed to save ad settings to Supabase:", error);
