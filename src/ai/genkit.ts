@@ -53,7 +53,7 @@ try {
 
   // Initialize the model with optimized settings
   model = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-1.5-flash', // Available model
+    model: 'gemini-2.0-flash-lite-001', // Available model
     generationConfig: {
       maxOutputTokens: 150,
       temperature: 0.9,
