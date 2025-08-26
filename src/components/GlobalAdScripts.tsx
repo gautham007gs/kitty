@@ -8,8 +8,12 @@ export default function GlobalAdScripts() {
   const { adSettings, isLoading } = useAdSettings();
 
   useEffect(() => {
-    if (isLoading) {
-      console.log('GlobalAdScripts: Ads disabled or still loading', { isLoadingAdSettings: isLoading });
+    // Return early if still loading or if adSettings is null
+    if (isLoading || !adSettings) {
+      console.log('GlobalAdScripts: Ads disabled or still loading', { 
+        isLoadingAdSettings: isLoading, 
+        adSettingsNull: !adSettings 
+      });
       return;
     }
 

@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 interface AdSettingsContextType {
   adSettings: AdSettings | null;
-  isLoadingAdSettings: boolean;
+  isLoading: boolean;
   fetchAdSettings: () => Promise<void>; // Allow manual refetch if needed
 }
 
@@ -59,7 +59,7 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   return (
-    <AdSettingsContext.Provider value={{ adSettings, isLoadingAdSettings, fetchAdSettings }}>
+    <AdSettingsContext.Provider value={{ adSettings, isLoading: isLoadingAdSettings, fetchAdSettings }}>
       {children}
     </AdSettingsContext.Provider>
   );
