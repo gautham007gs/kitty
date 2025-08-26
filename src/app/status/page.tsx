@@ -287,21 +287,29 @@ const StatusPage: React.FC = () => {
           <div className="my-3"></div>
 
           {/* Other Contacts */}
-          {(displayManagedDemoContacts || []).map(contact => (
-            (contact.hasUpdate || contact.statusImageUrl || contact.statusText) && (
-              <StatusItemDisplay
-                key={contact.id}
-                statusKey={contact.id}
-                displayName={contact.name}
-                rawAvatarUrl={contact.avatarUrl}
-                statusText={contact.statusText}
-                hasUpdateRing={contact.hasUpdate}
-                storyImageUrl={contact.statusImageUrl}
-                dataAiHint={contact.dataAiHint}
-                isKruthikaProfile={false}
-              />
-            )
-          ))}
+          {(displayManagedDemoContacts || []).map(contact => {
+            // Show contact if they have any meaningful content
+            const hasContent = contact.statusText && contact.statusText.trim() !== '';
+            const hasImage = contact.statusImageUrl && contact.statusImageUrl.trim() !== '';
+            const hasUpdate = contact.hasUpdate;
+            
+            if (hasContent || hasImage || hasUpdate) {
+              return (
+                <StatusItemDisplay
+                  key={contact.id}
+                  statusKey={contact.id}
+                  displayName={contact.name}
+                  rawAvatarUrl={contact.avatarUrl}
+                  statusText={contact.statusText || 'No status'}
+                  hasUpdateRing={contact.hasUpdate}
+                  storyImageUrl={contact.statusImageUrl}
+                  dataAiHint={contact.dataAiHint}
+                  isKruthikaProfile={false}
+                />
+              );
+            }
+            return null;
+          })}
         </div>
 
         {/* Bottom Banner Ad */}

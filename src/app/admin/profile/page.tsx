@@ -108,8 +108,14 @@ const AdminProfilePage: React.FC = () => {
   }, [contextAdminStatus]);
 
   useEffect(() => {
-    if (contextManagedContacts) setManagedContactStatuses(contextManagedContacts);
-  }, [contextManagedContacts]);
+    if (contextManagedContacts && contextManagedContacts.length > 0) {
+      console.log("[AdminProfilePage] Setting managedContactStatuses from context:", contextManagedContacts.length, "contacts");
+      setManagedContactStatuses(contextManagedContacts);
+    } else if (!isLoadingGlobalStatuses && (!contextManagedContacts || contextManagedContacts.length === 0)) {
+      console.log("[AdminProfilePage] Context has no managed contacts, using defaults:", defaultManagedContactStatuses.length);
+      setManagedContactStatuses(defaultManagedContactStatuses);
+    }
+  }, [contextManagedContacts, isLoadingGlobalStatuses]);
 
   useEffect(() => {
     if (contextMediaAssets) setAiMediaAssets(contextMediaAssets);
@@ -121,6 +127,7 @@ const AdminProfilePage: React.FC = () => {
       toast({ title: "Supabase Error", description: "Supabase client not available. Cannot load some global configurations.", variant: "destructive" });
       setAdSettings(defaultAdSettings); 
       setCurrentGlobalAIProfile(defaultAIProfile); // Ensure fallback
+      setManagedContactStatuses(defaultManagedContactStatuses); // Ensure demo contacts fallback
       return;
     }
     try {
@@ -896,7 +903,7 @@ const AdminProfilePage: React.FC = () => {
               <CardDescription className="text-sm">Set the ephemeral stories for the demo contacts that appear on the Status page. Visible to all users.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-2">
-              {(managedContactStatuses || []).map((contact) => (
+              {(managedContactStatuses && managedContactStatuses.length > 0 ? managedContactStatuses : defaultManagedContactStatuses).map((contact) => (
                 <div key={contact.id} className="border p-4 rounded-md space-y-3 bg-secondary/20 shadow-sm">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border" key={`${contact.id}-admin-avatar-${contact.avatarUrl}`}><AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint={contact.dataAiHint || "profile person"} onError={(e) => console.error(`Admin Page - Demo Contact Avatar load error. URL: ${contact.avatarUrl}`, e)} /><AvatarFallback>{contact.name.charAt(0)}</AvatarFallback></Avatar>

@@ -85,14 +85,32 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
         console.error('Error fetching managed demo contacts from Supabase:', demoContactsError);
         toast({ title: "Error Loading Demo Contacts", description: `Could not load global demo contacts. Using defaults. ${demoContactsError.message}`, variant: "destructive" });
         setManagedDemoContacts(defaultManagedContactStatuses);
-      } else if (demoContactsData && Array.isArray(demoContactsData.settings)) {
-         // Ensure defaultManagedContactStatuses provides a fallback for each ID if needed, or merge carefully
+      } else if (demoContactsData && Array.isArray(demoContactsData.settings) && demoContactsData.settings.length > 0) {
+         // Merge fetched data with defaults to ensure all contacts are present
         const fetchedContacts = demoContactsData.settings as ManagedContactStatus[];
-        // A simple merge: override defaults with fetched if IDs match, then add any new fetched.
-        // For a more robust merge, you might iterate and update based on ID.
-        // Here, we assume the fetched data is the complete source of truth if present.
-        setManagedDemoContacts(fetchedContacts);
+        
+        // Create a map of fetched contacts by ID
+        const fetchedContactsMap = new Map();
+        fetchedContacts.forEach(contact => {
+          fetchedContactsMap.set(contact.id, contact);
+        });
+        
+        // Merge with defaults, preferring fetched data where available
+        const mergedContacts = defaultManagedContactStatuses.map(defaultContact => {
+          const fetchedContact = fetchedContactsMap.get(defaultContact.id);
+          return fetchedContact ? { ...defaultContact, ...fetchedContact } : defaultContact;
+        });
+        
+        // Add any extra fetched contacts not in defaults
+        fetchedContacts.forEach(fetchedContact => {
+          if (!defaultManagedContactStatuses.find(def => def.id === fetchedContact.id)) {
+            mergedContacts.push(fetchedContact);
+          }
+        });
+        
+        setManagedDemoContacts(mergedContacts);
       } else {
+        console.log("[GlobalStatusContext] Using all default managed contacts:", defaultManagedContactStatuses.length);
         setManagedDemoContacts(defaultManagedContactStatuses);
       }
 
