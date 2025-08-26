@@ -1,72 +1,43 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAIResponse, generateSmartMediaResponse } from '@/lib/aiService';
-import { supabase } from '@/lib/supabaseClient';
+import { generateAIResponse } from '@/ai/genkit';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, conversationHistory = [], userId } = body;
+    const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
-        { error: 'Message is required' },
+        { error: 'Message is required and must be a string' },
         { status: 400 }
       );
     }
 
-    // Build conversation context
-    const messages = [
-      ...conversationHistory,
-      { role: 'user' as const, content: message }
-    ];
+    console.log('🚀 Chat API: Processing message from user:', userId);
+    console.log('📝 Message:', message.substring(0, 100) + '...');
 
-    // Generate AI response
-    const aiResponse = await generateAIResponse(messages);
+    // Generate AI response using the working Vertex AI service
+    const aiResponse = await generateAIResponse(message);
 
-    // Check for smart media response
-    const mediaResponse = await generateSmartMediaResponse(message, messages);
+    console.log('✅ Chat API: Response generated successfully');
 
-    // Log to Supabase if available
-    try {
-      if (supabase) {
-        await supabase.from('messages_log').insert({
-          user_id: userId || 'anonymous',
-          user_message: message,
-          ai_response: aiResponse,
-          session_id: `session_${Date.now()}`,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (logError) {
-      console.warn('Failed to log message to Supabase:', logError);
-      // Don't fail the request if logging fails
-    }
-
-    // Prepare response
-    const responseData: any = {
+    return NextResponse.json({
       response: aiResponse,
-      timestamp: new Date().toISOString()
-    };
-
-    // Add media if available
-    if (mediaResponse.shouldSendMedia) {
-      responseData.media = {
-        type: mediaResponse.mediaType,
-        url: mediaResponse.mediaUrl
-      };
-    }
-
-    return NextResponse.json(responseData);
+      newMood: mood || 'happy',
+      success: true
+    });
 
   } catch (error) {
-    console.error('Chat API Error:', error);
-    
-    // Return a fallback response instead of failing
+    console.error('❌ Chat API Error:', error);
+
+    // Return a contextual fallback response
+    const fallbackResponse = "Hey! Server mein thoda issue aa raha hai... But I'm here! Kya haal hai? 😊";
+
     return NextResponse.json({
-      response: "Sorry yaar! Main abhi thoda busy hun, but I'll be right back! 😊 Try again in a moment!",
-      timestamp: new Date().toISOString(),
-      error: 'AI_TEMPORARILY_UNAVAILABLE'
+      response: fallbackResponse,
+      newMood: 'neutral',
+      success: false,
+      error: 'AI service temporarily unavailable'
     });
   }
 }
