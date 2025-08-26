@@ -55,7 +55,7 @@ async function testVertexAI() {
     });
     
     const model = vertexAI.preview.getGenerativeModel({
-      model: 'gemini-1.5-pro',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         maxOutputTokens: 100,
         temperature: 0.7,
