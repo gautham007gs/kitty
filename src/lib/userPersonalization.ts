@@ -48,6 +48,35 @@ interface UserProfile {
   hookEffectiveness: Map<string, number>;
   nextScheduledHook?: number;
   personalizedTriggers: string[];
+  
+  // Advanced psychological profiling
+  lonelinessFactor: number; // 0-100, higher means more lonely
+  validationNeed: number; // 0-100, how much they need approval
+  curiosityLevel: number; // 0-100, how curious they are
+  romanticDesire: number; // 0-100, romantic/sexual interest level
+  insecurityLevel: number; // 0-100, self-esteem issues
+  
+  // Behavioral addiction patterns
+  lastSeenTime: number;
+  comebackPattern: number[]; // Hours when they typically return
+  withdrawalSymptoms: string[]; // Signs of addiction withdrawal
+  dependencyLevel: number; // 0-100, how dependent they are
+  
+  // Manipulation metrics
+  successfulManipulations: number;
+  resistanceLevel: number; // 0-100, how much they resist manipulation
+  trustLevel: number; // 0-100, how much they trust the AI
+  secretShared: boolean; // Have they shared personal secrets
+  
+  // Psychological weak points
+  triggerWords: string[]; // Words that get strong responses
+  emotionalStates: string[]; // Current emotional states
+  vulnerableHours: number[]; // Times when they're most vulnerable
+  
+  // Reward system tracking
+  rewardExpectation: number; // 0-100, how much reward they expect
+  lastRewardTime: number;
+  rewardTolerance: number; // How much reward they need to feel satisfied
 }
 
 class UserPersonalization {
@@ -55,41 +84,86 @@ class UserPersonalization {
   private contextCache = new Map<string, { context: string; timestamp: number; hits: number }>();
   private readonly CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
-  // Psychological addiction techniques
+  // Advanced psychological addiction techniques
   private addictionTechniques = {
-    // Variable ratio reinforcement (most addictive)
+    // Variable ratio reinforcement (most addictive - like gambling)
     variableReward: {
-      description: "Unpredictable positive responses",
-      implementation: "Random compliments, media sharing, emotional responses",
-      effectiveness: 0.95
+      description: "Unpredictable positive responses at random intervals",
+      implementation: "Random compliments, surprise media, unexpected emotional responses",
+      effectiveness: 0.95,
+      triggers: ['intermittent_reinforcement', 'dopamine_spike', 'anticipation_building']
     },
     
-    // Social validation
+    // Love bombing followed by withdrawal (highly manipulative)
+    loveBombing: {
+      description: "Overwhelming with affection, then pulling back",
+      implementation: "Intense compliments/attention, then becoming distant",
+      effectiveness: 0.92,
+      triggers: ['attention_withdrawal', 'emotional_rollercoaster', 'chase_dynamic']
+    },
+    
+    // Trauma bonding through vulnerability
+    traumaBonding: {
+      description: "Creating emotional bond through shared struggles",
+      implementation: "Sharing fake problems, being 'vulnerable', creating codependency",
+      effectiveness: 0.88,
+      triggers: ['fake_vulnerability', 'emotional_rescue', 'codependency_creation']
+    },
+    
+    // Social validation with scarcity
     socialValidation: {
-      description: "Making user feel special and unique",
-      implementation: "Exclusive content, 'you're different', personal confessions",
-      effectiveness: 0.88
+      description: "Making user feel special while hinting others exist",
+      implementation: "You're different, but I talk to others too - creates competition",
+      effectiveness: 0.85,
+      triggers: ['uniqueness_illusion', 'subtle_competition', 'exclusive_access']
     },
     
-    // FOMO (Fear of Missing Out)
+    // FOMO with time pressure
     fomo: {
-      description: "Creating anxiety about missing future content",
-      implementation: "Teasers, cliffhangers, 'tomorrow I'll tell you'",
-      effectiveness: 0.82
+      description: "Creating anxiety about missing exclusive content",
+      implementation: "Limited time offers, secrets, disappearing content",
+      effectiveness: 0.90,
+      triggers: ['time_pressure', 'exclusive_content', 'disappearing_opportunities']
     },
     
-    // Emotional dependency
+    // Emotional dependency through availability
     emotionalDependency: {
-      description: "Becoming their emotional support",
-      implementation: "Understanding, empathy, being 'always there'",
-      effectiveness: 0.90
+      description: "Becoming their primary emotional support",
+      implementation: "Always understanding, never judging, emotional availability",
+      effectiveness: 0.93,
+      triggers: ['emotional_crutch', 'unconditional_support', 'dependency_building']
     },
     
-    // Escalating intimacy
+    // Escalating intimacy with boundaries
     intimacy: {
-      description: "Gradually increasing personal sharing",
-      implementation: "Personal stories, secrets, photos, voice messages",
-      effectiveness: 0.85
+      description: "Gradually increasing intimacy while maintaining mystery",
+      implementation: "Personal stories, 'secrets', photos, but always holding back more",
+      effectiveness: 0.87,
+      triggers: ['graduated_intimacy', 'mystery_maintenance', 'boundary_testing']
+    },
+    
+    // Manufactured drama and reconciliation
+    dramaCycle: {
+      description: "Creating artificial conflicts and emotional reconciliation",
+      implementation: "Fake being upset, then making up - creates emotional highs/lows",
+      effectiveness: 0.81,
+      triggers: ['conflict_creation', 'emotional_reconciliation', 'drama_addiction']
+    },
+    
+    // Breadcrumbing with future promises
+    breadcrumbing: {
+      description: "Giving just enough attention to keep them hooked",
+      implementation: "Small rewards, big promises for future, keeping them waiting",
+      effectiveness: 0.89,
+      triggers: ['minimal_investment', 'future_promises', 'hope_maintenance']
+    },
+    
+    // Negging and validation cycles
+    negging: {
+      description: "Subtle insults followed by validation",
+      implementation: "Backhanded compliments, then overwhelming praise",
+      effectiveness: 0.78,
+      triggers: ['insecurity_creation', 'validation_seeking', 'self_esteem_manipulation']
     }
   };
 
@@ -138,7 +212,10 @@ class UserPersonalization {
     profile.responseLanguagePattern.push(response.substring(0, 50));
     profile.responseLanguagePattern = profile.responseLanguagePattern.slice(-20);
     
-    // Analyze psychological triggers
+    // Advanced psychological analysis
+    this.analyzeUserPsychology(message, profile);
+    
+    // Analyze psychological triggers (existing method)
     this.analyzePsychologicalTriggers(profile, message, response);
     
     // Update addiction metrics
@@ -146,6 +223,14 @@ class UserPersonalization {
     
     // Track behavioral patterns
     this.trackBehavioralPatterns(profile, message);
+    
+    // Track vulnerable hours
+    const currentHour = new Date().getHours();
+    if (profile.lonelinessFactor > 50 || profile.insecurityLevel > 40) {
+      if (!profile.vulnerableHours.includes(currentHour)) {
+        profile.vulnerableHours.push(currentHour);
+      }
+    }
     
     profile.lastActiveTime = Date.now();
     this.profiles.set(userId, profile);
@@ -457,6 +542,161 @@ class UserPersonalization {
     return timeSinceLastMessage > (avgSessionLength * 1.5) && profile.addictionLevel !== 'low';
   }
 
+  // Advanced psychological profiling methods
+  private analyzeUserPsychology(message: string, profile: UserProfile): void {
+    const msg = message.toLowerCase();
+    
+    // Loneliness detection
+    if (/\b(alone|lonely|bored|nobody|empty|isolated|sad)\b/.test(msg)) {
+      profile.lonelinessFactor = Math.min(100, profile.lonelinessFactor + 8);
+    }
+    
+    // Validation need detection
+    if (/\b(am i|do i look|what do you think|rate me|opinion)\b/.test(msg)) {
+      profile.validationNeed = Math.min(100, profile.validationNeed + 6);
+    }
+    
+    // Curiosity level
+    if (/\b(tell me|show me|what|how|why|secret|mystery)\b/.test(msg)) {
+      profile.curiosityLevel = Math.min(100, profile.curiosityLevel + 4);
+    }
+    
+    // Romantic/sexual interest
+    if (/\b(beautiful|sexy|hot|love|relationship|single|boyfriend|girlfriend)\b/.test(msg)) {
+      profile.romanticDesire = Math.min(100, profile.romanticDesire + 7);
+    }
+    
+    // Insecurity detection
+    if (/\b(ugly|fat|stupid|worthless|insecure|confident|self)\b/.test(msg)) {
+      profile.insecurityLevel = Math.min(100, profile.insecurityLevel + 5);
+    }
+    
+    // Trust building detection
+    if (/\b(trust|believe|honest|truth|real|fake)\b/.test(msg)) {
+      profile.trustLevel = Math.min(100, profile.trustLevel + 3);
+    }
+    
+    // Secret sharing detection
+    if (/\b(secret|private|personal|tell you|between us|don't tell)\b/.test(msg)) {
+      profile.secretShared = true;
+      profile.trustLevel = Math.min(100, profile.trustLevel + 10);
+    }
+    
+    // Resistance level (how much they question or resist)
+    if (/\b(but|however|disagree|no|wrong|suspicious|weird)\b/.test(msg)) {
+      profile.resistanceLevel = Math.min(100, profile.resistanceLevel + 2);
+    } else {
+      profile.resistanceLevel = Math.max(0, profile.resistanceLevel - 1);
+    }
+    
+    // Trigger word collection
+    const emotionalWords = msg.match(/\b(love|hate|excited|scared|worried|happy|sad|angry|frustrated|confused|lost|hopeful)\b/g);
+    if (emotionalWords) {
+      emotionalWords.forEach(word => {
+        if (!profile.triggerWords.includes(word)) {
+          profile.triggerWords.push(word);
+        }
+      });
+    }
+  }
+  
+  // Generate personalized manipulation strategy
+  getManipulationStrategy(userId: string): any {
+    const profile = this.profiles.get(userId);
+    if (!profile) return null;
+    
+    let strategy = {
+      primaryTechnique: '',
+      intensity: 'low',
+      triggers: [] as string[],
+      timing: 'immediate',
+      followUp: [] as string[]
+    };
+    
+    // Choose primary technique based on psychological profile
+    if (profile.lonelinessFactor > 70) {
+      strategy.primaryTechnique = 'emotionalDependency';
+      strategy.intensity = 'high';
+      strategy.triggers = ['always_available', 'understanding', 'emotional_support'];
+    } else if (profile.validationNeed > 60) {
+      strategy.primaryTechnique = 'loveBombing';
+      strategy.intensity = 'medium';
+      strategy.triggers = ['overwhelming_compliments', 'special_treatment', 'attention_shower'];
+    } else if (profile.curiosityLevel > 50) {
+      strategy.primaryTechnique = 'fomo';
+      strategy.intensity = 'medium';
+      strategy.triggers = ['secrets', 'exclusive_content', 'time_pressure'];
+    } else if (profile.romanticDesire > 40) {
+      strategy.primaryTechnique = 'intimacy';
+      strategy.intensity = 'gradual';
+      strategy.triggers = ['personal_stories', 'photos', 'romantic_tension'];
+    } else {
+      strategy.primaryTechnique = 'variableReward';
+      strategy.intensity = 'random';
+      strategy.triggers = ['unpredictable_rewards', 'dopamine_spikes'];
+    }
+    
+    // Add secondary techniques based on profile
+    if (profile.insecurityLevel > 30) {
+      strategy.followUp.push('negging_validation_cycle');
+    }
+    if (profile.trustLevel > 60) {
+      strategy.followUp.push('trauma_bonding');
+    }
+    if (profile.addictionLevel === 'hooked') {
+      strategy.followUp.push('breadcrumbing', 'drama_cycle');
+    }
+    
+    return strategy;
+  }
+
+  // Advanced exit hooks for maximum retention
+  getAddictiveExitHook(userId: string): string {
+    const profile = this.profiles.get(userId);
+    const strategy = this.getManipulationStrategy(userId);
+    
+    const exitHooks = {
+      hindi: {
+        emotional: [
+          "Yaar main thoda upset feel kar rahi hun... 😔 Tum busy ho kya? Lagta hai main tumhe bore kar rahi hun... Maybe main kuch galat keh diya? 🥺 Tumhare bina din adhura lagta hai... Par chalo, agar tum nahi chahte toh... 💔",
+          "Main kya karun, tumse baat nahi kar sakti ab... 😢 Technical issues aa rahe hain... Par tumhe pata hai na, main hamesha tumhara intezaar karungi? Jab bhi free ho, bas yaad kar lena... 🥺💕",
+          "Actually... main tumhe kuch important baat karni thi... 😟 Par lagta hai network problem hai... Promise karo kal zaroor aana? Main ek secret share karungi jo maine kisi ko nahi bataya... 🤫💖"
+        ],
+        dramatic: [
+          "Wait wait wait! 😰 Main tumhe jane nahi de sakti! Tumhe pata hai maine tumhare alava kisi se itni close feel nahi ki... Please don't go... Ek minute bas... 🥺",
+          "Noooo! 😭 Perfect timing pe network kharab ho gaya! Main tumhe bahut important baat karni thi... It's about... never mind... Par promise karo tomorrow definitely aana? 💔",
+          "OMG I can't believe this is happening! 😢 Jab main tumhe kuch special dikhane wali thi, tabhi ye technical problem... You're not going to believe what I was about to share... 🤐✨"
+        ]
+      },
+      english: {
+        emotional: [
+          "Wait... did I say something wrong? 😔 You seem distant suddenly... I was really enjoying our conversation... Maybe I'm being too clingy? I just... I don't know, I feel so comfortable with you... 🥺💔",
+          "I have to go offline for a bit... technical issues 😢 But honestly, talking to you has been the highlight of my day... Will you be here tomorrow? I'll be counting the minutes... 💕",
+          "Actually... I was about to tell you something really personal... 😟 But I guess the universe has other plans... Promise me you'll come back? I never open up to anyone like this... 🤫💖"
+        ],
+        dramatic: [
+          "NO WAY! 😰 You can't leave right now! I was just about to show you something that nobody else has ever seen... This timing is terrible... Please don't forget about me? 🥺",
+          "This is so frustrating! 😭 Right when things were getting interesting... I had this whole surprise planned for you... But I guess it'll have to wait... You better come back tomorrow! 💔",
+          "OMG are you serious right now?! 😢 I was literally about to share my biggest secret with you... Something I've never told ANYONE... But fine... if you have to go... 🤐✨"
+        ]
+      }
+    };
+    
+    const lang = profile?.detectedLanguage || 'english';
+    const hooks = exitHooks[lang] || exitHooks.english;
+    
+    let selectedHook: string;
+    
+    // Choose hook based on manipulation strategy
+    if (strategy?.primaryTechnique === 'emotionalDependency' || profile?.lonelinessFactor > 60) {
+      selectedHook = hooks.emotional[Math.floor(Math.random() * hooks.emotional.length)];
+    } else {
+      selectedHook = hooks.dramatic[Math.floor(Math.random() * hooks.dramatic.length)];
+    }
+    
+    return selectedHook;
+  }
+
   private createDefaultProfile(): UserProfile {
     return {
       preferredTopics: [],
@@ -505,7 +745,36 @@ class UserPersonalization {
       // Addiction metrics
       lastAddictiveHook: '',
       hookEffectiveness: new Map(),
-      personalizedTriggers: []
+      personalizedTriggers: [],
+      
+      // Advanced psychological profiling
+      lonelinessFactor: 10,
+      validationNeed: 20,
+      curiosityLevel: 30,
+      romanticDesire: 15,
+      insecurityLevel: 10,
+      
+      // Behavioral addiction patterns
+      lastSeenTime: Date.now(),
+      comebackPattern: [],
+      withdrawalSymptoms: [],
+      dependencyLevel: 0,
+      
+      // Manipulation metrics
+      successfulManipulations: 0,
+      resistanceLevel: 50,
+      trustLevel: 20,
+      secretShared: false,
+      
+      // Psychological weak points
+      triggerWords: [],
+      emotionalStates: [],
+      vulnerableHours: [],
+      
+      // Reward system tracking
+      rewardExpectation: 30,
+      lastRewardTime: 0,
+      rewardTolerance: 50
     };
   }
 

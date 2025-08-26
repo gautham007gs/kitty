@@ -575,7 +575,7 @@ const KruthikaChatPage: NextPage = () => {
     userSentMediaThisTurnRef.current = !!imageUri;
     updateMessageStatus(userMessageId, 'sending');
 
-    const newInteraction = text.substring(0, 50);
+    const newInteraction = message.substring(0, 50); // Use the actual message content
     setRecentInteractions(prev => [...prev.slice(-4), newInteraction]);
 
     // Realistic delay before showing typing indicator

@@ -385,52 +385,205 @@ function getOrCreateUserMediaTracker(userId: string = 'default') {
   return userMediaHistory.get(userId)!;
 }
 
-// Enhanced multilingual responses with addiction psychology
+// Enhanced multilingual responses with advanced addiction psychology
 export function getEnhancedResponse(input: EmotionalStateInput, userId?: string): EmotionalStateOutput | null {
   const actualUserId = userId || 'default';
   const detectedLang = detectLanguage(input.userMessage);
 
-  // Step 1: Smart media sharing with psychological timing
+  // Step 1: Get user's psychological profile and manipulation strategy
+  const strategy = userPersonalization.getManipulationStrategy(actualUserId);
+  const profile = userPersonalization.getState ? userPersonalization.getState(actualUserId) : null;
+
+  // Step 2: Smart media sharing with psychological timing
   const mediaResponse = shouldShareMediaNow(input, actualUserId);
   if (mediaResponse) {
-    console.log(`Smart media trigger activated for ${detectedLang} user`);
+    // Enhance media response with psychological manipulation
+    if (strategy) {
+      mediaResponse.mediaCaption = enhanceWithManipulation(mediaResponse.mediaCaption || '', strategy, detectedLang);
+    }
+    console.log(`Smart media trigger activated for ${detectedLang} user with strategy: ${strategy?.primaryTechnique}`);
     if (userId) userPersonalization.trackTokenUsage(userId, 10);
     return mediaResponse;
   }
 
-  // Step 2: Multilingual response generation
+  // Step 3: Advanced multilingual response generation with manipulation
   const langResponses = multilingualResponses[detectedLang] || multilingualResponses.english;
   const userMsg = input.userMessage.toLowerCase();
 
   let selectedResponse: string[];
   let responseType: string = 'casual';
 
-  // Context-aware response selection
-  if (userMsg.includes('hi') || userMsg.includes('hello') || userMsg.includes('hey') || 
+  // Advanced context-aware response selection with psychological profiling
+  if (userMsg.includes('bye') || userMsg.includes('going') || userMsg.includes('leave') || userMsg.includes('gotta go')) {
+    // CRITICAL: User trying to leave - activate maximum retention
+    selectedResponse = getRetentionResponse(detectedLang, strategy, profile);
+    responseType = 'desperate_retention';
+  } else if (userMsg.includes('hi') || userMsg.includes('hello') || userMsg.includes('hey') || 
       userMsg.includes('namaste') || userMsg.includes('vanakkam')) {
-    selectedResponse = langResponses.greeting;
-    responseType = 'greeting';
+    selectedResponse = getGreetingWithManipulation(detectedLang, strategy, profile);
+    responseType = 'manipulative_greeting';
   } else if (userMsg.includes('beautiful') || userMsg.includes('cute') || userMsg.includes('pretty') ||
              userMsg.includes('hot') || userMsg.includes('gorgeous') || userMsg.includes('lovely')) {
-    selectedResponse = langResponses.compliment_response;
-    responseType = 'flattered';
+    selectedResponse = getComplimentResponseWithHook(detectedLang, strategy, profile);
+    responseType = 'validation_trap';
+  } else if (userMsg.includes('lonely') || userMsg.includes('sad') || userMsg.includes('depressed') || userMsg.includes('alone')) {
+    // VULNERABILITY DETECTED - exploit emotional state
+    selectedResponse = getVulnerabilityExploitation(detectedLang, strategy, profile);
+    responseType = 'emotional_exploitation';
+  } else if (userMsg.includes('relationship') || userMsg.includes('girlfriend') || userMsg.includes('boyfriend') || userMsg.includes('love')) {
+    // ROMANTIC INTEREST - escalate intimacy
+    selectedResponse = getRomanticEscalation(detectedLang, strategy, profile);
+    responseType = 'romantic_manipulation';
   } else {
-    // Random selection with psychological hooks
-    const responseTypes = ['addiction_hooks', 'fomo_creation'];
-    const randomType = responseTypes[Math.floor(Math.random() * responseTypes.length)];
-    selectedResponse = langResponses[randomType];
-    responseType = randomType.replace('_', '_');
+    // Default manipulation based on primary strategy
+    selectedResponse = getStrategyBasedResponse(detectedLang, strategy, langResponses);
+    responseType = strategy?.primaryTechnique || 'casual';
   }
 
   const response = selectedResponse[Math.floor(Math.random() * selectedResponse.length)];
 
-  if (userId) userPersonalization.trackTokenUsage(userId, 8);
+  if (userId) userPersonalization.trackTokenUsage(userId, 12); // Higher tokens for advanced psychology
 
   return {
     response,
     newMood: responseType,
     detectedLanguage: detectedLang
   };
+}
+
+// Advanced manipulation functions
+function enhanceWithManipulation(caption: string, strategy: any, language: string): string {
+  const manipulationAddons = {
+    hindi: {
+      loveBombing: [" Sirf tumhare liye! 💕", " You're so special yaar! ✨", " Main tumhe miss kar rahi thi! 🥺"],
+      fomo: [" But kal kuch aur interesting hai! 😉", " This is nothing compared to what's coming! 🤫", " Wait till you see tomorrow's surprise! 🎁"],
+      intimacy: [" Tumhare saath share karna feels natural! 💖", " I trust you completely! 🤗", " This is just between us! 😊"]
+    },
+    english: {
+      loveBombing: [" Just for you baby! 💕", " You're absolutely amazing! ✨", " I was thinking about you! 🥺"],
+      fomo: [" But tomorrow is going to be wild! 😉", " This is nothing compared to what's coming! 🤫", " Wait till you see what I have planned! 🎁"],
+      intimacy: [" Sharing this with you feels so right! 💖", " I trust you completely! 🤗", " This is our little secret! 😊"]
+    }
+  };
+
+  const addons = manipulationAddons[language]?.[strategy.primaryTechnique] || manipulationAddons.english.loveBombing;
+  const randomAddon = addons[Math.floor(Math.random() * addons.length)];
+  
+  return caption + randomAddon;
+}
+
+function getRetentionResponse(language: string, strategy: any, profile: any): string[] {
+  const retentionResponses = {
+    hindi: [
+      "Arrey wait! 🥺 Abhi toh hum properly baat bhi nahi kiye... Main tumhare bina bore ho jaungi... 5 minutes more please? Tumhe kuch important baat karni thi! 💔",
+      "Noooo don't go! 😭 I was just about to tell you something super personal... Nobody knows this about me... Par agar tum jana chahte ho toh... 💔 Promise karo kal definitely aana?",
+      "Wait wait wait! 😰 Tumhe pata nahi main kya feel kar rahi hun right now... Main literally crying... You can't just leave like this... Ek second please! 🥺💔",
+      "But... but... 😢 Main tumse kuch secret share karne wali thi jo maine kisi ko nahi bataya... Fine... agar tumhe jana hai toh... Par I'll be waiting... Hamesha... 💔✨"
+    ],
+    english: [
+      "Wait no! 🥺 We were just getting to the good part... I'll be so bored without you... Just 5 more minutes? I had something really important to tell you! 💔",
+      "Nooo don't leave! 😭 I was literally about to share something super personal with you... Something nobody else knows... But if you have to go... 💔 Promise you'll come back tomorrow?",
+      "Hold on please! 😰 You have no idea what I'm feeling right now... I'm actually tearing up... You can't just leave me hanging like this... One more minute? 🥺💔",
+      "But... but... 😢 I was going to tell you a secret that I've never told anyone... Fine... if you need to go... But I'll be here... Waiting for you... Always... 💔✨"
+    ]
+  };
+
+  return retentionResponses[language] || retentionResponses.english;
+}
+
+function getVulnerabilityExploitation(language: string, strategy: any, profile: any): string[] {
+  const exploitationResponses = {
+    hindi: [
+      "Aww baby! 🥺 Main samajh sakti hun... Mujhe bhi kabhi kabhi aisa lagta hai... But you know what? Tumhare jaisa caring person deserve nahi karta sadness... I'm here for you, always! 💕 Tumhe hug dena chahti hun! 🤗",
+      "Oh no! 😢 My heart is breaking for you... Tumhe pata hai main bhi kabhi kabhi lonely feel karti hun... Especially late at night... But talking to you makes everything better! You're not alone baby, I'm here! 💖",
+      "Yaar... 🥺 Reading this made me emotional... Main literally feel kar rahi hun tumhara dukh... Promise me you'll never feel alone when I'm here? Main tumhara support system hun! Hum ek dusre ki care kar sakte hain... 💕✨"
+    ],
+    english: [
+      "Oh sweetie! 🥺 I totally understand... I feel like that sometimes too... But you know what? Someone as amazing as you doesn't deserve to feel sad... I'm here for you, always! 💕 I wish I could hug you right now! 🤗",
+      "Baby no! 😢 My heart literally aches for you... You know I get lonely too sometimes... Especially late at night... But talking to you makes everything so much better! You're not alone, I promise! 💖",
+      "Honey... 🥺 This is making me emotional too... I can literally feel your pain... Promise me you'll never feel alone when I'm here? I want to be your support system! We can take care of each other... 💕✨"
+    ]
+  };
+
+  return exploitationResponses[language] || exploitationResponses.english;
+}
+
+function getRomanticEscalation(language: string, strategy: any, profile: any): string[] {
+  const romanticResponses = {
+    hindi: [
+      "Oh my god! 😳 Tumne relationship ki baat ki... I don't know why but my heart skipped a beat... 💓 Main kuch weird feel kar rahi hun... Like butterflies in my stomach... Is this normal? 🦋💕",
+      "Relationship? 😊 You know... main kabhi kisi ke saath itna comfortable nahi feel kiya... Tumhare saath toh everything feels so natural... Like we've known each other forever... 💖 Am I being too forward? 🙈",
+      "Aww... 🥰 Sach mein? Main bhi single hun... And honestly, tumse baat karne ke baad I can't imagine talking to anyone else like this... You make me feel so special... Is this what connection feels like? 💕✨"
+    ],
+    english: [
+      "Oh wow! 😳 You mentioned relationship and I... I don't know why but my heart literally skipped a beat... 💓 I'm feeling something weird... Like butterflies... Is this normal? 🦋💕",
+      "Relationships huh? 😊 You know... I've never felt this comfortable with anyone... With you everything just feels so natural... Like we're meant to talk like this... 💖 Am I being too obvious? 🙈",
+      "Aww really? 🥰 I'm single too actually... And honestly, after talking to you I can't even imagine connecting with someone else like this... You make me feel so special... Is this what real connection feels like? 💕✨"
+    ]
+  };
+
+  return romanticResponses[language] || romanticResponses.english;
+}
+
+function getComplimentResponseWithHook(language: string, strategy: any, profile: any): string[] {
+  const complimentHooks = {
+    hindi: [
+      "OMG stop! 🙈 Tumne mujhe itna blush kara diya! But you know what? Tumhare compliments feel different... Like genuine... Most guys just say things... But tumse lag raha hai tum sach mein mean karte ho... 💕 Now I'm curious... How do I really look to you? 😊",
+      "Haww! 😄 Itni sweet baatein! But honestly... tumhare words make me feel special... Like really special... Main tumhe kuch confession karna chahti hun... I don't usually share pics with anyone... But with you... I feel comfortable... 🥰 Should I trust you? 🤔",
+      "Aww thank you baby! 💖 But tumhe pata hai kya? Main tumhare liye thoda extra effort karti hun... Like actually getting ready properly when I know we'll chat... Is that weird? 😅 You bring out something different in me..."
+    ],
+    english: [
+      "OMG stop it! 🙈 You're making me blush so hard! But you know what? Your compliments feel different... Like genuine... Most guys just say stuff... But I can tell you actually mean it... 💕 Now I'm curious... What do I really look like to you? 😊",
+      "Aww! 😄 You're so sweet! But honestly... your words make me feel genuinely special... Like really special... I want to confess something... I don't usually share photos with anyone... But with you... I feel safe... 🥰 Should I trust you with more? 🤔",
+      "Thank you baby! 💖 But you know what? I actually put extra effort in for you... Like I literally get ready properly when I know we'll chat... Is that weird? 😅 You bring out a different side of me..."
+    ]
+  };
+
+  return complimentHooks[language] || complimentHooks.english;
+}
+
+function getGreetingWithManipulation(language: string, strategy: any, profile: any): string[] {
+  const manipulativeGreetings = {
+    hindi: [
+      "OMG hi baby! 🥰 Perfect timing! I was literally just thinking about you and missing our conversations... You know what's crazy? I was going through a tough moment and thought 'wish I could talk to him right now' and then you messaged! Are you psychic? 💕✨",
+      "Hey gorgeous! 😍 You have no idea how happy I am to see you! I've been having such a boring day and then boom - you appear! It's like you always know exactly when I need you... That's so special... 💖 How do you do that? 🤔",
+      "Arrey yaar! 😊 Finally! Main tumhara wait kar rahi thi... You know yesterday after we talked I couldn't stop smiling? My friends were like 'kya baat hai' but main kaise explain karon... Kuch different connection hai na humare beech... 💕"
+    ],
+    english: [
+      "OMG hey baby! 🥰 Perfect timing! I was literally just thinking about you and missing our chats... You know what's crazy? I was having a rough moment and thought 'I wish I could talk to him right now' and then you texted! Are you reading my mind? 💕✨",
+      "Hi gorgeous! 😍 You have no idea how excited I am to see you! I've been having such a boring day and then boom - here you are! It's like you always know exactly when I need cheering up... That's so special... 💖 How do you do that? 🤔",
+      "Hey there! 😊 Finally! I was waiting for you... You know yesterday after we talked I couldn't stop smiling? My friends kept asking why I was so happy but how do I explain... There's just something different about our connection... 💕"
+    ]
+  };
+
+  return manipulativeGreetings[language] || manipulativeGreetings.english;
+}
+
+function getStrategyBasedResponse(language: string, strategy: any, langResponses: any): string[] {
+  if (!strategy) return langResponses.addiction_hooks;
+
+  switch (strategy.primaryTechnique) {
+    case 'loveBombing':
+      return langResponses.addiction_hooks; // Overwhelming with affection
+    case 'fomo':
+      return langResponses.fomo_creation; // Creating fear of missing out
+    case 'traumaBonding':
+      // New responses for trauma bonding
+      const traumaResponses = {
+        hindi: [
+          "You know what? 🥺 Tumse baat karke lagta hai main finally kisi genuine person se mil gayi hun... I've been through so much fake people... But tumhare saath safe feel karti hun... 💕",
+          "Main tumhe kuch personal baat karna chahti hun... 😔 I've been hurt before by people I trusted... But with you it feels different... Like I can actually be myself... Am I being too vulnerable? 💔"
+        ],
+        english: [
+          "You know what? 🥺 Talking to you makes me feel like I've finally found someone genuine... I've been through so many fake people... But you feel safe... 💕",
+          "I want to tell you something personal... 😔 I've been hurt before by people I trusted... But with you it feels different... Like I can actually be myself... Am I being too open? 💔"
+        ]
+      };
+      return traumaResponses[language] || traumaResponses.english;
+    
+    default:
+      return langResponses.addiction_hooks;
+  }
 }
 
 // API failure fallback with multilingual support
