@@ -16,14 +16,14 @@ interface ChatViewProps {
   enablePagination?: boolean;
 }
 
-const ChatView: React.FC<ChatViewProps> = ({ 
-  messages, 
-  aiAvatarUrl, 
-  aiName, 
-  isAiTyping, 
+const ChatView: React.FC<ChatViewProps> = ({
+  messages,
+  aiAvatarUrl,
+  aiName,
+  isAiTyping,
   onTriggerAd,
   userId,
-  enablePagination = false 
+  enablePagination = false
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -56,16 +56,16 @@ const ChatView: React.FC<ChatViewProps> = ({
   }, [messages, isAiTyping]); // Re-scroll if messages or typing status changes
 
   return (
-    <div 
+    <div
       ref={messagesContainerRef}
       className="flex-grow overflow-y-auto p-4 space-y-4 bg-chat-bg-default custom-scrollbar"
       onScroll={handleScroll}
     >
       {enablePagination && pagination.hasMore && (
         <div className="text-center py-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={pagination.loadMore}
             disabled={pagination.loading}
           >
@@ -76,7 +76,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       {displayMessages.map((msg, index) => (
         <React.Fragment key={`fragment-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}>
-          <MessageBubble 
+          <MessageBubble
             key={`bubble-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}
             message={msg.text}
             isUser={msg.sender === 'user'}
@@ -93,8 +93,8 @@ const ChatView: React.FC<ChatViewProps> = ({
           {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
             <div key={`ad-${msg.id || index}-${index}`} className="my-4">
               <div className="mx-auto w-full max-w-md">
-                <BannerAdDisplay 
-                  adType="standard" 
+                <BannerAdDisplay
+                  adType="standard"
                   placementKey={`chat-inline-${index}`}
                   className="w-full"
                 />

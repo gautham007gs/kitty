@@ -16,6 +16,7 @@ interface MessageBubbleProps {
   aiImageUrl?: string;
   audioUrl?: string;
   onTriggerAd?: () => void;
+  isTyping?: boolean;
 }
 
 const MessageBubble = memo(({
@@ -55,10 +56,12 @@ const MessageBubble = memo(({
 
       <div
         className={cn(
-          "rounded-2xl px-4 py-2 max-w-full break-words cursor-pointer transition-colors",
+          "rounded-2xl px-3 py-2 max-w-full break-words cursor-pointer transition-colors shadow-sm",
           isUser
-            ? "bg-[#DCF8C6] text-gray-900 rounded-br-md"
-            : "bg-white text-gray-900 rounded-bl-md"
+            ? "bg-[#DCF8C6] text-gray-900 rounded-br-md ml-2"
+            : "bg-white text-gray-900 rounded-bl-md mr-2 relative",
+          // Add breadcrumb tail for AI messages
+          !isUser && "before:content-[''] before:absolute before:left-[-8px] before:bottom-[8px] before:w-0 before:h-0 before:border-r-[8px] before:border-r-white before:border-t-[6px] before:border-t-transparent before:border-b-[6px] before:border-b-transparent"
         )}
         onClick={handleBubbleClick}
       >
@@ -114,8 +117,11 @@ const MessageBubble = memo(({
           </span>
           {isUser && (
             <div className="flex items-center ml-1">
+              {!isDelivered && (
+                <Check className="h-3 w-3 text-gray-300" />
+              )}
               {isDelivered && !isRead && (
-                <Check className="h-3 w-3 text-gray-400" />
+                <CheckCheck className="h-3 w-3 text-gray-400" />
               )}
               {isRead && (
                 <CheckCheck className="h-3 w-3 text-blue-500" />

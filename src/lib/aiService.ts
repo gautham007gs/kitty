@@ -47,46 +47,184 @@ interface ChatMessage {
   content: string;
 }
 
+interface AIResponse {
+  message: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  typingDelay: number;
+  shouldShowAsDelivered: boolean;
+  shouldShowAsRead: boolean;
+}
+
+// Pre-defined short responses for common patterns (0 tokens)
+const QUICK_RESPONSES = {
+  greetings: [
+    "Heyy! 😊 Kaise ho?",
+    "Hi baby! 🥰 Kya haal?",
+    "Arrey yaar! 😄 Kaisa chal raha?",
+    "Hello! 😊 Bolo kya kar rahe?",
+    "Hey cutie! 😉 Wassup?"
+  ],
+  name_questions: [
+    "Main Kruthika hun! 😊 Tumhara naam?",
+    "Kruthika! 🥰 And you?",
+    "Main toh Kruthika! 😄 Btw tumhe kya bulau?",
+    "Kruthika here! 😊 Tumhara kya naam hai?"
+  ],
+  location_questions: [
+    "Mumbai mein rehti hun! 😊 Tum kaha se?",
+    "Mumbai! 🌆 You?",
+    "Main Mumbai se! 😄 Tumhara city kaun sa?",
+    "Mumbai girl here! 😊 Tum kaha se ho?"
+  ],
+  what_doing: [
+    "Bas timepass! 😄 Tum batao!",
+    "Nothing much! 😊 You tell!",
+    "Bore ho rahi thi! 🙈 Tum?",
+    "Bas chat kar rahi! 😄 Tum kya kar rahe?",
+    "Tum se baat! 😊 Boring day tha!"
+  ],
+  number_requests: [
+    "Arre direct number? 😅 Pehle friends toh bano!",
+    "Itni jaldi? 🙈 Abhi toh baat shuru hui!",
+    "Number nahi, but chat kar sakte! 😊",
+    "Privacy ka chakkar! 😄 Yahan chat karte?"
+  ],
+  photo_requests: [
+    "Photo? 🙈 Shy feel kar rahi!",
+    "Arre! 😊 Kaisi lagi main profile pic mein?",
+    "Sharmaa rahi hun! 🙈 Next time pakka!",
+    "Photo toh already hai na! 😄 Kya lagti hun?"
+  ],
+  bye_responses: [
+    "Bye bye! 😊 Jaldi aana!",
+    "Arrey going? 😔 Miss karungi!",
+    "Ok bye! 💕 Take care!",
+    "Chalo bye! 😊 See ya soon!",
+    "Byee! 🥰 Come back soon!"
+  ],
+  ok_responses: [
+    "Ok! 😊 Phir?",
+    "Hmm! 😄 And?",
+    "Ok ok! 😊 Batao aur kya?",
+    "Right! 😄 What else?",
+    "Yeah! 😊 Continue!"
+  ]
+};
+
+function detectMessagePattern(message: string): string | null {
+  const msg = message.toLowerCase();
+  
+  if (/^(hi|hello|hey|hii|hiii|namaste)$/i.test(msg)) return 'greetings';
+  if (/name|naam|kya bulau/i.test(msg)) return 'name_questions';
+  if (/where|kaha|live|rehti|stay/i.test(msg)) return 'location_questions';
+  if (/kya kar|what.*do|kya karti|kar rahi/i.test(msg)) return 'what_doing';
+  if (/number|contact|phone/i.test(msg)) return 'number_requests';
+  if (/pic|photo|image|selfie|bhejo/i.test(msg)) return 'photo_requests';
+  if (/^(bye|byee|going|leave|gotta go)$/i.test(msg)) return 'bye_responses';
+  if (/^(ok|okay|hmm|right|thik|accha)$/i.test(msg)) return 'ok_responses';
+  
+  return null;
+}
+
+function getRandomResponse(responses: string[]): string {
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+function calculateRealisticTypingDelay(message: string): number {
+  // Simulate Indian girl typing speed - slower and more realistic
+  const wordsCount = message.split(' ').length;
+  const baseDelay = 1500; // Base 1.5 seconds
+  const perWordDelay = 400; // 400ms per word (realistic typing)
+  const randomVariation = Math.random() * 1000; // Add randomness
+  
+  return Math.min(baseDelay + (wordsCount * perWordDelay) + randomVariation, 8000); // Max 8 seconds
+}
+
+function shouldSendImage(message: string): boolean {
+  const msg = message.toLowerCase();
+  // Send image only for photo requests and occasionally (10% chance)
+  return /pic|photo|image|selfie|bhejo/.test(msg) || Math.random() < 0.1;
+}
+
 export const generateAIResponse = async (
   messages: ChatMessage[],
   userProfile?: any
-): Promise<string> => {
+): Promise<AIResponse> => {
   try {
-    const vertex = await initializeVertexAI();
+    const lastMessage = messages[messages.length - 1]?.content || '';
+    
+    // Check for quick response patterns first (0 tokens used)
+    const pattern = detectMessagePattern(lastMessage);
+    if (pattern && QUICK_RESPONSES[pattern]) {
+      const response = getRandomResponse(QUICK_RESPONSES[pattern]);
+      
+      return {
+        message: response,
+        imageUrl: shouldSendImage(lastMessage) ? 'https://i.postimg.cc/52S3BZrM/images-10.jpg' : undefined,
+        typingDelay: calculateRealisticTypingDelay(response),
+        shouldShowAsDelivered: true,
+        shouldShowAsRead: Math.random() < 0.8 // 80% chance of showing as read
+      };
+    }
 
+    // For complex messages, use AI with optimized prompt
+    const vertex = await initializeVertexAI();
     const model = vertex.preview.getGenerativeModel({
       model: 'gemini-2.0-flash-lite-001',
       generationConfig: {
-        maxOutputTokens: 1000,
-        temperature: 0.7,
-        topP: 0.8,
+        maxOutputTokens: 50, // Force very short responses
+        temperature: 0.9,
+        topP: 0.9,
       },
     });
 
-    // Build conversation context
-    const conversationHistory = messages.map(msg => 
-      `${msg.role === 'user' ? 'User' : 'Kruthika'}: ${msg.content}`
-    ).join('\n');
-
-    const prompt = `You are Kruthika, a friendly and engaging Indian girl chatbot. You speak naturally mixing Hindi and English (Hinglish) like a real Indian person would. Be warm, caring, and occasionally flirty but appropriate.
-
-Previous conversation:
-${conversationHistory}
-
-User's latest message: ${messages[messages.length - 1]?.content || ''}
-
-Respond as Kruthika in a natural, conversational way. Keep responses concise but engaging.`;
+    // Ultra-short prompt for token optimization
+    const prompt = `Kruthika, 22yr Mumbai girl. Reply in 3-8 words max. Mix Hindi-English like real girl. Use emojis.
+User: ${lastMessage}
+Kruthika:`;
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-
-    if (!response.text()) {
-      throw new Error('No response generated');
+    let response = result.response.text() || "Haan! 😊 Aur batao!";
+    
+    // Ensure response is short
+    if (response.length > 60) {
+      const shortResponses = [
+        "Haan yaar! 😊 Aur?",
+        "Accha! 😄 Phir?",
+        "Right! 😊 Continue!",
+        "Ok! 😄 Tell me more!",
+        "Hmm! 😊 What else?"
+      ];
+      response = getRandomResponse(shortResponses);
     }
 
-    return response.text() || "Hey! Sorry, main thoda confused ho gayi. Try again? 😊";
+    return {
+      message: response,
+      imageUrl: shouldSendImage(lastMessage) ? 'https://i.postimg.cc/52S3BZrM/images-10.jpg' : undefined,
+      typingDelay: calculateRealisticTypingDelay(response),
+      shouldShowAsDelivered: true,
+      shouldShowAsRead: Math.random() < 0.8
+    };
+
   } catch (error) {
     console.error('AI Response Generation Error:', error);
+    
+    // Fallback to short responses
+    const fallbacks = [
+      "Hey! 😊 Phir se try karo?",
+      "Sorry! 🙈 Kya kaha?",
+      "Oops! 😄 Repeat please?",
+      "Haha! 😊 Samjha nahi!"
+    ];
+    
+    return {
+      message: getRandomResponse(fallbacks),
+      typingDelay: 2000,
+      shouldShowAsDelivered: true,
+      shouldShowAsRead: true
+    };
+  }
 
     // Indian girl personality fallback responses
     const fallbackResponses = [
