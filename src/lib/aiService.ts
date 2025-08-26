@@ -1,4 +1,6 @@
 import { VertexAI } from '@google-cloud/vertexai';
+import { chatCache } from './chatCache';
+import { userPersonalization } from './userPersonalization';
 
 // Environment validation with detailed logging
 const config = {

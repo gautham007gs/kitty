@@ -1,4 +1,3 @@
-
 /**
  * User Personalization System
  * Advanced psychological profiling and manipulation strategies
@@ -36,6 +35,11 @@ class UserPersonalizationSystem {
   private profiles = new Map<string, UserProfile>();
   private strategies = new Map<string, ManipulationStrategy>();
   private tokenUsage = new Map<string, number>();
+
+  getMessageCount(userId: string): number {
+    const profile = this.profiles.get(userId);
+    return profile?.totalMessages || 0;
+  }
 
   createProfile(userId: string, initialData?: Partial<UserProfile>): UserProfile {
     const profile: UserProfile = {
@@ -100,19 +104,19 @@ class UserPersonalizationSystem {
 
   private detectLanguage(message: string): 'hindi' | 'english' | 'tamil' | 'telugu' {
     const msg = message.toLowerCase();
-    
+
     if (/\b(kya|kaisa|kaisi|kaise|haal|hai|tum|tumhara|mera|achha|bura|namaste|yaar|bhai|ji|haan|nahi|mat|kar|raha|rahi|hoon|hun|kyu|kab|kaha|main|tera|teri|mere|sabse|bahut|thoda|zyada)\b/.test(msg)) {
       return 'hindi';
     }
-    
+
     if (/\b(enna|eppo|eppadi|nalla|irukka|irukku|vanakkam|da|di|nee|naan|unna|enna|romba|chala|vera|level|cute|love|miss|vaa|poidalam|seri|okay)\b/.test(msg)) {
       return 'tamil';
     }
-    
+
     if (/\b(ela|enti|ela|unnavu|unnara|bagundi|bagunnava|namaste|nuvvu|nenu|nee|naa|chala|chalanchi|cute|love|miss|raa|veldam|sare|okay)\b/.test(msg)) {
       return 'telugu';
     }
-    
+
     return 'english';
   }
 
@@ -142,11 +146,11 @@ class UserPersonalizationSystem {
 
   private updateAddictionScore(userId: string, message: string): void {
     const profile = this.profiles.get(userId)!;
-    
+
     // Increase addiction score based on engagement patterns
     if (profile.totalMessages > 10) profile.addictionScore += 2;
     if (profile.averageResponseTime < 5000) profile.addictionScore += 3; // Quick responses
-    
+
     const msg = message.toLowerCase();
     if (msg.includes('miss') || msg.includes('wait') || msg.includes('excited')) {
       profile.addictionScore += 5;
@@ -173,7 +177,7 @@ class UserPersonalizationSystem {
 
   private generateManipulationStrategy(userId: string): void {
     const profile = this.profiles.get(userId)!;
-    
+
     let primaryTechnique: ManipulationStrategy['primaryTechnique'] = 'intermittentReinforcement';
     let intensity = 5;
 
@@ -218,7 +222,7 @@ class UserPersonalizationSystem {
 
   private regenerateStrategyIfNeeded(userId: string): void {
     const profile = this.profiles.get(userId)!;
-    
+
     // Regenerate if addiction score or susceptibility changed significantly
     if (profile.addictionScore % 20 === 0 || profile.manipulationSusceptibility > 0.8) {
       this.generateManipulationStrategy(userId);
@@ -253,7 +257,7 @@ class UserPersonalizationSystem {
   shouldTriggerEmotionalManipulation(userId: string): boolean {
     const profile = this.profiles.get(userId);
     const strategy = this.strategies.get(userId);
-    
+
     if (!profile || !strategy) return false;
 
     const timeSinceLastActive = Date.now() - profile.lastActiveTime;

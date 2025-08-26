@@ -292,7 +292,7 @@ const StatusPage: React.FC = () => {
             const hasContent = contact.statusText && contact.statusText.trim() !== '';
             const hasImage = contact.statusImageUrl && contact.statusImageUrl.trim() !== '';
             const hasUpdate = contact.hasUpdate;
-            
+
             if (hasContent || hasImage || hasUpdate) {
               return (
                 <StatusItemDisplay

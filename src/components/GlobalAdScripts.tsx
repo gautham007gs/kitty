@@ -20,8 +20,8 @@ export default function GlobalAdScripts() {
     console.log('GlobalAdScripts: Checking ad settings', adSettings);
 
     // Only inject scripts if ads are enabled and not already present
-    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && !document.querySelector('script[data-cfasync="false"][src*="suv4c1"]');
-    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && !document.querySelector('script[data-cfasync="false"][src*="monetag"]');
+    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && !document.querySelector('script[src*="suv4c1"]');
+    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && !document.querySelector('script[src*="thubanoa"]');
 
     if (shouldInjectAdsterra) {
       const adsterraScript = document.createElement('script');
