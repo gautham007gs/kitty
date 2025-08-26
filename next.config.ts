@@ -1,83 +1,59 @@
-import type { NextConfig } from 'next';
 
-const securityHeaders = [
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff',
-  },
-  {
-    key: 'X-Frame-Options',
-    value: 'DENY',
-  },
-  {
-    key: 'X-XSS-Protection',
-    value: '1; mode=block',
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin'
-  }
-];
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   experimental: {
-    serverActions: {
-      allowedOrigins: [
-        'localhost:3000',
-        'localhost:5000',
-        '*.replit.dev',
-        '*.replit.co',
-        '*.replit.com',
-        '1d7e9cbe-6933-448b-b115-5b1ad140e0be-00-2fscvner0eiv4.pike.replit.dev',
-        'edb3d2f8-5baa-409a-bbeb-469cdd803722-00-x5fjipggwmfa.sisko.replit.dev'
-      ]
-    }
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
   images: {
-    unoptimized: true,
-    domains: ['localhost', '0.0.0.0', 'ykgzsazqjhbdlzioduzx.supabase.co'],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
+    domains: [
+      'i.postimg.cc',
+      'placehold.co',
+      'example.com',
+      'via.placeholder.com'
     ],
+    unoptimized: process.env.NODE_ENV === 'development',
   },
-  serverExternalPackages: ['@google/generative-ai'],
-  async headers() {
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+  async rewrites() {
     return [
       {
-        source: '/:path*',
-        headers: securityHeaders,
+        source: '/api/:path*',
+        destination: '/api/:path*',
       },
     ];
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
   },
-  // Fix Server Actions CORS issue
-  allowedDevOrigins: ['*'],
-  
-  // Add hostname matching
-  async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [],
-      fallback: []
-    };
-  }
 };
 
 export default nextConfig;

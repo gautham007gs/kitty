@@ -428,13 +428,13 @@ const AdminProfilePage: React.FC = () => {
       type,
       url: urlToAdd,
     };
-    setAiMediaAssets(prev => ({ assets: [...prev.assets, newAsset] }));
+    setAiMediaAssets(prev => ({ assets: [...(prev?.assets || []), newAsset] }));
     if (type === 'image') setNewImageUrl('');
     else setNewAudioPath('');
   };
 
   const handleDeleteMediaAsset = (assetId: string) => {
-    setAiMediaAssets(prev => ({ assets: prev.assets.filter(asset => asset.id !== assetId) }));
+    setAiMediaAssets(prev => ({ assets: (prev?.assets || []).filter(asset => asset.id !== assetId) }));
   };
 
   const handleSaveAIMediaAssets = async () => {
@@ -653,9 +653,9 @@ const AdminProfilePage: React.FC = () => {
                     <Button onClick={() => handleAddMediaAsset('image')} variant="outline" size="icon"><PlusCircle className="h-4 w-4" /></Button>
                   </div>
                 </div>
-                {aiMediaAssets.assets.filter(asset => asset.type === 'image').length > 0 ? (
+                {aiMediaAssets?.assets?.filter(asset => asset.type === 'image').length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar p-2 bg-background rounded border">
-                    {aiMediaAssets.assets.filter(asset => asset.type === 'image').map(asset => (
+                    {aiMediaAssets?.assets?.filter(asset => asset.type === 'image').map(asset => (
                       <div key={asset.id} className="flex items-center justify-between p-2 bg-card border rounded-md hover:bg-secondary/30">
                         <div className="flex items-center gap-3 overflow-hidden">
                            <Avatar className="h-10 w-10 rounded border" key={`${asset.id}-thumb-${asset.url}`}><AvatarImage src={asset.url} alt="Thumbnail" data-ai-hint="thumbnail image" onError={(e) => console.error(`Admin Page - AI Media Image thumb load error. URL: ${asset.url}`, e)} /><AvatarFallback><ImagePlus size={16}/></AvatarFallback></Avatar>
@@ -680,9 +680,9 @@ const AdminProfilePage: React.FC = () => {
                     <AlertDescription className="!text-muted-foreground">Audio files must be placed in the `public/media/` folder of your project first. Then, add the path here (e.g., `/media/your_clip.mp3`).</AlertDescription>
                   </Alert>
                 </div>
-                 {aiMediaAssets.assets.filter(asset => asset.type === 'audio').length > 0 ? (
+                 {aiMediaAssets?.assets?.filter(asset => asset.type === 'audio').length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar p-2 bg-background rounded border">
-                    {aiMediaAssets.assets.filter(asset => asset.type === 'audio').map(asset => (
+                    {aiMediaAssets?.assets?.filter(asset => asset.type === 'audio').map(asset => (
                       <div key={asset.id} className="flex items-center justify-between p-2 bg-card border rounded-md hover:bg-secondary/30">
                         <div className="flex items-center gap-3 overflow-hidden">
                             <Music2 className="h-5 w-5 text-muted-foreground shrink-0"/>
