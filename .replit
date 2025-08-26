@@ -21,7 +21,7 @@ localPort = 9002
 externalPort = 80
 
 [workflows]
-runButton = "Run App"
+runButton = "Production Optimized"
 
 [[workflows.workflow]]
 name = "Run"
@@ -57,3 +57,20 @@ args = "npm run build"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm start"
+
+[[workflows.workflow]]
+name = "Production Optimized"
+author = 46912715
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run build"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start -- --port 5000 --hostname 0.0.0.0"
