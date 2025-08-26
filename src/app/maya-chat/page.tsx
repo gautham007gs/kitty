@@ -528,7 +528,7 @@ const KruthikaChatPage: NextPage = () => {
     if (chunks.length === 0 && response.length > 80) {
       const words = response.split(' ');
       currentChunk = '';
-      
+
       for (const word of words) {
         if (currentChunk && (currentChunk.length + word.length + 1) > 80) {
           chunks.push(currentChunk.trim());
@@ -537,7 +537,7 @@ const KruthikaChatPage: NextPage = () => {
           currentChunk += (currentChunk ? ' ' : '') + word;
         }
       }
-      
+
       if (currentChunk.trim()) {
         chunks.push(currentChunk.trim());
       }
@@ -554,8 +554,8 @@ const KruthikaChatPage: NextPage = () => {
     return baseDelay + (message.length * charsPerSecond * 100) + readingTime;
   };
 
-  const handleSendMessage = useCallback(async (text: string, imageUri?: string) => {
-    if (!text.trim() && !imageUri) return;
+  const handleSendMessage = useCallback(async (message: string, imageUri?: string) => {
+    if (!message.trim() && !imageUri) return;
 
     // Check if user has reached daily message limit
     const messageCount = userPersonalization.getMessageCount();
@@ -571,7 +571,7 @@ const KruthikaChatPage: NextPage = () => {
       return;
     }
 
-    const userMessageId = addMessage(text, true, imageUri);
+    const userMessageId = addMessage(message, true, imageUri);
     userSentMediaThisTurnRef.current = !!imageUri;
     updateMessageStatus(userMessageId, 'sending');
 
@@ -580,7 +580,7 @@ const KruthikaChatPage: NextPage = () => {
 
     // Realistic delay before showing typing indicator
     const initialDelay = 500 + Math.random() * 800; // 0.5-1.3 seconds
-    
+
     const typingIndicatorTimeout = setTimeout(() => {
       setIsAiTyping(true);
     }, initialDelay);
@@ -596,7 +596,7 @@ const KruthikaChatPage: NextPage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: text,
+          message: message,
           userImageUri: imageUri,
           timeOfDay: getTimeOfDay(),
           mood: aiMood,
@@ -611,31 +611,49 @@ const KruthikaChatPage: NextPage = () => {
 
       const result = await response.json();
 
-      if (result.response) {
-        // Calculate total typing time based on response length
-        const totalTypingTime = calculateTypingDelay(result.response);
-        
-        // Keep typing indicator for the calculated time
-        setTimeout(() => {
-          setIsAiTyping(false);
-          
-          // Chunk the response for realistic delivery
-          const chunks = chunkResponse(result.response);
-          
-          // Send chunks with realistic delays between them
-          chunks.forEach((chunk, index) => {
-            setTimeout(() => {
-              const aiMessageId = addMessage(chunk, false);
-              updateMessageStatus(aiMessageId, 'read');
-              
-              // Update mood only after the last chunk
-              if (index === chunks.length - 1 && result.newMood) {
-                setAiMood(result.newMood);
-              }
-            }, index * 800); // 800ms delay between chunks
-          });
-          
-        }, totalTypingTime);
+      if (result.error) {
+        console.warn('API returned error:', result.details);
+        throw new Error(result.details || 'API returned an error');
+      }
+
+      const aiResponse = result.response;
+      const newMood = result.newMood || aiMood;
+
+      if (aiResponse) {
+        // Handle multi-bubble responses
+        const responses = Array.isArray(aiResponse) ? aiResponse : [aiResponse];
+
+        // Send chunks with realistic delays between them
+        for (let i = 0; i < responses.length; i++) {
+          const bubbleText = responses[i].trim();
+          if (!bubbleText) continue;
+
+          // Calculate delay based on message length and position
+          const delay = i === 0 ? 800 : 1200 + (bubbleText.length * 35) + (Math.random() * 500);
+
+          setTimeout(() => {
+            const aiMessage: Message = {
+              id: `${Date.now()}-${i}`,
+              text: bubbleText,
+              sender: 'ai',
+              timestamp: new Date(),
+              aiAvatarUrl: globalAIProfile?.avatarUrl,
+              ...(result.aiImageUrl && i === responses.length - 1 && { aiImageUrl: result.aiImageUrl }),
+              ...(result.audioUrl && i === responses.length - 1 && { audioUrl: result.audioUrl })
+            };
+
+            setMessages(prev => [...prev, aiMessage]);
+            updateMessageStatus(aiMessage.id, 'read'); // Mark AI messages as read immediately
+
+            // Update mood and interactions after last bubble
+            if (i === responses.length - 1) {
+              setAiMood(newMood);
+              const aiInteraction = `AI: ${responses.join(' ')}`;
+              setRecentInteractions(prev => [...prev.slice(-9), aiInteraction]);
+              setIsAiTyping(false);
+            }
+          }, delay);
+        }
 
         userPersonalization.incrementMessageCount();
         if (tokenUsageStatus) {
@@ -646,7 +664,7 @@ const KruthikaChatPage: NextPage = () => {
           } : null);
         }
       } else {
-        throw new Error('No response received from API');
+        setIsAiTyping(false);
       }
 
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
@@ -673,7 +691,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization]);
+  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, getTimeOfDay, userIdRef, userPersonalization, messages]); // Added messages to dependency array
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 

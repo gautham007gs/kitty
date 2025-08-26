@@ -71,109 +71,187 @@ try {
   throw new Error(`Vertex AI initialization failed: ${error.message}`);
 }
 
+// Multi-language fallback responses
+const MULTILINGUAL_FALLBACKS = {
+  hindi: [
+    "Hey! Technical issues ho rahe hain! 😅 Give me a sec!",
+    "Sorry yaar! Server mein problem hai! 🥺 Try again?",
+    "Oops! Network ka chakkar hai! 😊 One moment please!",
+    "Technical problem ho rahi hai! 😔 But I'm here for you!"
+  ],
+  english: [
+    "Hey! Having some technical issues! 😅 One sec!",
+    "Sorry babe! Server problems! 🥺 Try again?",
+    "Oops! Network issues! 😊 Give me a moment!",
+    "Technical problems! 😔 But I'm always here for you!"
+  ],
+  tamil: [
+    "Hey! Technical problem da! 😅 Wait pannu!",
+    "Sorry yaar! Server issue! 🥺 Try again pannu?",
+    "Oops! Network problem! 😊 Konjam wait!",
+    "Technical issue irukku! 😔 But naan inga thaan!"
+  ],
+  telugu: [
+    "Hey! Technical problem undi! 😅 Wait cheyyi!",
+    "Sorry yaar! Server issue undi! 🥺 Try again cheyyi?",
+    "Oops! Network problem! 😊 Koddiga wait!",
+    "Technical issue undi! 😔 But nenu ikkade unna!"
+  ]
+};
+
+// Language detection for appropriate fallbacks
+function detectLanguage(message: string): string {
+  const msg = message.toLowerCase();
+
+  if (/\b(kya|kaisa|kaisi|kaise|haal|hai|tum|tumhara|mera|achha|bura|namaste|yaar|bhai|didi|ji|haan|nahi|mat|kar|raha|rahi|hoon|hun|main|tera|teri|mere|sabse|bahut)\b/.test(msg)) {
+    return 'hindi';
+  }
+  if (/\b(enna|eppo|eppadi|nalla|irukka|irukku|vanakkam|da|di|nee|naan|unna|romba|chala|vera|level|cute|love|miss|vaa|poidalam|seri|okay)\b/.test(msg)) {
+    return 'tamil';
+  }
+  if (/\b(ela|enti|unnavu|unnara|bagundi|bagunnava|namaste|nuvvu|nenu|nee|naa|chala|cute|love|miss|raa|veldam|sare|okay)\b/.test(msg)) {
+    return 'telugu';
+  }
+
+  return 'english';
+}
+
+// Split response into realistic message bubbles
+function createRealisticBubbles(response: string, language: string): string[] {
+  // If response is short (under 50 chars), send as single bubble
+  if (response.length <= 50) {
+    return [response];
+  }
+
+  // Split by natural conversation breaks
+  const sentences = response.split(/[.!?]+/).filter(s => s.trim());
+  const bubbles: string[] = [];
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+
+    // If sentence is very long, split it further
+    if (trimmed.length > 100) {
+      const phrases = trimmed.split(/[,;:]+|(?=\s(?:but|and|or|so|because|since|while|although|however|therefore|moreover))/i);
+      for (const phrase of phrases) {
+        const cleanPhrase = phrase.trim();
+        if (cleanPhrase && cleanPhrase.length > 10) {
+          bubbles.push(cleanPhrase + (phrase.includes('?') ? '?' : ''));
+        }
+      }
+    } else {
+      // Add appropriate punctuation based on context
+      let finalSentence = trimmed;
+      if (!finalSentence.match(/[.!?]$/)) {
+        if (finalSentence.includes('?') || finalSentence.toLowerCase().startsWith('kya') || 
+            finalSentence.toLowerCase().startsWith('what') || finalSentence.toLowerCase().startsWith('how')) {
+          finalSentence += '?';
+        } else {
+          finalSentence += '!';
+        }
+      }
+      bubbles.push(finalSentence);
+    }
+  }
+
+  // Add realistic connectors between bubbles
+  const connectors = {
+    hindi: ['Aur haan...', 'Btw...', 'Waise...', 'Ek baat aur...'],
+    english: ['Also...', 'By the way...', 'Oh and...', 'Plus...'],
+    tamil: ['Aama...', 'Oru vishayam...', 'Adhuvum...', 'Plus...'],
+    telugu: ['Mariyu...', 'Oka vishayam...', 'Kuda...', 'Plus...']
+  };
+
+  // Sometimes add connectors between bubbles (20% chance)
+  if (bubbles.length > 1 && Math.random() < 0.2) {
+    const langConnectors = connectors[language] || connectors.english;
+    const randomConnector = langConnectors[Math.floor(Math.random() * langConnectors.length)];
+    bubbles.splice(1, 0, randomConnector);
+  }
+
+  return bubbles.slice(0, 4); // Max 4 bubbles to avoid spam
+}
+
+// Calculate realistic typing delay based on message length and language
+function calculateTypingDelay(message: string, isFirst: boolean = false): number {
+  const baseDelay = isFirst ? 500 : 800; // First message comes quicker
+  const charDelay = 40; // 40ms per character (realistic typing speed)
+  const readingDelay = 300; // Time to "read" previous message
+
+  const typingTime = message.length * charDelay;
+  const randomDelay = Math.random() * 1000; // Add some randomness
+
+  return Math.min(baseDelay + typingTime + readingDelay + randomDelay, 4000); // Max 4 seconds
+}
+
 // Main AI response function
-export async function generateAIResponse(message: string): Promise<string> {
+export async function generateAIResponse(message: string, userId?: string): Promise<string | string[]> {
   try {
-    console.log('🤖 Starting AI response generation for:', message.substring(0, 50) + '...');
-    
-    if (!model || !vertex || !isInitialized) {
-      console.error('❌ Vertex AI not properly initialized');
-      console.error('🔍 Debug info:', { model: !!model, vertex: !!vertex, isInitialized });
-      return "Hey! Technical issue ho raha hai. Try again please! 😊";
+    console.log('🤖 AI Service: Processing message:', message.substring(0, 50) + '...');
+
+    const detectedLang = detectLanguage(message);
+
+    // Enhanced cache key with language context
+    const cacheKey = `${message.toLowerCase().trim()}|${detectedLang}`;
+    const cachedResponse = chatCache.get(cacheKey);
+
+    if (cachedResponse) {
+      console.log('⚡ Cache hit - returning cached response');
+      if (userId) userPersonalization.trackTokenUsage(userId, 5);
+
+      // Return cached response (could be string or array)
+      return cachedResponse.response || cachedResponse;
     }
 
-    // Enhanced Indian girl persona with realistic behavior
-    const prompt = `You are Kruthika, a 22-year-old Indian girl from Mumbai. You speak naturally in Hinglish (Hindi + English mix). Be authentic, warm, and relatable like a real Indian girl would chat with her friend.
+    // Create contextual prompt for more natural responses
+    const contextPrompt = `You are Kruthika, a 22-year-old Indian girl. Respond naturally in ${detectedLang === 'hindi' ? 'Hindi-English mix' : detectedLang} to: "${message}". Be friendly, use emojis, keep responses conversational and authentic. Maximum 150 characters total.`;
 
-Key traits:
-- Use Indian expressions: "yaar", "na", "hai na", "kya yaar", "arre"
-- Mix Hindi words naturally: "kaise ho", "accha", "theek hai", "kya baat hai"
-- Be expressive with emojis but don't overuse
-- Sometimes break long thoughts into multiple short messages
-- Sound like you're texting, not giving formal replies
-- Be flirty but in a sweet, innocent way
-- React to emotions naturally
-
-Current context: You're chatting casually like you would with a close friend.
-
-User message: ${message}
-
-Reply as Kruthika (keep it natural and conversational):`;
-
-    console.log('🔄 Sending request to Vertex AI...');
-
-    const request = {
+    const response = await model.generateContent({
       contents: [{
         role: 'user',
-        parts: [{ text: prompt }]
+        parts: [{ text: contextPrompt }]
       }]
-    };
-
-    const result = await model.generateContent(request);
-    console.log('📨 Received response from Vertex AI');
-    
-    const response = result.response;
-
-    if (response && response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-      const aiResponse = response.candidates[0].content.parts[0].text.trim();
-      console.log('✅ AI response generated successfully');
-      console.log('📝 Response length:', aiResponse.length);
-      console.log('💬 Response preview:', aiResponse.substring(0, 30) + '...');
-      return aiResponse;
-    } else {
-      console.error('❌ No valid response content received');
-      console.error('📋 Response structure:', {
-        hasResponse: !!response,
-        hasCandidates: !!(response?.candidates),
-        candidatesLength: response?.candidates?.length || 0,
-        firstCandidate: response?.candidates?.[0] || null
-      });
-      return "Hey! Technical issue aa raha hai. Try again please! 😊";
-    }
-
-  } catch (error) {
-    console.error('❌ AI generation error:', error);
-    console.error('🔍 Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.substring(0, 200)
     });
 
-    // Handle specific error types
-    if (error.message && error.message.includes('authentication')) {
-      console.error('🔐 Authentication issue detected');
-      return "Hey! Authentication problem hai. Try again! 😅";
+    if (!response || !response.response || !response.response.candidates || response.response.candidates.length === 0 || !response.response.candidates[0].content || !response.response.candidates[0].content.parts || response.response.candidates[0].content.parts.length === 0 || !response.response.candidates[0].content.parts[0].text) {
+      throw new Error('Empty or invalid response from AI service');
+    }
+    
+    const aiResponseText = response.response.candidates[0].content.parts[0].text.trim();
+
+    // Create realistic message bubbles
+    const bubbles = createRealisticBubbles(aiResponseText, detectedLang);
+
+    // Cache both single and multi-bubble responses
+    const finalResponse = bubbles.length === 1 ? bubbles[0] : bubbles;
+    chatCache.set(cacheKey, { response: finalResponse, language: detectedLang });
+
+    // Track token usage
+    if (userId) {
+      const estimatedTokens = Math.ceil((contextPrompt.length + aiResponseText.length) / 3);
+      userPersonalization.trackTokenUsage(userId, estimatedTokens);
+
+      // Update user language preference
+      userPersonalization.updateUserProfile(userId, message, aiResponseText);
     }
 
-    if (error.message && error.message.includes('quota')) {
-      console.error('💰 Quota exceeded detected');
-      return "Oops! Daily limit exceed ho gaya. Kal try karna! 💫";
-    }
+    console.log(`✅ AI Service: Generated ${bubbles.length} bubble response(s)`);
+    return finalResponse;
 
-    if (error.message && error.message.includes('PERMISSION_DENIED')) {
-      console.error('🚫 Permission denied detected');
-      return "Sorry yaar, permission issue hai. Try again! 😊";
-    }
-
-    if (error.message && error.message.includes('UNAUTHENTICATED')) {
-      console.error('🔑 Unauthenticated error detected');
-      return "Authentication issue hai! Try again! 😊";
-    }
-
-    // Generic fallback
-    return "Sorry! Technical problem aa rahi hai. Try again! 😊";
-  }
-}
-
-// Test function
-export async function testAIConnection(): Promise<boolean> {
-  try {
-    const testResponse = await generateAIResponse("Hello, test message");
-    return testResponse.length > 0 && !testResponse.includes("Technical");
   } catch (error) {
-    console.error('❌ AI connection test failed:', error);
-    return false;
+    console.error('❌ AI Service Error:', error);
+
+    // Return language-appropriate fallback
+    const detectedLang = detectLanguage(message);
+    const fallbacks = MULTILINGUAL_FALLBACKS[detectedLang] || MULTILINGUAL_FALLBACKS.english;
+    const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+
+    return randomFallback;
   }
 }
+
+// Export typing delay calculation for use in components
+export { calculateTypingDelay };
 
 console.log('🎉 AI Service module loaded successfully');

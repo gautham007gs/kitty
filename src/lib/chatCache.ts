@@ -27,10 +27,10 @@ class ChatCache {
     { pattern: /^(pic\s+send|photo\s+bhejo|selfie|your\s+pic)\s*$/i, category: 'pic_request' },
   ];
 
-  private createHash(prompt: string, mood?: string, timeOfDay?: string): string {
+  private createHash(prompt: string, mood?: string, timeOfDay?: string, language?: string): string {
     // Normalize the prompt for better matching
     const normalizedPrompt = this.normalizePrompt(prompt);
-    const context = `${normalizedPrompt}|${mood || ''}|${timeOfDay || ''}`;
+    const context = `${normalizedPrompt}|${mood || ''}|${timeOfDay || ''}|${language || 'en'}`;
     return crypto.createHash('sha256').update(context).digest('hex');
   }
 
@@ -92,8 +92,8 @@ class ChatCache {
     return matches / maxLength;
   }
 
-  set(prompt: string, response: any, mood?: string, timeOfDay?: string): void {
-    const key = this.createHash(prompt, mood, timeOfDay);
+  set(prompt: string, response: any, mood?: string, timeOfDay?: string, language?: string): void {
+    const key = this.createHash(prompt, mood, timeOfDay, language);
     
     // If cache is at max size, remove least used entries
     if (this.cache.size >= this.MAX_CACHE_SIZE) {
@@ -118,18 +118,19 @@ class ChatCache {
       hitCount: 0,
       originalPrompt: prompt,
       mood,
-      timeOfDay
+      timeOfDay,
+      language
     });
   }
 
-  get(prompt: string, mood?: string, timeOfDay?: string): any | null {
+  get(prompt: string, mood?: string, timeOfDay?: string, language?: string): any | null {
     // First try exact match
-    const key = this.createHash(prompt, mood, timeOfDay);
+    const key = this.createHash(prompt, mood, timeOfDay, language);
     let entry = this.cache.get(key);
     
-    // If no exact match, try similarity matching
+    // If no exact match, try similarity matching within same language
     if (!entry) {
-      const similarResponse = this.findSimilarResponse(prompt, mood, timeOfDay);
+      const similarResponse = this.findSimilarResponse(prompt, mood, timeOfDay, language);
       if (similarResponse) {
         return similarResponse;
       }
