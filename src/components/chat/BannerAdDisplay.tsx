@@ -33,16 +33,8 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
       timerRef.current = null;
     }
 
-    // Early return if still loading or adSettings is null
-    if (isLoadingAdSettings || !adSettings) {
-      setIsVisible(false);
-      setAdCodeToInject(null);
-      scriptInjectedRef.current = false;
-      return;
-    }
-
-    // Check if ads are globally enabled
-    if (!adSettings.adsEnabledGlobally) {
+    // Early return if still loading or adSettings is null or ads are not enabled
+    if (isLoadingAdSettings || !adSettings || !adSettings.adsEnabledGlobally) {
       setIsVisible(false);
       setAdCodeToInject(null);
       scriptInjectedRef.current = false;
