@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Chat API: Processing message from user:', userId);
     console.log('📝 Message:', message.substring(0, 100) + '...');
 
-    // Generate AI response using Vertex AI - no fallbacks
-    let aiResponse: string;
+    // Generate AI response using Vertex AI - no fallbacks, returns breadcrumbs
+    let aiResponseBreadcrumbs: string[];
     try {
-      aiResponse = await generateAIResponse(message);
+      aiResponseBreadcrumbs = await generateAIResponse(message);
     } catch (error) {
       console.error('❌ Failed to get Vertex AI response:', error);
       return NextResponse.json(
@@ -37,21 +37,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response: ChatResponse = {
-      id: Date.now().toString(),
-      message: aiResponse,
+    // Create multiple response objects for breadcrumb effect
+    const responses: ChatResponse[] = aiResponseBreadcrumbs.map((breadcrumb, index) => ({
+      id: `${Date.now()}-${index}`,
+      message: breadcrumb,
       timestamp: new Date(),
       sender: 'ai',
       isTyping: false
-    };
+    }));
 
-    // The original code included these, so we preserve them if they are part of the intended functionality
-    // For example, if newMood is meant to be updated based on the AI's response, it should be kept.
-    // If not, they can be removed. Assuming they are relevant for context.
-    const newMood = mood || 'happy'; // Keep original mood handling if applicable
+    const newMood = mood || 'happy';
 
     return NextResponse.json({
-      response: response, // Ensure the entire response object is returned
+      responses: responses, // Return array of responses for breadcrumb effect
       newMood: newMood,
       success: true
     });
