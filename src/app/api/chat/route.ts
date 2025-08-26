@@ -1,68 +1,79 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAIResponse } from '@/lib/aiService';
-import { userPersonalization } from '@/lib/userPersonalization'; // Corrected import
+import { generateAIResponse, generateSmartMediaResponse } from '@/lib/aiService';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Chat API: Received request');
-
     const body = await request.json();
-    const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = body;
+    const { message, conversationHistory = [], userId } = body;
 
     if (!message || typeof message !== 'string') {
-      console.error('❌ Chat API: Invalid message input');
       return NextResponse.json(
-        { error: 'Message is required and must be a string' },
+        { error: 'Message is required' },
         { status: 400 }
       );
     }
 
-    console.log('💬 Chat API: Processing message:', message.substring(0, 50) + '...');
-    console.log('🕒 Time of day:', timeOfDay);
-    console.log('😊 Current mood:', mood);
-    console.log('👤 User ID:', userId);
+    // Build conversation context
+    const messages = [
+      ...conversationHistory,
+      { role: 'user' as const, content: message }
+    ];
 
-    // Get message count from the singleton instance
-    const messageCount = await userPersonalization.getMessageCount(userId);
-    console.log('Message count for user:', messageCount);
+    // Generate AI response
+    const aiResponse = await generateAIResponse(messages);
 
+    // Check for smart media response
+    const mediaResponse = await generateSmartMediaResponse(message, messages);
 
-    // Generate AI response using the improved aiService
-    const aiResponse = await generateAIResponse(message, userId);
-
-    // Handle array responses (multiple bubbles)
-    const responseText = Array.isArray(aiResponse) ? aiResponse[0] : aiResponse;
-
-    console.log('✅ Chat API: Generated response:', responseText.substring(0, 50) + '...');
-
-    // Simple mood detection based on user message
-    let newMood = mood || 'neutral';
-    const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes('love') || lowerMessage.includes('miss') || lowerMessage.includes('pyaar')) {
-      newMood = 'romantic';
-    } else if (lowerMessage.includes('haha') || lowerMessage.includes('funny') || lowerMessage.includes('mazak')) {
-      newMood = 'playful';
-    } else if (lowerMessage.includes('tired') || lowerMessage.includes('sleepy') || lowerMessage.includes('thak')) {
-      newMood = 'tired';
-    } else if (lowerMessage.includes('sad') || lowerMessage.includes('upset') || lowerMessage.includes('dukhi')) {
-      newMood = 'sad';
+    // Log to Supabase if available
+    try {
+      if (supabase) {
+        await supabase.from('messages_log').insert({
+          user_id: userId || 'anonymous',
+          user_message: message,
+          ai_response: aiResponse,
+          session_id: `session_${Date.now()}`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (logError) {
+      console.warn('Failed to log message to Supabase:', logError);
+      // Don't fail the request if logging fails
     }
 
-    return NextResponse.json({
-      response: responseText,
-      newMood: newMood,
-      status: 'success'
-    });
+    // Prepare response
+    const responseData: any = {
+      response: aiResponse,
+      timestamp: new Date().toISOString()
+    };
+
+    // Add media if available
+    if (mediaResponse.shouldSendMedia) {
+      responseData.media = {
+        type: mediaResponse.mediaType,
+        url: mediaResponse.mediaUrl
+      };
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
-    console.error('❌ Chat API Error:', error);
-
-    // Return a natural fallback response
+    console.error('Chat API Error:', error);
+    
+    // Return a fallback response instead of failing
     return NextResponse.json({
-      response: "Sorry yaar! Technical problem ho rahi hai. Try again please! 😊",
-      newMood: 'neutral',
-      status: 'error'
-    }, { status: 500 });
+      response: "Sorry yaar! Main abhi thoda busy hun, but I'll be right back! 😊 Try again in a moment!",
+      timestamp: new Date().toISOString(),
+      error: 'AI_TEMPORARILY_UNAVAILABLE'
+    });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    status: 'Chat API is working',
+    timestamp: new Date().toISOString()
+  });
 }
