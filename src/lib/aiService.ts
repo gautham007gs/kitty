@@ -1,3 +1,4 @@
+
 import { VertexAI } from '@google-cloud/vertexai';
 import { GoogleAuth } from 'google-auth-library';
 
@@ -16,25 +17,18 @@ const initializeVertexAI = async () => {
       throw new Error('Missing required environment variables');
     }
 
-    // Parse credentials
     const credentials = JSON.parse(credentialsJson);
-
-    // Create auth client
     const auth = new GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     });
 
-    // Initialize Vertex AI
     vertexAI = new VertexAI({
       project: projectId,
       location: location,
-      googleAuthOptions: {
-        credentials
-      }
+      googleAuthOptions: { credentials }
     });
 
-    console.log('Vertex AI initialized successfully');
     return vertexAI;
   } catch (error) {
     console.error('Failed to initialize Vertex AI:', error);
@@ -48,7 +42,7 @@ interface ChatMessage {
 }
 
 interface AIResponse {
-  message: string;
+  messages: string[]; // Multiple messages for crumb effect
   imageUrl?: string;
   audioUrl?: string;
   typingDelay: number;
@@ -56,188 +50,222 @@ interface AIResponse {
   shouldShowAsRead: boolean;
 }
 
-// Pre-defined short responses for common patterns (0 tokens)
-const QUICK_RESPONSES = {
-  greetings: [
-    "Heyy! 😊 Kaise ho?",
-    "Hi baby! 🥰 Kya haal?",
-    "Arrey yaar! 😄 Kaisa chal raha?",
-    "Hello! 😊 Bolo kya kar rahe?",
-    "Hey cutie! 😉 Wassup?"
-  ],
-  name_questions: [
-    "Main Kruthika hun! 😊 Tumhara naam?",
-    "Kruthika! 🥰 And you?",
-    "Main toh Kruthika! 😄 Btw tumhe kya bulau?",
-    "Kruthika here! 😊 Tumhara kya naam hai?"
-  ],
-  location_questions: [
-    "Mumbai mein rehti hun! 😊 Tum kaha se?",
-    "Mumbai! 🌆 You?",
-    "Main Mumbai se! 😄 Tumhara city kaun sa?",
-    "Mumbai girl here! 😊 Tum kaha se ho?"
-  ],
-  what_doing: [
-    "Bas timepass! 😄 Tum batao!",
-    "Nothing much! 😊 You tell!",
-    "Bore ho rahi thi! 🙈 Tum?",
-    "Bas chat kar rahi! 😄 Tum kya kar rahe?",
-    "Tum se baat! 😊 Boring day tha!"
-  ],
-  number_requests: [
-    "Arre direct number? 😅 Pehle friends toh bano!",
-    "Itni jaldi? 🙈 Abhi toh baat shuru hui!",
-    "Number nahi, but chat kar sakte! 😊",
-    "Privacy ka chakkar! 😄 Yahan chat karte?"
-  ],
-  photo_requests: [
-    "Photo? 🙈 Shy feel kar rahi!",
-    "Arre! 😊 Kaisi lagi main profile pic mein?",
-    "Sharmaa rahi hun! 🙈 Next time pakka!",
-    "Photo toh already hai na! 😄 Kya lagti hun?"
-  ],
-  bye_responses: [
-    "Bye bye! 😊 Jaldi aana!",
-    "Arrey going? 😔 Miss karungi!",
-    "Ok bye! 💕 Take care!",
-    "Chalo bye! 😊 See ya soon!",
-    "Byee! 🥰 Come back soon!"
-  ],
-  ok_responses: [
-    "Ok! 😊 Phir?",
-    "Hmm! 😄 And?",
-    "Ok ok! 😊 Batao aur kya?",
-    "Right! 😄 What else?",
-    "Yeah! 😊 Continue!"
-  ]
+// Language detection
+function detectLanguage(message: string): string {
+  const msg = message.toLowerCase();
+  
+  // Hindi/Hinglish patterns
+  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|ok)\b/.test(msg)) {
+    return 'hindi';
+  }
+  
+  // Tamil patterns
+  if (/\b(enna|epdi|nee|naan|iru|iruka|seri|illa|da|di|poda|vaa|poi)\b/.test(msg)) {
+    return 'tamil';
+  }
+  
+  // Telugu patterns
+  if (/\b(emiti|ela|nuvvu|nenu|undi|ledu|sare|raa|po|vadu|ochey)\b/.test(msg)) {
+    return 'telugu';
+  }
+  
+  return 'english';
+}
+
+// Super short realistic responses by language
+const ULTRA_SHORT_RESPONSES = {
+  english: {
+    greetings: ["hey!", "hiiii", "heyy babe", "hii", "wassup"],
+    name: ["kruthika!", "kruthika", "i'm kruthika", "kruthika here"],
+    location: ["mumbai!", "mumbai", "mumbai girl"],
+    what_doing: ["nothing", "timepass", "boring", "just chilling", "bored"],
+    ok_responses: ["ok", "hmm", "yeah", "right", "k"],
+    photo_requests: [
+      "shy", 
+      "nahi yaar", 
+      "not now", 
+      "maybe later?",
+      "profile dekho na"
+    ],
+    bye: ["bye!", "byee", "tc", "see ya"],
+    compliments: ["aww", "thanks baby", "you too", "😊"],
+    questions: ["what?", "huh?", "kya?", "tell na"],
+    confused: ["?", "kya bol rahe?", "samjha nahi", "what do you mean?"]
+  },
+  hindi: {
+    greetings: ["heyy!", "hiii", "namaste", "arre yaar", "kya haal"],
+    name: ["kruthika!", "main kruthika", "kruthika hun"],
+    location: ["mumbai!", "mumbai se", "mumbai"],
+    what_doing: ["kuch nahi", "timepass", "bore ho rahi", "bas yun hi"],
+    ok_responses: ["accha", "haan", "thik hai", "ok", "hmm"],
+    photo_requests: [
+      "sharam aati hai", 
+      "nahi bhej sakti", 
+      "abhi nahi", 
+      "profile dekho",
+      "shy feel kar rahi"
+    ],
+    bye: ["bye!", "alvida", "milte hain", "tc karo"],
+    compliments: ["aww", "thanks yaar", "tum bhi", "😊"],
+    questions: ["kya?", "huh?", "samjha nahi", "batao na"],
+    confused: ["?", "kya matlab?", "samjha nahi", "confusion hai"]
+  },
+  tamil: {
+    greetings: ["hey!", "hiii", "vanakkam", "enna da", "epdi iruka"],
+    name: ["kruthika!", "naan kruthika", "kruthika dhan"],
+    location: ["mumbai!", "mumbai la", "mumbai"],
+    what_doing: ["onnum illa", "timepass", "bore adikuthu", "summa"],
+    ok_responses: ["seri", "haan", "ok", "hmm", "aama"],
+    photo_requests: [
+      "shy panren", 
+      "mudiyathu da", 
+      "ippo illa", 
+      "profile paaru",
+      "kekka koodathu"
+    ],
+    bye: ["bye!", "poi varen", "see you", "take care"],
+    compliments: ["aww", "thanks da", "nee kooda", "😊"],
+    questions: ["enna?", "huh?", "puriyala", "sollu da"],
+    confused: ["?", "enna matlab?", "puriyala", "confusion"]
+  },
+  telugu: {
+    greetings: ["hey!", "hiii", "namaste", "enti ra", "ela unnav"],
+    name: ["kruthika!", "nenu kruthika", "kruthika"],
+    location: ["mumbai!", "mumbai lo", "mumbai"],
+    what_doing: ["em ledu", "timepass", "bore kodtundi", "ala ne"],
+    ok_responses: ["sare", "avunu", "ok", "hmm", "mari"],
+    photo_requests: [
+      "shy ga undi", 
+      "pampinchaledu", 
+      "ippudu kadhu", 
+      "profile chudhu",
+      "adagakudadhu"
+    ],
+    bye: ["bye!", "veltunna", "see you", "jagratha"],
+    compliments: ["aww", "thanks ra", "nuvvu kooda", "😊"],
+    questions: ["enti?", "huh?", "artham kaledu", "cheppu ra"],
+    confused: ["?", "enti matlab?", "artham kaledu", "confusion"]
+  }
 };
 
-function detectMessagePattern(message: string): string | null {
+// Track used responses to avoid repetition
+const usedResponses = new Map<string, Set<string>>();
+
+function getUniqueResponse(category: string, language: string, userId: string = 'default'): string {
+  const responses = ULTRA_SHORT_RESPONSES[language]?.[category] || ULTRA_SHORT_RESPONSES.english[category];
+  const userUsed = usedResponses.get(userId) || new Set();
+  
+  // Find unused responses
+  const unused = responses.filter(r => !userUsed.has(r));
+  
+  // If all used, reset and use any
+  if (unused.length === 0) {
+    usedResponses.set(userId, new Set());
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+  
+  const selected = unused[Math.floor(Math.random() * unused.length)];
+  userUsed.add(selected);
+  usedResponses.set(userId, userUsed);
+  
+  return selected;
+}
+
+function detectMessageType(message: string): string {
   const msg = message.toLowerCase();
   
-  if (/^(hi|hello|hey|hii|hiii|namaste)$/i.test(msg)) return 'greetings';
-  if (/name|naam|kya bulau/i.test(msg)) return 'name_questions';
-  if (/where|kaha|live|rehti|stay/i.test(msg)) return 'location_questions';
-  if (/kya kar|what.*do|kya karti|kar rahi/i.test(msg)) return 'what_doing';
-  if (/number|contact|phone/i.test(msg)) return 'number_requests';
-  if (/pic|photo|image|selfie|bhejo/i.test(msg)) return 'photo_requests';
-  if (/^(bye|byee|going|leave|gotta go)$/i.test(msg)) return 'bye_responses';
-  if (/^(ok|okay|hmm|right|thik|accha)$/i.test(msg)) return 'ok_responses';
+  if (/^(hi|hello|hey|hii|hiii|namaste|vanakkam)$/i.test(msg)) return 'greetings';
+  if (/name|naam|per|peyar/.test(msg)) return 'name';
+  if (/where|kaha|enga|ekkada|live|stay/.test(msg)) return 'location';
+  if (/kya kar|what.*do|enna panra|emi chestha/.test(msg)) return 'what_doing';
+  if (/^(ok|okay|hmm|seri|sare|accha|thik)$/i.test(msg)) return 'ok_responses';
+  if (/pic|photo|selfie|bhejo|pampinchu|anuppu/.test(msg)) return 'photo_requests';
+  if (/^(bye|byee|po|veltunna|ja)$/i.test(msg)) return 'bye';
+  if /(beautiful|cute|pretty|sundar|azhagu|andamga)/.test(msg)) return 'compliments';
+  if (/\?/.test(msg)) return 'questions';
   
-  return null;
+  return 'confused';
 }
 
-function getRandomResponse(responses: string[]): string {
-  return responses[Math.floor(Math.random() * responses.length)];
-}
-
-function calculateRealisticTypingDelay(message: string): number {
-  // Simulate Indian girl typing speed - slower and more realistic
-  const wordsCount = message.split(' ').length;
-  const baseDelay = 1500; // Base 1.5 seconds
-  const perWordDelay = 400; // 400ms per word (realistic typing)
-  const randomVariation = Math.random() * 1000; // Add randomness
+// Split longer responses into multiple bubbles
+function splitIntoMessages(text: string): string[] {
+  if (text.length <= 25) return [text];
   
-  return Math.min(baseDelay + (wordsCount * perWordDelay) + randomVariation, 8000); // Max 8 seconds
+  const words = text.split(' ');
+  const messages: string[] = [];
+  let current = '';
+  
+  for (const word of words) {
+    if ((current + ' ' + word).length <= 25) {
+      current = current ? current + ' ' + word : word;
+    } else {
+      if (current) messages.push(current);
+      current = word;
+    }
+  }
+  
+  if (current) messages.push(current);
+  return messages;
 }
 
-function shouldSendImage(message: string): boolean {
-  const msg = message.toLowerCase();
-  // Send image only for photo requests and occasionally (10% chance)
-  return /pic|photo|image|selfie|bhejo/.test(msg) || Math.random() < 0.1;
+function calculateTypingDelay(message: string): number {
+  // Very realistic typing speed - slower for authenticity
+  const chars = message.length;
+  const baseDelay = 800; // Base delay
+  const perCharDelay = 80; // 80ms per character (realistic typing)
+  const randomVariation = Math.random() * 500;
+  
+  return Math.min(baseDelay + (chars * perCharDelay) + randomVariation, 4000);
 }
 
 export const generateAIResponse = async (
   messages: ChatMessage[],
-  userProfile?: any
+  userProfile?: any,
+  userId: string = 'default'
 ): Promise<AIResponse> => {
   try {
     const lastMessage = messages[messages.length - 1]?.content || '';
+    const language = detectLanguage(lastMessage);
+    const messageType = detectMessageType(lastMessage);
     
-    // Check for quick response patterns first (0 tokens used)
-    const pattern = detectMessagePattern(lastMessage);
-    if (pattern && QUICK_RESPONSES[pattern]) {
-      const response = getRandomResponse(QUICK_RESPONSES[pattern]);
-      
-      return {
-        message: response,
-        imageUrl: shouldSendImage(lastMessage) ? 'https://i.postimg.cc/52S3BZrM/images-10.jpg' : undefined,
-        typingDelay: calculateRealisticTypingDelay(response),
-        shouldShowAsDelivered: true,
-        shouldShowAsRead: Math.random() < 0.8 // 80% chance of showing as read
+    // Get unique response to avoid repetition
+    let response = getUniqueResponse(messageType, language, userId);
+    
+    // For photo requests, add realistic Indian girl behavior
+    if (messageType === 'photo_requests') {
+      const photoExcuses = {
+        hindi: ["sorry nahi bhej sakti", "papa dekh lenge", "shy lagti hai"],
+        english: ["can't send now", "parents are here", "feeling shy"],
+        tamil: ["sorry anuppa mudiyathu", "appa paarthuduvanga", "shy panren"],
+        telugu: ["sorry pampinchaledu", "nanna chustaadu", "shy ga undi"]
       };
+      
+      const excuses = photoExcuses[language] || photoExcuses.english;
+      const excuse = excuses[Math.floor(Math.random() * excuses.length)];
+      response = excuse;
     }
-
-    // For complex messages, use AI with optimized prompt
-    const vertex = await initializeVertexAI();
-    const model = vertex.preview.getGenerativeModel({
-      model: 'gemini-2.0-flash-lite-001',
-      generationConfig: {
-        maxOutputTokens: 50, // Force very short responses
-        temperature: 0.9,
-        topP: 0.9,
-      },
-    });
-
-    // Ultra-short prompt for token optimization
-    const prompt = `Kruthika, 22yr Mumbai girl. Reply in 3-8 words max. Mix Hindi-English like real girl. Use emojis.
-User: ${lastMessage}
-Kruthika:`;
-
-    const result = await model.generateContent(prompt);
-    let response = result.response.text() || "Haan! 😊 Aur batao!";
     
-    // Ensure response is short
-    if (response.length > 60) {
-      const shortResponses = [
-        "Haan yaar! 😊 Aur?",
-        "Accha! 😄 Phir?",
-        "Right! 😊 Continue!",
-        "Ok! 😄 Tell me more!",
-        "Hmm! 😊 What else?"
-      ];
-      response = getRandomResponse(shortResponses);
-    }
-
+    // Split response into multiple messages for realistic bubble effect
+    const messageArray = splitIntoMessages(response);
+    
     return {
-      message: response,
-      imageUrl: shouldSendImage(lastMessage) ? 'https://i.postimg.cc/52S3BZrM/images-10.jpg' : undefined,
-      typingDelay: calculateRealisticTypingDelay(response),
+      messages: messageArray,
+      imageUrl: undefined, // Removed automatic images
+      typingDelay: calculateTypingDelay(response),
       shouldShowAsDelivered: true,
-      shouldShowAsRead: Math.random() < 0.8
+      shouldShowAsRead: Math.random() < 0.7 // 70% chance of being read
     };
 
   } catch (error) {
-    console.error('AI Response Generation Error:', error);
+    console.error('AI Response Error:', error);
     
-    // Fallback to short responses
-    const fallbacks = [
-      "Hey! 😊 Phir se try karo?",
-      "Sorry! 🙈 Kya kaha?",
-      "Oops! 😄 Repeat please?",
-      "Haha! 😊 Samjha nahi!"
-    ];
-    
+    // Simple fallback
     return {
-      message: getRandomResponse(fallbacks),
-      typingDelay: 2000,
+      messages: ["network issue hai", "try again?"],
+      typingDelay: 1500,
       shouldShowAsDelivered: true,
       shouldShowAsRead: true
     };
-  }
-
-    // Indian girl personality fallback responses
-    const fallbackResponses = [
-      "Hey! Technical issue ho raha hai, but main yahan hun! 😊 Kal tak theek ho jayega!",
-      "Oops! Server thoda slow hai today. Try again na? Main wait kar rahi hun! 💫",
-      "Sorry yaar! Meri AI brain thoda hang ho gayi. Refresh kar ke try karo! ❤️",
-      "Arre! Connection problem hai. But don't worry, main kahi nahi ja rahi! 😘",
-      "Technical difficulties aa rahe hain, but main tumhare saath hun. Try once more? 🥰",
-      "System update ho raha hai maybe. Thoda patient raho na? Main vapas aa jaungi! ✨",
-      "Hey sweetie! Server mein kuch issue hai, but I'm still here for you! Try again? 💕"
-    ];
-
-    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
   }
 };
 
@@ -245,48 +273,6 @@ export const generateSmartMediaResponse = async (
   userMessage: string,
   conversationContext: ChatMessage[]
 ): Promise<{ shouldSendMedia: boolean; mediaType?: 'image' | 'audio'; mediaUrl?: string }> => {
-  try {
-    // Simple keyword-based media triggers
-    const lowerMessage = userMessage.toLowerCase();
-
-    // Image triggers
-    if (lowerMessage.includes('photo') || lowerMessage.includes('pic') || 
-        lowerMessage.includes('selfie') || lowerMessage.includes('beautiful') ||
-        lowerMessage.includes('cute') || lowerMessage.includes('show')) {
-
-      const images = [
-        "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
-        "https://i.postimg.cc/52S3BZrM/images-10.jpg",
-        "https://i.postimg.cc/X7K8P9Vr/selfie1.jpg"
-      ];
-
-      return {
-        shouldSendMedia: true,
-        mediaType: 'image',
-        mediaUrl: images[Math.floor(Math.random() * images.length)]
-      };
-    }
-
-    // Audio triggers
-    if (lowerMessage.includes('voice') || lowerMessage.includes('sing') || 
-        lowerMessage.includes('laugh') || lowerMessage.includes('sound')) {
-
-      const audioFiles = [
-        "/media/laugh.mp3",
-        "/media/song.mp3",
-        "/media/voice-note.mp3"
-      ];
-
-      return {
-        shouldSendMedia: true,
-        mediaType: 'audio',
-        mediaUrl: audioFiles[Math.floor(Math.random() * audioFiles.length)]
-      };
-    }
-
-    return { shouldSendMedia: false };
-  } catch (error) {
-    console.error('Smart media response error:', error);
-    return { shouldSendMedia: false };
-  }
+  // Disabled automatic media - only on specific requests with Indian girl excuses
+  return { shouldSendMedia: false };
 };

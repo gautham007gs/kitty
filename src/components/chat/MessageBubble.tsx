@@ -56,12 +56,12 @@ const MessageBubble = memo(({
 
       <div
         className={cn(
-          "rounded-2xl px-3 py-2 max-w-full break-words cursor-pointer transition-colors shadow-sm",
+          "rounded-2xl px-3 py-2 max-w-full break-words cursor-pointer transition-colors shadow-sm relative",
           isUser
             ? "bg-[#DCF8C6] text-gray-900 rounded-br-md ml-2"
-            : "bg-white text-gray-900 rounded-bl-md mr-2 relative",
-          // Add breadcrumb tail for AI messages
-          !isUser && "before:content-[''] before:absolute before:left-[-8px] before:bottom-[8px] before:w-0 before:h-0 before:border-r-[8px] before:border-r-white before:border-t-[6px] before:border-t-transparent before:border-b-[6px] before:border-b-transparent"
+            : "bg-white text-gray-900 rounded-bl-md mr-2",
+          // Add WhatsApp-style tail for AI messages only
+          !isUser && "before:content-[''] before:absolute before:left-[-7px] before:bottom-[7px] before:w-0 before:h-0 before:border-r-[7px] before:border-r-white before:border-t-[5px] before:border-t-transparent before:border-b-[5px] before:border-b-transparent before:drop-shadow-sm"
         )}
         onClick={handleBubbleClick}
       >
