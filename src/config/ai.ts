@@ -314,11 +314,38 @@ export const defaultManagedContactStatuses = [
   {
     id: 'demo_contact_6',
     name: 'Anjali Gupta',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+    avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
     statusText: 'Cooking something special today 👩‍🍳',
     statusImageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=500&fit=crop',
     hasUpdate: true,
     dataAiHint: 'profile woman cooking'
+  },
+  {
+    id: 'demo_contact_7',
+    name: 'Siddharth Joshi',
+    avatarUrl: 'https://images.unsplash.com/photo-1552058544-f2b08422138a?w=150&h=150&fit=crop&crop=face',
+    statusText: 'New book release! 📚 Finally published!',
+    statusImageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=500&fit=crop',
+    hasUpdate: true,
+    dataAiHint: 'profile man writer'
+  },
+  {
+    id: 'demo_contact_8',
+    name: 'Kavya Reddy',
+    avatarUrl: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Beach vacation mode ON! 🏖️ Life is good!',
+    statusImageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&h=500&fit=crop',
+    hasUpdate: true,
+    dataAiHint: 'profile woman beach'
+  },
+  {
+    id: 'demo_contact_9',
+    name: 'Rohan Mehta',
+    avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671d66?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Concert tonight! 🎸 Rock on!',
+    statusImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=500&fit=crop',
+    hasUpdate: false,
+    dataAiHint: 'profile man music'
   }
 ];
 

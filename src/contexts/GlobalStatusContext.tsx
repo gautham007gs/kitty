@@ -93,7 +93,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
         // Here, we assume the fetched data is the complete source of truth if present.
         setManagedDemoContacts(fetchedContacts);
       } else {
-        setManagedDemoContacts([]);
+        setManagedDemoContacts(defaultManagedContactStatuses);
       }
 
     } catch (e: any) {

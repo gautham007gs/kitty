@@ -28,6 +28,14 @@ const AdminLoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
 
+    // Clear any existing session storage first
+    try {
+      sessionStorage.removeItem(ADMIN_AUTH_KEY);
+      sessionStorage.removeItem('admin_user_id');
+    } catch (error) {
+      console.warn("Could not clear existing session:", error);
+    }
+
     if (!supabase) {
       setError('Supabase client is not available. Please check configuration.');
       setIsLoading(false);

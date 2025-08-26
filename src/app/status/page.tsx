@@ -288,7 +288,7 @@ const StatusPage: React.FC = () => {
 
           {/* Other Contacts */}
           {(displayManagedDemoContacts || []).map(contact => (
-            (contact.hasUpdate || contact.statusImageUrl) && (
+            (contact.hasUpdate || contact.statusImageUrl || contact.statusText) && (
               <StatusItemDisplay
                 key={contact.id}
                 statusKey={contact.id}

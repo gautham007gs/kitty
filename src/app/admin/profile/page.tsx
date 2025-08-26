@@ -80,9 +80,10 @@ const AdminProfilePage: React.FC = () => {
 
   useEffect(() => {
     try {
-        const authStatus = sessionStorage.getItem(ADMIN_AUTH_KEY);
+        const authStatus = sessionStorage?.getItem(ADMIN_AUTH_KEY);
         if (authStatus !== 'true') {
           router.replace('/admin/login');
+          return;
         } else {
           setIsAuthenticated(true);
         }
