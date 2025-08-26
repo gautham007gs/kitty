@@ -1,11 +1,11 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAIResponse } from '@/lib/aiService';
+import { userPersonalization } from '@/lib/userPersonalization'; // Corrected import
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Chat API: Received request');
-    
+
     const body = await request.json();
     const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = body;
 
@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
     console.log('😊 Current mood:', mood);
     console.log('👤 User ID:', userId);
 
+    // Get message count from the singleton instance
+    const messageCount = await userPersonalization.getMessageCount(userId);
+    console.log('Message count for user:', messageCount);
+
+
     // Generate AI response using the improved aiService
     const aiResponse = await generateAIResponse(message, userId);
 
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Simple mood detection based on user message
     let newMood = mood || 'neutral';
     const lowerMessage = message.toLowerCase();
-    
+
     if (lowerMessage.includes('love') || lowerMessage.includes('miss') || lowerMessage.includes('pyaar')) {
       newMood = 'romantic';
     } else if (lowerMessage.includes('haha') || lowerMessage.includes('funny') || lowerMessage.includes('mazak')) {
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Chat API Error:', error);
-    
+
     // Return a natural fallback response
     return NextResponse.json({
       response: "Sorry yaar! Technical problem ho rahi hai. Try again please! 😊",

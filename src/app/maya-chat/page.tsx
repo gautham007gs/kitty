@@ -558,9 +558,9 @@ const KruthikaChatPage: NextPage = () => {
     if (!message.trim() && !imageUri) return;
 
     // Check if user has reached daily message limit
-    const msgCount = userPersonalization?.getMessageCount?.(userIdRef.current) || 0;
+    const messageCount = await userPersonalization.getMessageCount(userIdRef.current);
 
-    if (userPersonalization?.isTokenLimitReached?.(userIdRef.current)) {
+    if (userPersonalization.isTokenLimitReached(userIdRef.current)) {
       toast({
         title: "Daily Limit Reached",
         description: `You've reached your daily limit of ${userPersonalization.getMessageLimit()} messages. Come back tomorrow!`,

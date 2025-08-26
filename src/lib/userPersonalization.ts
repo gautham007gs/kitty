@@ -276,4 +276,7 @@ class UserPersonalizationSystem {
   }
 }
 
-export const userPersonalization = new UserPersonalizationSystem();
+// Export both the class and a singleton instance
+const userPersonalization = UserPersonalizationManager.getInstance();
+
+export { UserPersonalizationManager, userPersonalization };
