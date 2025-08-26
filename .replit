@@ -5,7 +5,7 @@ run = "npm run dev"
 channel = "stable-25_05"
 
 [deployment]
-run = ["sh", "-c", "npm start"]
+run = ["sh", "-c", "PORT=5000 HOSTNAME=0.0.0.0 npm start"]
 build = ["sh", "-c", "npm run build"]
 
 [[ports]]
@@ -21,7 +21,7 @@ localPort = 9002
 externalPort = 80
 
 [workflows]
-runButton = "Production Optimized"
+runButton = "High Performance Server"
 
 [[workflows.workflow]]
 name = "Run"
@@ -74,3 +74,20 @@ args = "npm run build"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm start -- --port 5000 --hostname 0.0.0.0"
+
+[[workflows.workflow]]
+name = "High Performance Server"
+author = 46912715
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run build"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=5000 HOSTNAME=0.0.0.0 npm start"
