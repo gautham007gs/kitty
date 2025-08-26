@@ -273,7 +273,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Just finished my workout! 💪',
     statusImageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile man fitness'
+    dataAiHint: 'profile man fitness',
+    enabled: true
   },
   {
     id: 'demo_contact_2', 
@@ -282,7 +283,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Coffee break ☕ Perfect evening!',
     statusImageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=500&fit=crop',
     hasUpdate: false,
-    dataAiHint: 'profile woman coffee'
+    dataAiHint: 'profile woman coffee',
+    enabled: true
   },
   {
     id: 'demo_contact_3',
@@ -291,7 +293,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Weekend vibes! 🌅',
     statusImageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile man nature'
+    dataAiHint: 'profile man nature',
+    enabled: true
   },
   {
     id: 'demo_contact_4',
@@ -300,7 +303,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Shopping day! 🛍️ Found amazing deals!',
     statusImageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile woman shopping'
+    dataAiHint: 'profile woman shopping',
+    enabled: true
   },
   {
     id: 'demo_contact_5',
@@ -309,7 +313,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Road trip adventure begins! 🚗',
     statusImageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=500&fit=crop',
     hasUpdate: false,
-    dataAiHint: 'profile man travel'
+    dataAiHint: 'profile man travel',
+    enabled: true
   },
   {
     id: 'demo_contact_6',
@@ -318,7 +323,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Cooking something special today 👩‍🍳',
     statusImageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile woman cooking'
+    dataAiHint: 'profile woman cooking',
+    enabled: true
   },
   {
     id: 'demo_contact_7',
@@ -327,7 +333,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'New book release! 📚 Finally published!',
     statusImageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile man writer'
+    dataAiHint: 'profile man writer',
+    enabled: true
   },
   {
     id: 'demo_contact_8',
@@ -336,7 +343,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Beach vacation mode ON! 🏖️ Life is good!',
     statusImageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: 'profile woman beach'
+    dataAiHint: 'profile woman beach',
+    enabled: true
   },
   {
     id: 'demo_contact_9',
@@ -345,7 +353,8 @@ export const defaultManagedContactStatuses = [
     statusText: 'Concert tonight! 🎸 Rock on!',
     statusImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=500&fit=crop',
     hasUpdate: false,
-    dataAiHint: 'profile man music'
+    dataAiHint: 'profile man music',
+    enabled: true
   }
 ];
 

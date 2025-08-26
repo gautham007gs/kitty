@@ -43,6 +43,7 @@ export interface ManagedContactStatus {
   hasUpdate: boolean;
   dataAiHint?: string;
   statusImageUrl?: string;
+  enabled?: boolean;
 }
 
 export interface AdSettings {

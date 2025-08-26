@@ -328,7 +328,7 @@ const AdminProfilePage: React.FC = () => {
     setManagedContactStatuses(prev =>
       prev.map(contact => {
         if (contact.id === id) {
-          if (field === 'statusImageUrl') {
+          if (field === 'statusImageUrl' || field === 'avatarUrl') {
             return { ...contact, [field]: (value as string)?.trim() === '' ? undefined : value };
           }
           return { ...contact, [field]: value };
@@ -338,11 +338,11 @@ const AdminProfilePage: React.FC = () => {
     );
   };
 
-  const handleClearManagedContactField = (id: string, field: 'statusText' | 'statusImageUrl') => {
+  const handleClearManagedContactField = (id: string, field: 'statusText' | 'statusImageUrl' | 'name' | 'avatarUrl') => {
     setManagedContactStatuses(prev =>
       prev.map(contact =>
         contact.id === id
-          ? { ...contact, [field]: field === 'statusText' ? "" : undefined }
+          ? { ...contact, [field]: (field === 'statusText' || field === 'name') ? "" : undefined }
           : contact
       )
     );
@@ -905,9 +905,25 @@ const AdminProfilePage: React.FC = () => {
             <CardContent className="space-y-6 pt-2">
               {(managedContactStatuses && managedContactStatuses.length > 0 ? managedContactStatuses : defaultManagedContactStatuses).map((contact) => (
                 <div key={contact.id} className="border p-4 rounded-md space-y-3 bg-secondary/20 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border" key={`${contact.id}-admin-avatar-${contact.avatarUrl}`}><AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint={contact.dataAiHint || "profile person"} onError={(e) => console.error(`Admin Page - Demo Contact Avatar load error. URL: ${contact.avatarUrl}`, e)} /><AvatarFallback>{contact.name.charAt(0)}</AvatarFallback></Avatar>
-                    <h4 className="font-medium text-md text-secondary-foreground">{contact.name} (Demo)</h4>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border" key={`${contact.id}-admin-avatar-${contact.avatarUrl}`}><AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint={contact.dataAiHint || "profile person"} onError={(e) => console.error(`Admin Page - Demo Contact Avatar load error. URL: ${contact.avatarUrl}`, e)} /><AvatarFallback>{contact.name.charAt(0)}</AvatarFallback></Avatar>
+                      <h4 className="font-medium text-md text-secondary-foreground">{contact.name} (Demo)</h4>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch id={`contactEnabled-${contact.id}`} checked={contact.enabled !== false} onCheckedChange={(checked) => handleManagedContactChange(contact.id, 'enabled', checked)}/>
+                      <Label htmlFor={`contactEnabled-${contact.id}`} className="text-xs font-medium">Enabled</Label>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`contactName-${contact.id}`} className="font-medium text-xs">Contact Name</Label>
+                      <Input id={`contactName-${contact.id}`} value={contact.name} onChange={(e) => handleManagedContactChange(contact.id, 'name', e.target.value)} placeholder="Contact name" className="text-sm"/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`contactAvatarUrl-${contact.id}`} className="font-medium text-xs">Avatar URL</Label>
+                      <Input id={`contactAvatarUrl-${contact.id}`} type="url" value={contact.avatarUrl} onChange={(e) => handleManagedContactChange(contact.id, 'avatarUrl', e.target.value)} placeholder="https://placehold.co/150x150.png" className="text-sm"/>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor={`contactStoryText-${contact.id}`} className="font-medium text-xs">Status Text</Label>
@@ -923,6 +939,8 @@ const AdminProfilePage: React.FC = () => {
                     <Label htmlFor={`contactHasUpdate-${contact.id}`} className="text-xs font-medium">Show as new/unread update</Label>
                   </div>
                    <div className="flex flex-wrap gap-2 pt-1">
+                    <Button onClick={() => handleClearManagedContactField(contact.id, 'name')} variant="outline" size="xs" className="text-xs px-2 py-1 h-auto"><Trash2 className="mr-1 h-3 w-3"/>Clear Name</Button>
+                    <Button onClick={() => handleClearManagedContactField(contact.id, 'avatarUrl')} variant="outline" size="xs" className="text-xs px-2 py-1 h-auto"><Trash2 className="mr-1 h-3 w-3"/>Clear Avatar</Button>
                     <Button onClick={() => handleClearManagedContactField(contact.id, 'statusText')} variant="outline" size="xs" className="text-xs px-2 py-1 h-auto"><Trash2 className="mr-1 h-3 w-3"/>Clear Text</Button>
                     <Button onClick={() => handleClearManagedContactField(contact.id, 'statusImageUrl')} variant="outline" size="xs" className="text-xs px-2 py-1 h-auto"><Trash2 className="mr-1 h-3 w-3"/>Clear Image</Button>
                   </div>

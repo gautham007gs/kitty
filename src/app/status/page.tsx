@@ -287,7 +287,7 @@ const StatusPage: React.FC = () => {
           <div className="my-3"></div>
 
           {/* Other Contacts */}
-          {(displayManagedDemoContacts || []).map(contact => {
+          {(displayManagedDemoContacts || []).filter(contact => contact.enabled !== false).map(contact => {
             // Show contact if they have any meaningful content
             const hasContent = contact.statusText && contact.statusText.trim() !== '';
             const hasImage = contact.statusImageUrl && contact.statusImageUrl.trim() !== '';

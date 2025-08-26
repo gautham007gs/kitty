@@ -98,7 +98,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
         // Merge with defaults, preferring fetched data where available
         const mergedContacts = defaultManagedContactStatuses.map(defaultContact => {
           const fetchedContact = fetchedContactsMap.get(defaultContact.id);
-          return fetchedContact ? { ...defaultContact, ...fetchedContact } : defaultContact;
+          return fetchedContact ? { ...defaultContact, ...fetchedContact, enabled: fetchedContact.enabled !== false } : { ...defaultContact, enabled: true };
         });
         
         // Add any extra fetched contacts not in defaults
