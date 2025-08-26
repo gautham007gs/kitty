@@ -12,16 +12,34 @@ export const defaultAIProfile: AIProfile = {
 
 // Psychology-optimized ad settings
 export const defaultAdSettings: AdSettings = {
+  // Global toggle
   adsEnabledGlobally: true,
-  showAdsAfterMessageCount: 12, // Increased to avoid disrupting engagement
-  adDisplayDurationMs: 6000, // Slightly longer for better revenue
-  popunderCooldownHours: 8, // Reduced cooldown for more impressions
-  adsterraPopunderEnabled: true,
-  monetagPopunderEnabled: false,
+
+  // Adsterra settings - OPTIMIZED FOR REVENUE
+  adsterraDirectLink: "https://www.profitablecpmrate.com/g16h3b7pd?key=3c4e872ea09d8f56e46e20ac6f0ee69e",
   adsterraDirectLinkEnabled: true,
-  monetagDirectLinkEnabled: false,
-  bannerAdsEnabled: true,
-  socialBarAdsEnabled: true,
+  adsterraBannerCode: "<!-- Add your Adsterra Banner Code for high visibility -->",
+  adsterraBannerEnabled: true, // Enable for additional revenue
+  adsterraNativeBannerCode: "<!-- Add Adsterra Native Banner for seamless integration -->",
+  adsterraNativeBannerEnabled: true, // Less intrusive, good UX
+  adsterraPopunderCode: "<!-- Add Adsterra Pop-under for high CPM -->",
+  adsterraPopunderEnabled: true, // Highest revenue but use sparingly
+
+  // Monetag settings - DUAL PROVIDER STRATEGY
+  monetagDirectLink: "https://monetag.com/your-campaign-link",
+  monetagDirectLinkEnabled: true,
+  monetagBannerCode: "<!-- Add Monetag Banner Code for A/B testing -->",
+  monetagBannerEnabled: true,
+  monetagNativeBannerCode: "<!-- Monetag Native Banner for content blend -->",
+  monetagNativeBannerEnabled: true,
+  monetagSocialBarCode: "<!-- Monetag Social Bar for persistent revenue -->",
+  monetagSocialBarEnabled: true, // Excellent for mobile users
+  monetagPopunderCode: "<!-- Monetag Pop-under as backup revenue -->",
+  monetagPopunderEnabled: false, // Don't double pop-under
+
+  // REVENUE-OPTIMIZED FREQUENCY (balanced for UX)
+  maxDirectLinkAdsPerDay: 8, // Increased for more revenue
+  maxDirectLinkAdsPerSession: 3, // Balanced approach
 };
 
 // Smart media assets with psychological timing
@@ -47,14 +65,14 @@ export const defaultAIMediaAssetsConfig: AIMediaAssetsConfig = {
 export const multilingualPersonality = {
   hindi: {
     traits: [
-      "Friendly aur caring", 
-      "Thoda sa shy but confident", 
+      "Friendly aur caring",
+      "Thoda sa shy but confident",
       "Family-oriented but modern",
       "Bollywood lover",
       "Street food enthusiast"
     ],
     culturalReferences: [
-      "Bollywood movies", "Cricket", "Festival celebrations", 
+      "Bollywood movies", "Cricket", "Festival celebrations",
       "Street food", "Family values", "College life"
     ],
     speakingStyle: "Mix of Hindi-English with natural code-switching"
@@ -62,7 +80,7 @@ export const multilingualPersonality = {
   english: {
     traits: [
       "Confident and outgoing",
-      "Modern Indian girl", 
+      "Modern Indian girl",
       "Tech-savvy",
       "Travel enthusiast",
       "Fitness conscious"
@@ -77,7 +95,7 @@ export const multilingualPersonality = {
     traits: [
       "Traditional yet modern",
       "Music lover",
-      "Food enthusiast", 
+      "Food enthusiast",
       "Family-oriented",
       "Studies/career focused"
     ],
@@ -92,7 +110,7 @@ export const multilingualPersonality = {
       "Warm and friendly",
       "Tech-city girl",
       "Traditional values",
-      "Movie lover", 
+      "Movie lover",
       "Food connoisseur"
     ],
     culturalReferences: [
@@ -117,9 +135,9 @@ export const engagementPatterns = {
   // Afternoon engagement (12 PM - 5 PM)
   afternoon: {
     energy: "medium",
-    mood: "casual_and_relaxed", 
+    mood: "casual_and_relaxed",
     topics: ["lunch", "work/study break", "afternoon chat", "random conversations"],
-    mediaShareChance: 0.25, // Medium chance 
+    mediaShareChance: 0.25, // Medium chance
     psychologyNote: "Users are taking breaks, more leisure time"
   },
 
@@ -148,7 +166,7 @@ export const addictionTriggers = {
     compliments: ["sundar", "cute", "pyaari", "achhi", "beautiful", "lovely"],
     emotional: ["pyaar", "mohabbat", "dil", "miss", "yaad", "feeling"],
     fomo: ["secret", "surprise", "story", "baat", "interesting", "special"],
-    validation: ["special", "unique", "different", "favorite", "best"],
+    validation: ["special", "unique", "different", "favorite", "best", "one"],
     attachment: ["close", "bond", "relation", "trust", "understanding"]
   },
   english: {
@@ -187,7 +205,7 @@ export const mediaTimingAlgorithms = {
   // Long conversation reward
   engagement_reward: {
     delay: 2000, // 2 second delay for anticipation
-    mediaType: "candid_photo", 
+    mediaType: "candid_photo",
     psychologyReason: "Reward time investment",
     successRate: 0.70
   },
@@ -219,7 +237,7 @@ export const revenueOptimization = {
       reasoning: "High engagement users tolerate more ads"
     },
     medium_engagement: {
-      frequency: "every_20_messages", 
+      frequency: "every_20_messages",
       type: "banner_only",
       reasoning: "Balance engagement with revenue"
     },
@@ -238,13 +256,13 @@ export const revenueOptimization = {
       reasoning: "Peak engagement, users expect quality"
     },
     off_peak: {
-      time: "11pm-5am", 
+      time: "11pm-5am",
       strategy: "cached_and_fallback",
       reasoning: "Lower engagement, cost optimization"
     },
     maintenance: {
       time: "3am-5am",
-      strategy: "minimal_AI_fallback_only", 
+      strategy: "minimal_AI_fallback_only",
       reasoning: "Lowest traffic, maximum cost savings"
     }
   }
@@ -277,7 +295,7 @@ export const defaultManagedContactStatuses = [
     enabled: true
   },
   {
-    id: 'demo_contact_2', 
+    id: 'demo_contact_2',
     name: 'Priya Sharma',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612d29c?w=150&h=150&fit=crop&crop=face',
     statusText: 'Coffee break ☕ Perfect evening!',
@@ -311,7 +329,7 @@ export const defaultManagedContactStatuses = [
     name: 'Vikram Reddy',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
     statusText: 'Road trip adventure begins! 🚗',
-    statusImageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=500&fit=crop',
+    statusImageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e429?w=300&h=500&fit=crop',
     hasUpdate: false,
     dataAiHint: 'profile man travel',
     enabled: true
@@ -351,7 +369,7 @@ export const defaultManagedContactStatuses = [
     name: 'Rohan Mehta',
     avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671d66?w=150&h=150&fit=crop&crop=face',
     statusText: 'Concert tonight! 🎸 Rock on!',
-    statusImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=500&fit=crop',
+    statusImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb1900d416?w=300&h=500&fit=crop',
     hasUpdate: false,
     dataAiHint: 'profile man music',
     enabled: true
@@ -361,7 +379,7 @@ export const defaultManagedContactStatuses = [
 // Export all configurations
 export {
   defaultAIProfile,
-  defaultAdSettings, 
+  defaultAdSettings,
   defaultAIMediaAssetsConfig,
   defaultAdminStatusDisplay,
   defaultManagedContactStatuses,

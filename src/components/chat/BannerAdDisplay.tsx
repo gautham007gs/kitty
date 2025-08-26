@@ -21,6 +21,11 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
   const scriptInjectedRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // State for ad rotation
+  const [currentAdProvider, setCurrentAdProvider] = useState<'adsterra' | 'monetag' | null>(null);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const AD_ROTATION_INTERVAL = 15000; // 15 seconds interval, adjust as needed
+
   useEffect(() => {
     // Clear any existing timer when settings or delay change
     if (timerRef.current) {
@@ -104,8 +109,39 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     }
   }, [adCodeToInject, placementKey, adType]);
 
+  // REVENUE-OPTIMIZED rotation - prioritize higher-paying providers
+  useEffect(() => {
+    const availableAds = [];
 
-  if (isLoadingAdSettings || !isVisible || !adCodeToInject) {
+    // Prioritize Adsterra (typically higher CPM)
+    if (adSettings.adsterraBannerEnabled && adSettings.adsterraBannerCode && 
+        !adSettings.adsterraBannerCode.includes("Placeholder")) {
+      availableAds.push('adsterra', 'adsterra'); // Double weight for higher revenue
+    }
+
+    // Add Monetag for diversity and fallback
+    if (adSettings.monetagBannerEnabled && adSettings.monetagBannerCode && 
+        !adSettings.monetagBannerCode.includes("Placeholder")) {
+      availableAds.push('monetag');
+    }
+
+    if (availableAds.length === 0) {
+      setCurrentAdProvider(null);
+      return;
+    }
+
+    setCurrentAdProvider(availableAds[currentAdIndex % availableAds.length]);
+
+    // Faster rotation for more impressions = more revenue
+    const interval = setInterval(() => {
+      setCurrentAdIndex(prev => (prev + 1) % availableAds.length);
+    }, AD_ROTATION_INTERVAL * 0.75); // 25% faster rotation
+
+    return () => clearInterval(interval);
+  }, [adSettings, currentAdIndex]);
+
+
+  if (isLoadingAdSettings || !isVisible || !adCodeToInject || !currentAdProvider) {
     return null; 
   }
 
@@ -120,7 +156,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
         className,
         contextual && "kruthika-chat-contextual-ad" // Apply contextual class if true
       )}
-      key={`${placementKey}-${adType}-${adCodeToInject.substring(0, 30)}`} 
+      key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject.substring(0, 30)}`} 
     />
   );
 };
