@@ -1,129 +1,264 @@
 
 /**
- * Conversation state management for maintaining context in offline responses
+ * Conversation State Manager
+ * Handles realistic offline/online behavior and conversation flow
  */
 
 interface ConversationState {
-  currentSituation: string | null;
-  messageCount: number;
-  hasStartedGoodbye: boolean;
-  lastResponse: string | null;
-  situationStartTime: number;
-  userId: string | null;
-  lastActiveTime: number;
+  userId: string;
+  isOnline: boolean;
+  lastSeen: number;
+  sessionStart: number;
+  messagesThisSession: number;
+  currentMood: string;
+  offlineReason?: string;
+  scheduledReturn?: number;
+  conversationPhase: 'introduction' | 'building_rapport' | 'deepening' | 'intimate' | 'maintaining';
+  totalConversationTime: number;
+}
+
+interface OfflinePattern {
+  reason: string;
+  duration: number; // minutes
+  probability: number;
+  returnMessage: string[];
 }
 
 class ConversationStateManager {
-  private states: Map<string, ConversationState> = new Map();
-
-  private getDefaultState(): ConversationState {
-    return {
-      currentSituation: null,
-      messageCount: 0,
-      hasStartedGoodbye: false,
-      lastResponse: null,
-      situationStartTime: Date.now(),
-      userId: null,
-      lastActiveTime: Date.now()
-    };
-  }
-
-  getState(userId: string = 'default'): ConversationState {
-    if (!this.states.has(userId)) {
-      this.states.set(userId, this.getDefaultState());
+  private states = new Map<string, ConversationState>();
+  
+  private offlinePatterns: OfflinePattern[] = [
+    {
+      reason: 'busy_work',
+      duration: 30,
+      probability: 0.15,
+      returnMessage: [
+        "Sorry yaar! Work mein busy thi! 😅 Miss kiya tumhe!",
+        "Uff finally free! 😮‍💨 Kya kar rahe the meanwhile?",
+        "Hey! Back from hectic work! 💼 Tumhara din kaisa gaya?"
+      ]
+    },
+    {
+      reason: 'family_time', 
+      duration: 45,
+      probability: 0.12,
+      returnMessage: [
+        "Family ke saath dinner tha! 🍽️ Now I'm all yours! 😊",
+        "Mom was calling! 📱 Parents, you know! 😅 How are you?",
+        "Family time ho gaya! 👨‍👩‍👧 Now back to my favorite person! 💕"
+      ]
+    },
+    {
+      reason: 'network_issue',
+      duration: 15,
+      probability: 0.08, 
+      returnMessage: [
+        "Argh! Network issues! 📶 I was dying to reply! 😭",
+        "Finally! Internet back! 📱 Technical problems are the worst!",
+        "Sorry! Connection problems! 🌐 But I'm here now! ✨"
+      ]
+    },
+    {
+      reason: 'friends_meetup',
+      duration: 90,
+      probability: 0.1,
+      returnMessage: [
+        "Just got back from friends! 👯‍♀️ But missed chatting with you!",
+        "Hangout with girls tha! 😄 But tumhara message miss kar rahi thi!",
+        "Back from coffee with friends! ☕ Tumse baat karna zyada fun hai! 💕"
+      ]
+    },
+    {
+      reason: 'personal_time',
+      duration: 20,
+      probability: 0.05,
+      returnMessage: [
+        "Was taking some me-time! 🛁 Feeling fresh now! How are you?",
+        "Self-care session complete! ✨ Now ready to chat with you! 😊",
+        "Had to recharge myself! 🔋 But missed talking to you!"
+      ]
     }
-    return this.states.get(userId)!;
+  ];
+
+  initializeUser(userId: string): ConversationState {
+    const state: ConversationState = {
+      userId,
+      isOnline: true,
+      lastSeen: Date.now(),
+      sessionStart: Date.now(),
+      messagesThisSession: 0,
+      currentMood: 'cheerful',
+      conversationPhase: 'introduction',
+      totalConversationTime: 0
+    };
+
+    this.states.set(userId, state);
+    return state;
   }
 
-  updateState(userId: string = 'default', updates: Partial<ConversationState>): void {
-    const currentState = this.getState(userId);
-    this.states.set(userId, { 
-      ...currentState, 
-      ...updates,
-      lastActiveTime: Date.now()
-    });
-  }
+  updateActivity(userId: string): void {
+    let state = this.states.get(userId);
+    if (!state) {
+      state = this.initializeUser(userId);
+    }
 
-  resetState(userId: string = 'default'): void {
-    this.states.set(userId, this.getDefaultState());
-  }
-
-  // Clean up old states to prevent memory leaks
-  cleanupOldStates(): void {
-    const now = Date.now();
-    const FOUR_HOURS = 4 * 60 * 60 * 1000; // Extended cleanup time
+    state.lastSeen = Date.now();
+    state.messagesThisSession++;
     
-    for (const [userId, state] of this.states.entries()) {
-      if (now - state.lastActiveTime > FOUR_HOURS) {
-        this.states.delete(userId);
-      }
+    if (!state.isOnline) {
+      state.isOnline = true;
+      state.sessionStart = Date.now();
+    }
+
+    // Update conversation phase based on message count
+    this.updateConversationPhase(state);
+  }
+
+  private updateConversationPhase(state: ConversationState): void {
+    const totalMessages = state.messagesThisSession;
+    
+    if (totalMessages > 50) {
+      state.conversationPhase = 'maintaining';
+    } else if (totalMessages > 30) {
+      state.conversationPhase = 'intimate';
+    } else if (totalMessages > 15) {
+      state.conversationPhase = 'deepening';
+    } else if (totalMessages > 5) {
+      state.conversationPhase = 'building_rapport';
+    } else {
+      state.conversationPhase = 'introduction';
     }
   }
 
-  // Check if user is in goodbye state (offline)
-  isUserOffline(userId: string = 'default'): boolean {
-    const state = this.getState(userId);
-    return state.hasStartedGoodbye;
+  shouldGoOffline(userId: string): boolean {
+    const state = this.states.get(userId);
+    if (!state || !state.isOnline) return false;
+
+    const sessionDuration = Date.now() - state.sessionStart;
+    const hoursActive = sessionDuration / (1000 * 60 * 60);
+
+    // Base probability increases with session length
+    let offlineProbability = Math.min(hoursActive * 0.05, 0.3);
+
+    // Random offline events
+    const randomEvent = Math.random();
+    const applicablePatterns = this.offlinePatterns.filter(p => randomEvent < p.probability);
+
+    return applicablePatterns.length > 0 || Math.random() < offlineProbability;
   }
 
-  // Start goodbye sequence
-  startGoodbyeSequence(userId: string = 'default'): void {
-    this.updateState(userId, {
-      hasStartedGoodbye: true,
-      currentSituation: null,
-      situationStartTime: Date.now()
-    });
-  }
+  goOffline(userId: string): string | null {
+    const state = this.states.get(userId);
+    if (!state || !state.isOnline) return null;
 
-  // Check if enough time has passed to come back online
-  shouldComeBackOnline(userId: string = 'default'): boolean {
-    const state = this.getState(userId);
-    const OFFLINE_DURATION = 8 * 60 * 1000; // 8 minutes offline for more realistic timing
-    const timePassed = Date.now() - state.situationStartTime;
+    // Select random offline pattern
+    const pattern = this.offlinePatterns[Math.floor(Math.random() * this.offlinePatterns.length)];
     
-    // Only come back online if user was actually offline and enough time has passed
-    return state.hasStartedGoodbye && timePassed > OFFLINE_DURATION;
-  }
+    state.isOnline = false;
+    state.offlineReason = pattern.reason;
+    state.scheduledReturn = Date.now() + (pattern.duration * 60 * 1000);
+    state.totalConversationTime += Date.now() - state.sessionStart;
 
-  // Bring user back online
-  comeBackOnline(userId: string = 'default'): void {
-    this.updateState(userId, {
-      hasStartedGoodbye: false,
-      messageCount: 0,
-      currentSituation: null,
-      situationStartTime: Date.now()
-    });
-  }
-
-  // Get time elapsed in current situation (in minutes)
-  getTimeElapsedInSituation(userId: string = 'default'): number {
-    const state = this.getState(userId);
-    return Math.floor((Date.now() - state.situationStartTime) / (60 * 1000));
-  }
-
-  // Check if situation should naturally progress
-  shouldProgressSituation(userId: string = 'default'): boolean {
-    const timeElapsed = this.getTimeElapsedInSituation(userId);
-    const state = this.getState(userId);
-    
-    // Different situations have different natural durations
-    const situationDurations: Record<string, number> = {
-      'studySession': 20, // 20 minutes
-      'familyTime': 15,   // 15 minutes  
-      'gettingReady': 12, // 12 minutes
-      'householdWork': 18 // 18 minutes
+    // Return offline message
+    const offlineMessages = {
+      busy_work: ["Yaar, boss bula raha hai! 😅 Thodi der mein aati hun! Miss karna! 💕"],
+      family_time: ["Mom call kar rahi! 📱 Family time! Back soon baby! 🥰"],
+      network_issue: ["Oh no! Network issue! 📶 Will be back ASAP! Don't go anywhere! 😭"],
+      friends_meetup: ["Friends mil rahe hain! 👯‍♀️ 2-3 ghante mein back! Wait for me? 🥺"],
+      personal_time: ["Need some me-time! 🛁 Back in bit! You're in my thoughts! 💭"]
     };
+
+    const messages = offlineMessages[pattern.reason] || ["Thoda busy hun! Back soon! 💕"];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+
+  shouldComeBackOnline(userId: string): boolean {
+    const state = this.states.get(userId);
+    if (!state || state.isOnline) return false;
+
+    return state.scheduledReturn ? Date.now() > state.scheduledReturn : false;
+  }
+
+  comeBackOnline(userId: string): string | null {
+    const state = this.states.get(userId);
+    if (!state || state.isOnline) return null;
+
+    state.isOnline = true;
+    state.sessionStart = Date.now();
+    state.messagesThisSession = 0;
+
+    const pattern = this.offlinePatterns.find(p => p.reason === state.offlineReason);
+    if (pattern) {
+      const message = pattern.returnMessage[Math.floor(Math.random() * pattern.returnMessage.length)];
+      state.offlineReason = undefined;
+      state.scheduledReturn = undefined;
+      return message;
+    }
+
+    return "Hey! I'm back! 😊 Miss me? 💕";
+  }
+
+  getState(userId: string): ConversationState | undefined {
+    return this.states.get(userId);
+  }
+
+  isUserOnline(userId: string): boolean {
+    const state = this.states.get(userId);
+    return state ? state.isOnline : true; // Default to online
+  }
+
+  getLastSeen(userId: string): number {
+    const state = this.states.get(userId);
+    return state ? state.lastSeen : Date.now();
+  }
+
+  getCurrentMood(userId: string): string {
+    const state = this.states.get(userId);
+    return state ? state.currentMood : 'cheerful';
+  }
+
+  updateMood(userId: string, mood: string): void {
+    const state = this.states.get(userId);
+    if (state) {
+      state.currentMood = mood;
+    }
+  }
+
+  getConversationPhase(userId: string): string {
+    const state = this.states.get(userId);
+    return state ? state.conversationPhase : 'introduction';
+  }
+
+  // Realistic response delays based on conversation state
+  getRealisticDelay(userId: string, messageLength: number): number {
+    const state = this.states.get(userId);
+    const baseDelay = Math.min(messageLength * 100, 3000); // Base typing time
     
-    const expectedDuration = situationDurations[state.currentSituation || ''] || 15;
-    return timeElapsed >= expectedDuration;
+    if (!state) return baseDelay;
+
+    // Add realistic variations
+    const moodMultiplier = {
+      excited: 0.7,
+      cheerful: 1,
+      thoughtful: 1.3,
+      busy: 2,
+      tired: 1.5
+    };
+
+    const phaseMultiplier = {
+      introduction: 1.2, // Slightly slower, more careful
+      building_rapport: 1,
+      deepening: 1.1,
+      intimate: 0.9, // Faster, more comfortable
+      maintaining: 0.8 // Very comfortable, quick responses
+    };
+
+    const finalDelay = baseDelay * 
+      (moodMultiplier[state.currentMood] || 1) *
+      (phaseMultiplier[state.conversationPhase] || 1);
+
+    return Math.min(Math.max(finalDelay, 1000), 6000); // 1-6 seconds
   }
 }
 
 export const conversationStateManager = new ConversationStateManager();
-
-// Clean up old states every 2 hours
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    conversationStateManager.cleanupOldStates();
-  }, 2 * 60 * 60 * 1000); // Every 2 hours
-}

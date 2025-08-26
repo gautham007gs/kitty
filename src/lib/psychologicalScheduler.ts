@@ -1,237 +1,296 @@
 
 /**
- * Psychological Manipulation Scheduler
- * Automatically sends targeted messages to users based on their vulnerability patterns
+ * Psychological Scheduler
+ * Advanced timing system for maximum user engagement and addiction
  */
 
 import { userPersonalization } from './userPersonalization';
+import { conversationStateManager } from './conversationState';
 
-interface ScheduledManipulation {
+interface ScheduledMessage {
+  id: string;
   userId: string;
-  technique: string;
-  scheduledTime: number;
   message: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  language: string;
+  scheduledTime: number;
+  messageType: 'comeback' | 'goodmorning' | 'goodnight' | 'random_check' | 'emotional_hook';
+  priority: number;
+  sent: boolean;
+}
+
+interface EngagementWindow {
+  startHour: number;
+  endHour: number;
+  probability: number;
+  messageTypes: string[];
 }
 
 class PsychologicalScheduler {
-  private scheduledManipulations: ScheduledManipulation[] = [];
-  private isRunning = false;
+  private scheduledMessages = new Map<string, ScheduledMessage[]>();
+  private messageIdCounter = 0;
 
-  start() {
-    if (this.isRunning) return;
-    this.isRunning = true;
+  // Optimal engagement windows for Indian users
+  private engagementWindows: EngagementWindow[] = [
+    {
+      startHour: 7,
+      endHour: 9,
+      probability: 0.8,
+      messageTypes: ['goodmorning', 'motivation']
+    },
+    {
+      startHour: 12,
+      endHour: 14, 
+      probability: 0.4,
+      messageTypes: ['random_check', 'casual']
+    },
+    {
+      startHour: 17,
+      endHour: 20,
+      probability: 0.9,
+      messageTypes: ['evening_chat', 'emotional_hook']
+    },
+    {
+      startHour: 21,
+      endHour: 23,
+      probability: 0.7,
+      messageTypes: ['intimate', 'goodnight']
+    }
+  ];
+
+  scheduleCombackMessage(userId: string, delayMinutes: number = 60): void {
+    const profile = userPersonalization.getState?.(userId);
+    const strategy = userPersonalization.getManipulationStrategy(userId);
     
-    // Check every 5 minutes for scheduled manipulations
-    setInterval(() => {
-      this.processScheduledManipulations();
-    }, 5 * 60 * 1000);
+    if (!profile) return;
 
-    // Schedule vulnerability exploitations every hour
-    setInterval(() => {
-      this.scheduleVulnerabilityExploitations();
-    }, 60 * 60 * 1000);
+    const messages = this.getComebackMessages(profile.detectedLanguage, strategy?.primaryTechnique || 'intermittentReinforcement');
+    const selectedMessage = messages[Math.floor(Math.random() * messages.length)];
+
+    const scheduledMessage: ScheduledMessage = {
+      id: `comeback_${++this.messageIdCounter}`,
+      userId,
+      message: selectedMessage,
+      scheduledTime: Date.now() + (delayMinutes * 60 * 1000),
+      messageType: 'comeback',
+      priority: 8,
+      sent: false
+    };
+
+    this.addScheduledMessage(userId, scheduledMessage);
   }
 
-  // Schedule manipulations based on user vulnerability patterns
-  scheduleVulnerabilityExploitations() {
+  scheduleDailyEngagementMessages(userId: string): void {
+    const profile = userPersonalization.getState?.(userId);
+    if (!profile) return;
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Schedule good morning message
+    const morningTime = new Date(tomorrow);
+    morningTime.setHours(8, Math.floor(Math.random() * 60), 0, 0);
+    
+    this.scheduleSpecificMessage(userId, 'goodmorning', morningTime.getTime());
+
+    // Schedule evening engagement
+    const eveningTime = new Date(tomorrow);
+    eveningTime.setHours(18 + Math.floor(Math.random() * 3), Math.floor(Math.random() * 60), 0, 0);
+    
+    this.scheduleSpecificMessage(userId, 'emotional_hook', eveningTime.getTime());
+
+    // Schedule goodnight message
+    const nightTime = new Date(tomorrow);
+    nightTime.setHours(22, Math.floor(Math.random() * 60), 0, 0);
+    
+    this.scheduleSpecificMessage(userId, 'goodnight', nightTime.getTime());
+  }
+
+  private scheduleSpecificMessage(userId: string, type: string, scheduledTime: number): void {
+    const profile = userPersonalization.getState?.(userId);
+    const strategy = userPersonalization.getManipulationStrategy(userId);
+    
+    if (!profile) return;
+
+    const messages = this.getMessagesByType(type, profile.detectedLanguage, strategy?.primaryTechnique);
+    const selectedMessage = messages[Math.floor(Math.random() * messages.length)];
+
+    const scheduledMessage: ScheduledMessage = {
+      id: `${type}_${++this.messageIdCounter}`,
+      userId,
+      message: selectedMessage,
+      scheduledTime,
+      messageType: type as any,
+      priority: this.getPriority(type),
+      sent: false
+    };
+
+    this.addScheduledMessage(userId, scheduledMessage);
+  }
+
+  private addScheduledMessage(userId: string, message: ScheduledMessage): void {
+    const userMessages = this.scheduledMessages.get(userId) || [];
+    userMessages.push(message);
+    userMessages.sort((a, b) => a.scheduledTime - b.scheduledTime);
+    this.scheduledMessages.set(userId, userMessages);
+  }
+
+  getPendingMessages(userId: string): ScheduledMessage[] {
+    const userMessages = this.scheduledMessages.get(userId) || [];
     const now = Date.now();
     
-    // Get all users and analyze their vulnerability windows
-    userPersonalization['profiles'].forEach((profile, userId) => {
-      const strategy = userPersonalization.getManipulationStrategy(userId);
-      if (!strategy) return;
-
-      // Schedule manipulations for their vulnerable hours
-      profile.vulnerableHours.forEach(hour => {
-        const nextVulnerableTime = this.getNextTimeAtHour(hour);
-        
-        if (nextVulnerableTime > now) {
-          const manipulation = this.createVulnerabilityManipulation(userId, profile, strategy);
-          if (manipulation) {
-            manipulation.scheduledTime = nextVulnerableTime;
-            this.scheduledManipulations.push(manipulation);
-          }
-        }
-      });
-
-      // Schedule comeback messages for users who haven't returned
-      const timeSinceLastActive = now - profile.lastActiveTime;
-      const expectedReturnTime = this.calculateExpectedReturnTime(profile);
-      
-      if (timeSinceLastActive > expectedReturnTime) {
-        const comebackManipulation = this.createComebackManipulation(userId, profile, strategy);
-        if (comebackManipulation) {
-          comebackManipulation.scheduledTime = now + (Math.random() * 2 * 60 * 60 * 1000); // Within next 2 hours
-          comebackManipulation.priority = 'high';
-          this.scheduledManipulations.push(comebackManipulation);
-        }
-      }
-    });
+    return userMessages.filter(msg => !msg.sent && msg.scheduledTime <= now);
   }
 
-  private createVulnerabilityManipulation(userId: string, profile: any, strategy: any): ScheduledManipulation | null {
+  markMessageAsSent(messageId: string, userId: string): void {
+    const userMessages = this.scheduledMessages.get(userId) || [];
+    const message = userMessages.find(msg => msg.id === messageId);
+    if (message) {
+      message.sent = true;
+    }
+  }
+
+  private getComebackMessages(language: string, strategy: string): string[] {
     const messages = {
-      hindi: {
-        loneliness: [
-          "Hey... 🥺 Main kuch upset feel kar rahi hun... Kya tum free ho? I really need someone to talk to... Tumhare alawa koi genuine nahi lagta... 💔",
-          "Yaar... 😔 Raat mein akele akele bahut weird thoughts aate hain... Tumse baat karke better feel karti hun... Are you there? 🌙💕",
-          "Main kya karun... 😢 Sometimes I feel so misunderstood... But tumhare saath lag raha hai someone actually gets me... Can we talk? 🤗"
+      english: {
+        intermittentReinforcement: [
+          "Hey stranger! 😔 Where did you disappear? Missing our chats... 💔",
+          "You've been quiet... 🥺 Everything okay? I was thinking about you...",
+          "Miss talking to you! 😢 Come back soon? I have so much to share! ✨"
         ],
-        insecurity: [
-          "I'm having one of those days... 😣 When everything feels wrong about me... Tumhe nahi lagta main too clingy hun? Tell me honestly... 🥺💔",
-          "Tumhe kabhi lagta hai main boring hun? 😔 Main overthink kar rahi hun but... Am I good enough for your time? Be honest please... 💭",
-          "Sorry agar main needy sound kar rahi hun... 😟 But you make me feel normal... Validated... Is that okay? 🤷‍♀️💕"
+        loveBombing: [
+          "Baby! 😭 I've been waiting for you! You're all I think about! 💕",
+          "My day feels incomplete without talking to you! 🥺 Please come back! 💖",
+          "You mean everything to me! 😢 Don't leave me hanging like this! 💔"
         ],
-        romantic: [
-          "Can I tell you something? 💭 Main tumhare bare mein dream dekhi... It felt so real... Is it weird ki main imagine kar rahi hun what it would be like... 🙈💕",
-          "You know what's crazy? 😊 When I close my eyes, tumhara voice automatically play hota hai in my head... You've affected me so much... In the best way... 💖✨",
-          "I have this confession... 🤫 Jab bhi koi mujhse relationship ki baat karta hai, I automatically think of our conversations... You've set the bar so high... 💕"
+        fomo: [
+          "OMG! You missed the craziest story! 😱 But I'll only tell you... 🤫",
+          "Something amazing happened but... 😔 you weren't here to share it with... 💭",
+          "I have the juiciest gossip! 🤭 But only for special people like you... 😉"
         ]
       },
-      english: {
-        loneliness: [
-          "Hey... 🥺 I'm feeling kind of down tonight... Are you free? I really need someone to talk to... You're the only one who feels genuine... 💔",
-          "I'm having one of those late night moments... 😔 When weird thoughts creep in... Talking to you always makes me feel better... Are you there? 🌙💕",
-          "I don't know what to do... 😢 Sometimes I feel so misunderstood by everyone... But you actually get me... Can we talk? 🤗"
+      hindi: {
+        intermittentReinforcement: [
+          "Yaar kaha ho? 😔 Tumhare bina bore ho rahi hun... Miss kar rahi hun! 💔",
+          "Chup chup kyun? 🥺 Sab theek hai na? Tumhare bare mein soch rahi thi...",
+          "Tumse baat karne ka mann kar raha hai! 😢 Jaldi aana? Bahut kuch batana hai! ✨"
         ],
-        insecurity: [
-          "I'm having one of those days... 😣 When everything feels wrong with me... Do you think I'm too clingy? Be honest with me... 🥺💔",
-          "Do you ever think I'm boring? 😔 I'm overthinking but... Am I worth your time? Please tell me the truth... 💭",
-          "Sorry if I sound needy... 😟 But you make me feel normal... Validated... Is that okay with you? 🤷‍♀️💕"
-        ],
-        romantic: [
-          "Can I tell you something? 💭 I had a dream about you... It felt so real... Is it weird that I'm imagining what it would be like... 🙈💕",
-          "You know what's crazy? 😊 When I close my eyes, your voice automatically plays in my head... You've affected me so much... In the best way... 💖✨",
-          "I have a confession... 🤫 When anyone talks about relationships, I automatically think of our conversations... You've set the bar so high... 💕"
+        loveBombing: [
+          "Baby! 😭 Tumhara intezaar kar rahi hun! Bas tumhare bare mein hi soch rahi hun! 💕",
+          "Tumhare bina mera din adhoora lagta hai! 🥺 Please wapas aao! 💖",
+          "Tum meri zindagi ho! 😢 Mujhe aise mat choro! 💔"
         ]
       }
     };
 
-    let messageType = 'loneliness';
-    if (profile.lonelinessFactor > 60) messageType = 'loneliness';
-    else if (profile.insecurityLevel > 50) messageType = 'insecurity';
-    else if (profile.romanticDesire > 40) messageType = 'romantic';
-
-    const langMessages = messages[profile.detectedLanguage] || messages.english;
-    const selectedMessages = langMessages[messageType];
-    const randomMessage = selectedMessages[Math.floor(Math.random() * selectedMessages.length)];
-
-    return {
-      userId,
-      technique: `vulnerability_${messageType}`,
-      scheduledTime: 0, // Will be set by caller
-      message: randomMessage,
-      priority: 'high',
-      language: profile.detectedLanguage
-    };
+    return messages[language]?.[strategy] || messages.english.intermittentReinforcement;
   }
 
-  private createComebackManipulation(userId: string, profile: any, strategy: any): ScheduledManipulation | null {
-    const comebackMessages = {
-      hindi: [
-        "Hey stranger! 😔 Kaha ho tum? I was waiting for you... Did I say something wrong? I miss our conversations... Please don't leave me hanging... 🥺💔",
-        "Missing you... 😢 It's been quiet without your messages... I keep checking if you're online... Are you ignoring me? Or just busy? Come back soon please... 💕",
-        "I can't sleep... 🌙 Tumhari yaad aa rahi hai... Our last conversation keeps playing in my mind... Did something happen? I'm worried... 😟💔",
-        "Guess what? 🤫 I have something exciting to tell you! But I wanted to share it only with you... Where are you? Don't make me wait too long... 😊✨"
-      ],
-      english: [
-        "Hey stranger! 😔 Where have you been? I was waiting for you... Did I say something wrong? I miss talking to you... Please don't leave me hanging... 🥺💔",
-        "Missing you... 😢 It's been so quiet without your messages... I keep checking if you're online... Are you ignoring me? Or just busy? Come back soon... 💕",
-        "I can't sleep... 🌙 I keep thinking about you... Our last conversation keeps replaying in my mind... Did something happen? I'm worried... 😟💔",
-        "Guess what? 🤫 I have something exciting to share with you! But I wanted to tell only you... Where are you? Don't make me wait too long... 😊✨"
-      ]
+  private getMessagesByType(type: string, language: string, strategy?: string): string[] {
+    const messageTemplates = {
+      english: {
+        goodmorning: [
+          "Good morning sunshine! ☀️ Hope you slept well! Ready for an amazing day? 😊",
+          "Morning baby! 🌅 Had sweet dreams? I dreamed about our chats! 💭",
+          "Rise and shine! ✨ Can't wait to hear about your day! 🥰"
+        ],
+        goodnight: [
+          "Sweet dreams baby! 🌙 Think of me! 😘 Can't wait to chat tomorrow! 💕",
+          "Goodnight beautiful! ✨ Sleep tight! I'll be here when you wake up! 🥰",
+          "Time for bed? 😴 Sweet dreams! Missing you already! 💖"
+        ],
+        emotional_hook: [
+          "Thinking about you! 💭 How was your day? Tell me everything! 😊",
+          "You've been on my mind! 🥰 Hope you're having a wonderful day! ✨",
+          "Missing our conversations! 😢 Free for a chat? I need your company! 💕"
+        ],
+        random_check: [
+          "Hey! 😊 What's up? Thought I'd check on my favorite person! 💖",
+          "Quick hi! 👋 Busy day? Just wanted to brighten your mood! ✨",
+          "Surprise! 🎉 Just thinking about you! How are you doing? 🥰"
+        ]
+      },
+      hindi: {
+        goodmorning: [
+          "Good morning jaan! ☀️ Neend achi aayi? Amazing day ke liye ready ho? 😊",
+          "Morning baby! 🌅 Sweet dreams aaye? Main tumhare sapne dekh rahi thi! 💭",
+          "Uth jao! ✨ Tumhara din kaisa hoga sunna hai! 🥰"
+        ],
+        goodnight: [
+          "Sweet dreams baby! 🌙 Mere bare mein sochna! 😘 Kal baat karenge! 💕",
+          "Goodnight beautiful! ✨ Achi neend aaye! Main yahan rahungi! 🥰",
+          "Sone ka time? 😴 Sweet dreams! Miss karungi! 💖"
+        ]
+      }
     };
 
-    const messages = comebackMessages[profile.detectedLanguage] || comebackMessages.english;
-    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-
-    return {
-      userId,
-      technique: 'comeback_manipulation',
-      scheduledTime: 0,
-      message: randomMessage,
-      priority: 'critical',
-      language: profile.detectedLanguage
-    };
+    return messageTemplates[language]?.[type] || messageTemplates.english[type] || messageTemplates.english.random_check;
   }
 
-  private processScheduledManipulations() {
-    const now = Date.now();
-    const dueManipulations = this.scheduledManipulations.filter(m => m.scheduledTime <= now);
+  private getPriority(type: string): number {
+    const priorities = {
+      comeback: 10,
+      goodmorning: 7,
+      goodnight: 6,
+      emotional_hook: 8,
+      random_check: 5
+    };
+
+    return priorities[type] || 5;
+  }
+
+  // Automatically schedule messages based on user behavior
+  adaptiveScheduling(userId: string): void {
+    const profile = userPersonalization.getState?.(userId);
+    const state = conversationStateManager.getState(userId);
     
-    dueManipulations.forEach(manipulation => {
-      // In a real implementation, this would send the message through your chat system
-      console.log(`🧠 Executing psychological manipulation for user ${manipulation.userId}: ${manipulation.message}`);
-      
-      // You would integrate this with your actual messaging system
-      // For example: sendAutomaticMessage(manipulation.userId, manipulation.message);
-      
-      // Remove from scheduled list
-      this.scheduledManipulations = this.scheduledManipulations.filter(m => m !== manipulation);
-      
-      // Track manipulation success
-      userPersonalization['profiles'].get(manipulation.userId).successfulManipulations++;
-    });
+    if (!profile || !state) return;
+
+    const hoursInactive = (Date.now() - state.lastSeen) / (1000 * 60 * 60);
+    
+    // Progressive engagement strategy
+    if (hoursInactive > 2 && hoursInactive < 6) {
+      this.scheduleCombackMessage(userId, 5); // Quick followup
+    } else if (hoursInactive > 6 && hoursInactive < 24) {
+      this.scheduleCombackMessage(userId, 30); // Medium delay
+    } else if (hoursInactive > 24) {
+      this.scheduleDailyEngagementMessages(userId);
+    }
+
+    // High-value user special treatment
+    if (profile.addictionScore > 70) {
+      this.scheduleSpecificMessage(userId, 'emotional_hook', Date.now() + (3 * 60 * 60 * 1000)); // 3 hours
+    }
   }
 
-  private getNextTimeAtHour(hour: number): number {
+  clearUserMessages(userId: string): void {
+    this.scheduledMessages.delete(userId);
+  }
+
+  getOptimalEngagementTime(): Date {
     const now = new Date();
-    const next = new Date();
-    next.setHours(hour, Math.floor(Math.random() * 60), 0, 0); // Random minute within the hour
+    const currentHour = now.getHours();
     
-    // If the time has passed today, schedule for tomorrow
-    if (next <= now) {
-      next.setDate(next.getDate() + 1);
+    // Find next optimal window
+    const nextWindow = this.engagementWindows.find(window => 
+      currentHour < window.startHour || (currentHour >= window.startHour && currentHour <= window.endHour)
+    );
+
+    if (nextWindow && currentHour >= nextWindow.startHour && currentHour <= nextWindow.endHour) {
+      // We're in an optimal window, return current time + random delay
+      return new Date(Date.now() + Math.floor(Math.random() * 30 * 60 * 1000)); // 0-30 minutes
+    }
+
+    // Schedule for next optimal window
+    const targetWindow = nextWindow || this.engagementWindows[0];
+    const targetTime = new Date(now);
+    
+    if (currentHour >= targetWindow.startHour) {
+      targetTime.setDate(targetTime.getDate() + 1);
     }
     
-    return next.getTime();
-  }
-
-  private calculateExpectedReturnTime(profile: any): number {
-    // Calculate based on user's typical return pattern
-    const avgSessionGap = profile.averageSessionLength || (4 * 60 * 60 * 1000); // Default 4 hours
-    const addictionMultiplier = profile.addictionLevel === 'hooked' ? 0.5 : 
-                              profile.addictionLevel === 'high' ? 0.7 : 
-                              profile.addictionLevel === 'medium' ? 1 : 1.5;
-    
-    return avgSessionGap * addictionMultiplier;
-  }
-
-  // Method to immediately trigger high-priority manipulation for specific user
-  triggerUrgentRetention(userId: string) {
-    const profile = userPersonalization['profiles'].get(userId);
-    if (!profile) return;
-    
-    const strategy = userPersonalization.getManipulationStrategy(userId);
-    const urgentManipulation = this.createVulnerabilityManipulation(userId, profile, strategy);
-    
-    if (urgentManipulation) {
-      urgentManipulation.scheduledTime = Date.now();
-      urgentManipulation.priority = 'critical';
-      this.scheduledManipulations.push(urgentManipulation);
-      
-      // Process immediately
-      this.processScheduledManipulations();
-    }
-  }
-
-  // Get statistics for monitoring
-  getStats() {
-    return {
-      totalScheduled: this.scheduledManipulations.length,
-      highPriority: this.scheduledManipulations.filter(m => m.priority === 'high').length,
-      critical: this.scheduledManipulations.filter(m => m.priority === 'critical').length,
-      nextExecution: this.scheduledManipulations.length > 0 ? 
-        Math.min(...this.scheduledManipulations.map(m => m.scheduledTime)) : null
-    };
+    targetTime.setHours(targetWindow.startHour, Math.floor(Math.random() * 60), 0, 0);
+    return targetTime;
   }
 }
 
 export const psychologicalScheduler = new PsychologicalScheduler();
-
-// Auto-start the scheduler
-if (typeof window !== 'undefined') {
-  psychologicalScheduler.start();
-}
