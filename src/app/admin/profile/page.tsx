@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -60,7 +59,7 @@ const AdminProfilePage: React.FC = () => {
   const [managedContactStatuses, setManagedContactStatuses] = useState<ManagedContactStatus[]>(defaultManagedContactStatuses);
   const [adSettings, setAdSettings] = useState<AdSettings>(defaultAdSettings);
   const [aiMediaAssets, setAiMediaAssets] = useState<AIMediaAssetsConfig>(defaultAIMediaAssetsConfig);
-  
+
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newAudioPath, setNewAudioPath] = useState('');
 
@@ -144,7 +143,7 @@ const AdminProfilePage: React.FC = () => {
 
       if (adConfigError && adConfigError.code !== 'PGRST116') throw adConfigError;
       const adSettingsData = adConfigData?.settings;
-      
+
       const mergedAdSettings = { 
         ...defaultAdSettings, 
         ...(adSettingsData as Partial<AdSettings>),
@@ -176,7 +175,7 @@ const AdminProfilePage: React.FC = () => {
       fetchAllNonAnalyticsConfigs();
     }
   }, [isAuthenticated, fetchAllNonAnalyticsConfigs]);
-  
+
    useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -235,7 +234,7 @@ const AdminProfilePage: React.FC = () => {
           return { date: format(day, 'EEE'), count: found ? Number(found.active_users) : 0 };
         });
         setDailyActiveUsersData(formattedDAUCounts);
-        
+
         const todayFormatted = format(todayDate, 'EEE');
         const todayDAU = formattedDAUCounts.find(d => d.date === todayFormatted);
         setCurrentDAU(todayDAU ? todayDAU.count : 0);
@@ -270,11 +269,11 @@ const AdminProfilePage: React.FC = () => {
     };
     console.log("[AdminProfilePage] handleSaveKruthikaCoreProfile - profileDataToUpdate before calling context update:", JSON.stringify(profileDataToUpdate, null, 2));
     await updateAIProfile(profileDataToUpdate);
-    
+
     // Emit global event to notify all users
     GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AI_PROFILE_UPDATED, profileDataToUpdate);
     GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
-    
+
     setIsProfileEditorOpen(false);
   };
 
@@ -286,12 +285,12 @@ const AdminProfilePage: React.FC = () => {
     };
     console.log("[AdminProfilePage] handleSaveKruthikaStory - storyDataToUpdate before calling context update:", JSON.stringify(storyDataToUpdate, null, 2));
     await updateAIProfile(storyDataToUpdate);
-    
+
     // Emit global event to notify all users
     GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AI_PROFILE_UPDATED, storyDataToUpdate);
     GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
   };
-  
+
   const handleClearKruthikaStoryField = (field: 'statusStoryText' | 'statusStoryImageUrl') => {
     setCurrentGlobalAIProfile(p => ({
       ...p,
@@ -318,11 +317,11 @@ const AdminProfilePage: React.FC = () => {
         );
       if (error) throw error;
       await fetchGlobalStatuses();
-      
+
       // Emit global event to notify all users
       GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_STATUS_UPDATED, statusToSave);
       GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
-      
+
       toast({ title: "Global 'My Status' Saved!", description: "Your status for the Status Page has been updated universally." });
     } catch (error: any)
       {
@@ -330,7 +329,7 @@ const AdminProfilePage: React.FC = () => {
       toast({ title: "Error Saving 'My Status'", description: `Could not save your status globally. ${error.message || ''}`, variant: "destructive" });
     }
   };
-  
+
   const handleClearAdminStatusField = (field: 'statusText' | 'statusImageUrl') => {
     setAdminStatus(s => ({
         ...s,
@@ -377,11 +376,11 @@ const AdminProfilePage: React.FC = () => {
         );
       if (error) throw error;
       await fetchGlobalStatuses();
-      
+
       // Emit global event to notify all users
       GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_DEMO_CONTACTS_UPDATED, managedContactStatuses);
       GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
-      
+
       toast({ title: "Global Demo Contacts Saved!", description: "Status details for demo contacts have been updated universally." });
     } catch (error: any) {
       console.error("Failed to save managed contact statuses to Supabase:", error);
@@ -428,11 +427,14 @@ const AdminProfilePage: React.FC = () => {
           { onConflict: 'id' }
         );
       if (error) throw error;
-      
-      // Emit global event to notify all users
-      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.ADMIN_AD_SETTINGS_UPDATED, settingsToSave);
-      GlobalEventSystem.getInstance().emit(GLOBAL_EVENTS.FORCE_REFRESH_ALL);
-      
+
+      // Emit global update event for real-time sync
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('globalSettingsUpdate', {
+          detail: { type: 'AD_SETTINGS_UPDATED', data: adSettings }
+        }));
+      }
+
       toast({ title: "Global Ad Settings Saved!", description: "Ad configurations have been saved to Supabase and will apply universally." });
     } catch (error: any) {
       console.error("Failed to save ad settings to Supabase:", error);
@@ -500,7 +502,7 @@ const AdminProfilePage: React.FC = () => {
     toast({ title: 'Logged Out', description: 'You have been logged out of the admin panel.' });
     router.replace('/admin/login');
   };
-  
+
   const handleForceRefreshGlobalData = async () => {
     toast({ title: "Refreshing...", description: "Manually fetching latest global data from Supabase."});
     await fetchAllNonAnalyticsConfigs(); 
@@ -513,7 +515,7 @@ const AdminProfilePage: React.FC = () => {
   }
 
   const scriptPasteInstruction = "Paste the full ad script code provided by the ad network here. Include any <!-- comments --> or <script> tags as provided.";
-  
+
   let adminPageAvatarUrlToUse = currentGlobalAIProfile.avatarUrl;
   if (!adminPageAvatarUrlToUse || typeof adminPageAvatarUrlToUse !== 'string' || adminPageAvatarUrlToUse.trim() === '' || (!adminPageAvatarUrlToUse.startsWith('http') && !adminPageAvatarUrlToUse.startsWith('data:'))) {
     adminPageAvatarUrlToUse = defaultAIProfile.avatarUrl;
@@ -614,7 +616,7 @@ const AdminProfilePage: React.FC = () => {
               />
             )}
           </Card>
-          
+
           <Card className="bg-card text-card-foreground mb-8 shadow-lg">
             <CardHeader className="pb-4">
                <CardTitle className="flex items-center text-xl font-semibold"><Palette className="mr-2 h-5 w-5 text-primary"/>Kruthika's Status Story (Global)</CardTitle>
@@ -747,7 +749,7 @@ const AdminProfilePage: React.FC = () => {
                 <Switch id="adsEnabledGlobally" checked={adSettings.adsEnabledGlobally} onCheckedChange={(checked) => handleAdSettingChange('adsEnabledGlobally', checked)}/>
                 <Label htmlFor="adsEnabledGlobally" className="text-md font-semibold">Enable All Ads Globally</Label>
               </div>
-              
+
               <Card className="bg-secondary/10 border-border shadow-sm">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg font-semibold text-primary flex items-center"><TrendingUp className="mr-2 h-5 w-5"/>Direct Link Ad Frequency</CardTitle>
@@ -882,7 +884,7 @@ const AdminProfilePage: React.FC = () => {
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="status_content">
           <Card className="bg-card text-card-foreground mb-8 shadow-lg">
             <CardHeader className="pb-4">
@@ -922,7 +924,7 @@ const AdminProfilePage: React.FC = () => {
             </CardFooter>
           </Card>
 
-          <Card className="bg-card text-card-foreground mb-6 shadow-lg">
+          <Card className="bg-card text-foreground mb-6 shadow-lg">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-xl font-semibold"><Users className="mr-2 h-5 w-5 text-primary"/>Manage Demo Contact Statuses (Global)</CardTitle>
               <CardDescription className="text-sm">Set the ephemeral stories for the demo contacts that appear on the Status page. Visible to all users.</CardDescription>
@@ -1168,7 +1170,7 @@ const AdminProfilePage: React.FC = () => {
                     Using Supabase Authentication. Ensure RLS policies are properly configured for production.
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="space-y-3">
                   <h4 className="font-semibold text-primary">Security Checklist:</h4>
                   <div className="space-y-2 text-sm">
@@ -1211,7 +1213,7 @@ const AdminProfilePage: React.FC = () => {
                     <Badge variant="secondary" className="mt-1">GDPR Compliant</Badge>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button onClick={() => router.push('/legal/privacy')} variant="outline" size="sm">
                     <FileText className="mr-2 h-4 w-4"/>View Privacy Policy
@@ -1242,7 +1244,7 @@ const AdminProfilePage: React.FC = () => {
                     </ul>
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div className="text-center p-3 border rounded-lg">
                     <Badge variant="default" className="mb-2">Active</Badge>
@@ -1269,5 +1271,3 @@ const AdminProfilePage: React.FC = () => {
 };
 
 export default AdminProfilePage;
-
-    

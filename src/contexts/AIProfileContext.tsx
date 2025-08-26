@@ -158,30 +158,19 @@ export const AIProfileProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   useEffect(() => {
     fetchAIProfile();
-    
-    // Set up real-time subscription for AI profile changes
-    if (supabase && typeof supabase.channel === 'function') {
-      const channel = supabase
-        .channel('ai_profile_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'app_configurations',
-            filter: `id=eq.${AI_PROFILE_CONFIG_KEY}`,
-          },
-          (payload) => {
-            console.log('AI profile changed:', payload);
-            fetchAIProfile(); // Refetch when profile changes
-          }
-        )
-        .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+    // Listen for real-time updates
+    const handleGlobalUpdate = (event: CustomEvent) => {
+      if (event.detail.type === 'AI_PROFILE_UPDATED') {
+        fetchAIProfile();
+      }
+    };
+
+    window.addEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+    };
   }, [fetchAIProfile]);
 
   return (

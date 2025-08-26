@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -57,31 +56,20 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     fetchAdSettings();
-    
-    // Set up real-time subscription for ad settings changes
-    if (supabase && typeof supabase.channel === 'function') {
-      const channel = supabase
-        .channel('ad_settings_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'app_configurations',
-            filter: `id=eq.${AD_SETTINGS_CONFIG_KEY}`,
-          },
-          (payload) => {
-            console.log('Ad settings changed:', payload);
-            fetchAdSettings(); // Refetch when settings change
-          }
-        )
-        .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, []);
+    // Listen for real-time updates
+    const handleGlobalUpdate = (event: CustomEvent) => {
+      if (event.detail.type === 'AD_SETTINGS_UPDATED') {
+        fetchAdSettings();
+      }
+    };
+
+    window.addEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+    };
+  }, [fetchAdSettings]);
 
   const refreshAdSettings = async () => {
     console.log('[AdSettingsContext] Force refreshing ad settings...');

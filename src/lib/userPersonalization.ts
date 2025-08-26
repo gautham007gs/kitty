@@ -167,7 +167,44 @@ class UserPersonalizationManager {
     }
     this.saveToStorage();
   }
+
+  // Message counting and limits for chat functionality
+  getMessageCount(userId: string | null): number {
+    if (!userId) return 0;
+    const userData = this.getUserData(userId);
+    const today = new Date().toDateString();
+    const lastMessageDate = localStorage.getItem(`${userId}_last_message_date`);
+    
+    if (lastMessageDate !== today) {
+      localStorage.setItem(`${userId}_message_count`, '0');
+      localStorage.setItem(`${userId}_last_message_date`, today);
+      return 0;
+    }
+    
+    return parseInt(localStorage.getItem(`${userId}_message_count`) || '0', 10);
+  }
+
+  incrementMessageCount(userId: string | null = null): void {
+    if (!userId) {
+      userId = this.generateUserId();
+    }
+    const currentCount = this.getMessageCount(userId);
+    localStorage.setItem(`${userId}_message_count`, (currentCount + 1).toString());
+  }
+
+  getMessageLimit(): number {
+    return 100; // Daily message limit
+  }
+
+  isTokenLimitReached(userId: string | null): boolean {
+    if (!userId) return false;
+    const count = this.getMessageCount(userId);
+    return count >= this.getMessageLimit();
+  }
 }
 
-export { UserPersonalizationManager };
+// Export the singleton instance for easy access
+const userPersonalization = UserPersonalizationManager.getInstance();
+
+export { UserPersonalizationManager, userPersonalization };
 export type { UserPreferences, UserEngagementMetrics, UserPersonalizationData };
