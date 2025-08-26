@@ -12,60 +12,29 @@ export const defaultAIProfile: AIProfile = {
 
 // Psychology-optimized ad settings for MAXIMUM REVENUE
 export const defaultAdSettings: AdSettings = {
-  // Global toggle
   adsEnabledGlobally: true,
-
-  // Adsterra settings - PSYCHOLOGICALLY OPTIMIZED FOR MAXIMUM REVENUE
-  adsterraDirectLink: "https://www.profitablecpmrate.com/g16h3b7pd?key=3c4e872ea09d8f56e46e20ac6f0ee69e",
+  adsterraDirectLink: "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
   adsterraDirectLinkEnabled: true,
-  adsterraBannerCode: `
-    <!-- Adsterra High-Performance Banner - Psychological Timing -->
-    <script async="async" data-cfasync="false" src="//pl24567890.profitablegatecpm.com/6db4f6f1a3f64e4b9e2a1c8f7d5e8b9c/invoke.js"></script>
-    <div id="container-6db4f6f1a3f64e4b9e2a1c8f7d5e8b9c"></div>
-  `,
-  adsterraBannerEnabled: true,
-  adsterraNativeBannerCode: `
-    <!-- Adsterra Native Banner - Seamless Integration for High Engagement -->
-    <script async="async" data-cfasync="false" src="//pl24567890.profitablegatecpm.com/a1b2c3d4e5f67890abcdef1234567890/invoke.js"></script>
-    <div id="container-a1b2c3d4e5f67890abcdef1234567890"></div>
-  `,
-  adsterraNativeBannerEnabled: true,
-  adsterraPopunderCode: `
-    <!-- Adsterra Pop-under - Maximum Revenue, Psychological Timing -->
-    <script async="async" data-cfasync="false" src="//pl24567890.profitablegatecpm.com/z9x8c7v6b5n4m3l2k1j0h9g8/invoke.js"></script>
-  `,
-  adsterraPopunderEnabled: true,
-
-  // Monetag settings - DUAL PROVIDER STRATEGY FOR MAXIMUM COVERAGE
-  monetagDirectLink: "https://www.profitablecpmgate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
+  adsterraBannerCode: "<!-- Adsterra Banner Code Placeholder -->",
+  adsterraBannerEnabled: false,
+  adsterraNativeBannerCode: "<!-- Adsterra Native Banner Code Placeholder -->",
+  adsterraNativeBannerEnabled: false,
+  adsterraSocialBarCode: "<!-- Adsterra Social Bar Code Placeholder -->",
+  adsterraSocialBarEnabled: false,
+  adsterraPopunderCode: "<!-- Adsterra Pop-under Script Placeholder -->",
+  adsterraPopunderEnabled: false,
+  monetagDirectLink: "https://monetag.com/direct-link-placeholder",
   monetagDirectLinkEnabled: true,
-  monetagBannerCode: `
-    <!-- Monetag High-CTR Banner -->
-    <script async src="https://www.monetag.com/assets/native.js"></script>
-    <div id="monetag-banner-container"></div>
-  `,
-  monetagBannerEnabled: true,
-  monetagNativeBannerCode: `
-    <!-- Monetag Native - Content Integration -->
-    <script async src="https://www.monetag.com/assets/native-content.js"></script>
-    <div id="monetag-native-container"></div>
-  `,
-  monetagNativeBannerEnabled: true,
-  monetagSocialBarCode: `
-    <!-- Monetag Social Bar - Persistent Revenue Stream -->
-    <script async src="https://www.monetag.com/assets/social-bar.js"></script>
-  `,
-  monetagSocialBarEnabled: true,
-  monetagPopunderCode: `
-    <!-- Monetag Pop-under - Backup Revenue -->
-    <script async src="https://www.monetag.com/assets/popunder.js"></script>
-  `,
-  monetagPopunderEnabled: false, // Avoid double pop-unders
-
-  // PSYCHOLOGICALLY OPTIMIZED FREQUENCY FOR MAXIMUM REVENUE
-  maxDirectLinkAdsPerDay: 12,
-  maxDirectLinkAdsPerSession: 5,
+  monetagBannerCode: "<!-- Monetag Banner Code Placeholder -->",
+  monetagBannerEnabled: false,
+  monetagNativeBannerCode: "<!-- Monetag Native Banner Code Placeholder -->",
+  monetagNativeBannerEnabled: false,
+  monetagPopunderCode: "<!-- Monetag Pop-under Script Placeholder -->",
+  monetagPopunderEnabled: false
 };
+
+export const AI_PROFILE_CONFIG_KEY = 'ai_profile_kruthika_chat_v1';
+export const AD_SETTINGS_CONFIG_KEY = 'ad_settings_kruthika_chat_v1';
 
 // Smart media assets with psychological timing
 export const defaultAIMediaAssetsConfig: AIMediaAssetsConfig = {
@@ -118,7 +87,7 @@ export const defaultManagedContactStatuses = [
     name: 'Arjun Kumar',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
     statusText: 'Just finished my workout! 💪',
-    statusImageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=500&fit=crop',
+    statusImageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f98b2d8b?w=300&h=500&fit=crop',
     hasUpdate: true,
     dataAiHint: 'profile man fitness',
     enabled: true

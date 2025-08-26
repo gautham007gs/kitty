@@ -33,7 +33,16 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
       timerRef.current = null;
     }
 
-    if (isLoadingAdSettings || !adSettings || !adSettings.adsEnabledGlobally) {
+    // Early return if still loading or adSettings is null
+    if (isLoadingAdSettings || !adSettings) {
+      setIsVisible(false);
+      setAdCodeToInject(null);
+      scriptInjectedRef.current = false;
+      return;
+    }
+
+    // Check if ads are globally enabled
+    if (!adSettings.adsEnabledGlobally) {
       setIsVisible(false);
       setAdCodeToInject(null);
       scriptInjectedRef.current = false;
@@ -111,6 +120,12 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
 
   // REVENUE-OPTIMIZED rotation - prioritize higher-paying providers
   useEffect(() => {
+    // Return early if adSettings is null or still loading
+    if (!adSettings || isLoadingAdSettings) {
+      setCurrentAdProvider(null);
+      return;
+    }
+
     const availableAds = [];
 
     // Prioritize Adsterra (typically higher CPM)
@@ -138,7 +153,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     }, AD_ROTATION_INTERVAL * 0.75); // 25% faster rotation
 
     return () => clearInterval(interval);
-  }, [adSettings, currentAdIndex]);
+  }, [adSettings, currentAdIndex, isLoadingAdSettings]);
 
 
   if (isLoadingAdSettings || !isVisible || !adCodeToInject || !currentAdProvider) {
