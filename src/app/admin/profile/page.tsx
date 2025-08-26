@@ -895,7 +895,7 @@ const AdminProfilePage: React.FC = () => {
               <CardDescription className="text-sm">Set the ephemeral stories for the demo contacts that appear on the Status page. Visible to all users.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-2">
-              {managedContactStatuses.map((contact) => (
+              {(managedContactStatuses || []).map((contact) => (
                 <div key={contact.id} className="border p-4 rounded-md space-y-3 bg-secondary/20 shadow-sm">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border" key={`${contact.id}-admin-avatar-${contact.avatarUrl}`}><AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint={contact.dataAiHint || "profile person"} onError={(e) => console.error(`Admin Page - Demo Contact Avatar load error. URL: ${contact.avatarUrl}`, e)} /><AvatarFallback>{contact.name.charAt(0)}</AvatarFallback></Avatar>

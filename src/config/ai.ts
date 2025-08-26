@@ -1,4 +1,3 @@
-
 import type { AIProfile, AdSettings, AIMediaAssetsConfig } from '@/types';
 
 // Enhanced AI profile with multilingual personality
@@ -114,7 +113,7 @@ export const engagementPatterns = {
     mediaShareChance: 0.15, // Lower chance in morning
     psychologyNote: "Users are starting their day, need motivation"
   },
-  
+
   // Afternoon engagement (12 PM - 5 PM)
   afternoon: {
     energy: "medium",
@@ -123,7 +122,7 @@ export const engagementPatterns = {
     mediaShareChance: 0.25, // Medium chance 
     psychologyNote: "Users are taking breaks, more leisure time"
   },
-  
+
   // Evening engagement (6 PM - 10 PM)
   evening: {
     energy: "high",
@@ -132,7 +131,7 @@ export const engagementPatterns = {
     mediaShareChance: 0.40, // Higher chance in evening
     psychologyNote: "Peak engagement time, users are most social"
   },
-  
+
   // Night engagement (11 PM - 5 AM)
   night: {
     energy: "low_intimate",
@@ -184,7 +183,7 @@ export const mediaTimingAlgorithms = {
     psychologyReason: "Reward positive behavior immediately",
     successRate: 0.85
   },
-  
+
   // Long conversation reward
   engagement_reward: {
     delay: 2000, // 2 second delay for anticipation
@@ -192,7 +191,7 @@ export const mediaTimingAlgorithms = {
     psychologyReason: "Reward time investment",
     successRate: 0.70
   },
-  
+
   // Emotional bonding
   emotional_connection: {
     delay: 1500, // Slight delay for emotional build-up
@@ -200,7 +199,7 @@ export const mediaTimingAlgorithms = {
     psychologyReason: "Voice creates intimacy",
     successRate: 0.75
   },
-  
+
   // FOMO creation
   curiosity_gap: {
     delay: 5000, // Longer delay to build anticipation
@@ -230,7 +229,7 @@ export const revenueOptimization = {
       reasoning: "Avoid driving away new users"
     }
   },
-  
+
   // Token usage optimization
   tokenStrategy: {
     peak_hours: {
@@ -268,22 +267,58 @@ export const defaultAdminStatusDisplay = {
 // Default managed contact statuses
 export const defaultManagedContactStatuses = [
   {
-    id: "demo-contact-1",
-    name: "Priya",
-    avatarUrl: "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
-    statusText: "Coffee date today! ☕",
+    id: 'demo_contact_1',
+    name: 'Arjun Kumar',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Just finished my workout! 💪',
+    statusImageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=500&fit=crop',
     hasUpdate: true,
-    dataAiHint: "friend college student",
-    statusImageUrl: "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg"
+    dataAiHint: 'profile man fitness'
   },
   {
-    id: "demo-contact-2", 
-    name: "Sneha",
-    avatarUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg",
-    statusText: "Weekend vibes! 🌟",
+    id: 'demo_contact_2', 
+    name: 'Priya Sharma',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612d29c?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Coffee break ☕ Perfect evening!',
+    statusImageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=500&fit=crop',
     hasUpdate: false,
-    dataAiHint: "friend social media",
-    statusImageUrl: "https://i.postimg.cc/52S3BZrM/images-10.jpg"
+    dataAiHint: 'profile woman coffee'
+  },
+  {
+    id: 'demo_contact_3',
+    name: 'Rahul Singh',
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Weekend vibes! 🌅',
+    statusImageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=500&fit=crop',
+    hasUpdate: true,
+    dataAiHint: 'profile man nature'
+  },
+  {
+    id: 'demo_contact_4',
+    name: 'Neha Patel',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Shopping day! 🛍️ Found amazing deals!',
+    statusImageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=500&fit=crop',
+    hasUpdate: true,
+    dataAiHint: 'profile woman shopping'
+  },
+  {
+    id: 'demo_contact_5',
+    name: 'Vikram Reddy',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Road trip adventure begins! 🚗',
+    statusImageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=500&fit=crop',
+    hasUpdate: false,
+    dataAiHint: 'profile man travel'
+  },
+  {
+    id: 'demo_contact_6',
+    name: 'Anjali Gupta',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+    statusText: 'Cooking something special today 👩‍🍳',
+    statusImageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=500&fit=crop',
+    hasUpdate: true,
+    dataAiHint: 'profile woman cooking'
   }
 ];
 

@@ -37,7 +37,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
           statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,
           statusStoryHasUpdate: defaultAIProfile.statusStoryHasUpdate
         });
-      setManagedDemoContacts([]);
+      setManagedDemoContacts(defaultManagedContactStatuses);
       setIsLoadingGlobalStatuses(false);
       return;
     }
@@ -84,7 +84,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
       if (demoContactsError && demoContactsError.code !== 'PGRST116') {
         console.error('Error fetching managed demo contacts from Supabase:', demoContactsError);
         toast({ title: "Error Loading Demo Contacts", description: `Could not load global demo contacts. Using defaults. ${demoContactsError.message}`, variant: "destructive" });
-        setManagedDemoContacts([]);
+        setManagedDemoContacts(defaultManagedContactStatuses);
       } else if (demoContactsData && Array.isArray(demoContactsData.settings)) {
          // Ensure defaultManagedContactStatuses provides a fallback for each ID if needed, or merge carefully
         const fetchedContacts = demoContactsData.settings as ManagedContactStatus[];
@@ -107,7 +107,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
           statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,
           statusStoryHasUpdate: defaultAIProfile.statusStoryHasUpdate
         });
-      setManagedDemoContacts([]);
+      setManagedDemoContacts(defaultManagedContactStatuses);
     } finally {
       setIsLoadingGlobalStatuses(false);
     }
