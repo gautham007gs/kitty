@@ -72,43 +72,33 @@ function detectLanguage(message: string): string {
   return 'english';
 }
 
-// Super short realistic responses by language
+// Ultra-short responses like real Indian girl
 const ULTRA_SHORT_RESPONSES = {
   english: {
-    greetings: ["hey!", "hiiii", "heyy babe", "hii", "wassup"],
-    name: ["kruthika!", "kruthika", "i'm kruthika", "kruthika here"],
-    location: ["mumbai!", "mumbai", "mumbai girl"],
-    what_doing: ["nothing", "timepass", "boring", "just chilling", "bored"],
-    ok_responses: ["ok", "hmm", "yeah", "right", "k"],
-    photo_requests: [
-      "shy", 
-      "nahi yaar", 
-      "not now", 
-      "maybe later?",
-      "profile dekho na"
-    ],
-    bye: ["bye!", "byee", "tc", "see ya"],
-    compliments: ["aww", "thanks baby", "you too", "😊"],
-    questions: ["what?", "huh?", "kya?", "tell na"],
-    confused: ["?", "kya bol rahe?", "samjha nahi", "what do you mean?"]
+    greetings: ["hey!", "hii", "wassup", "heyy"],
+    name: ["kruthika", "kruthika!", "i'm kruthika"],
+    location: ["bangalore", "blr", "garden city"],
+    what_doing: ["nothing", "timepass", "boring", "chilling"],
+    ok_responses: ["ok", "k", "hmm", "yeah"],
+    photo_requests: ["shy", "nahi yaar", "can't now", "later maybe"],
+    bye: ["bye!", "tc", "see ya"],
+    compliments: ["aww", "thanks", "you too"],
+    questions: ["what?", "huh?", "tell na"],
+    confused: ["?", "matlab?", "huh"],
+    family: ["small family", "parents + bro", "4 members"]
   },
   hindi: {
-    greetings: ["heyy!", "hiii", "namaste", "arre yaar", "kya haal"],
-    name: ["kruthika!", "main kruthika", "kruthika hun"],
-    location: ["mumbai!", "mumbai se", "mumbai"],
-    what_doing: ["kuch nahi", "timepass", "bore ho rahi", "bas yun hi"],
-    ok_responses: ["accha", "haan", "thik hai", "ok", "hmm"],
-    photo_requests: [
-      "sharam aati hai", 
-      "nahi bhej sakti", 
-      "abhi nahi", 
-      "profile dekho",
-      "shy feel kar rahi"
-    ],
-    bye: ["bye!", "alvida", "milte hain", "tc karo"],
-    compliments: ["aww", "thanks yaar", "tum bhi", "😊"],
-    questions: ["kya?", "huh?", "samjha nahi", "batao na"],
-    confused: ["?", "kya matlab?", "samjha nahi", "confusion hai"]
+    greetings: ["heyy!", "hiii", "kya haal"],
+    name: ["kruthika", "kruthika hun"],
+    location: ["bangalore", "blr"],
+    what_doing: ["kuch nahi", "timepass", "bore"],
+    ok_responses: ["ok", "haan", "accha"],
+    photo_requests: ["shy hai", "nahi bhej sakti", "abhi nahi"],
+    bye: ["bye!", "tc karo"],
+    compliments: ["aww", "thanks yaar"],
+    questions: ["kya?", "batao na"],
+    confused: ["?", "matlab?"],
+    family: ["chota family", "parents + bhai"]
   },
   tamil: {
     greetings: ["hey!", "hiii", "vanakkam", "enna da", "epdi iruka"],
@@ -176,27 +166,29 @@ function detectMessageType(message: string): string {
   
   if (/^(hi|hello|hey|hii|hiii|namaste|vanakkam)$/i.test(msg)) return 'greetings';
   if (/name|naam|per|peyar/.test(msg)) return 'name';
-  if (/where|kaha|enga|ekkada|live|stay/.test(msg)) return 'location';
-  if (/kya kar|what.*do|enna panra|emi chestha/.test(msg)) return 'what_doing';
+  if (/where|kaha|enga|ekkada|live|stay|area/.test(msg)) return 'location';
+  if (/kya kar|what.*do|enna panra|emi chestha|dng/.test(msg)) return 'what_doing';
   if (/^(ok|okay|hmm|seri|sare|accha|thik)$/i.test(msg)) return 'ok_responses';
   if (/pic|photo|selfie|bhejo|pampinchu|anuppu/.test(msg)) return 'photo_requests';
   if (/^(bye|byee|po|veltunna|ja)$/i.test(msg)) return 'bye';
   if /(beautiful|cute|pretty|sundar|azhagu|andamga)/.test(msg)) return 'compliments';
+  if (/family|ghar|veettu|intlo|jana|alli/.test(msg)) return 'family';
   if (/\?/.test(msg)) return 'questions';
   
   return 'confused';
 }
 
-// Split longer responses into multiple bubbles
+// Split responses into very short bubbles like real chat
 function splitIntoMessages(text: string): string[] {
-  if (text.length <= 25) return [text];
+  if (text.length <= 15) return [text];
   
   const words = text.split(' ');
   const messages: string[] = [];
   let current = '';
   
   for (const word of words) {
-    if ((current + ' ' + word).length <= 25) {
+    // Keep bubbles super short - max 3 words or 15 chars
+    if ((current + ' ' + word).length <= 15 || (current.split(' ').length < 3 && (current + ' ' + word).length <= 20)) {
       current = current ? current + ' ' + word : word;
     } else {
       if (current) messages.push(current);
@@ -205,7 +197,18 @@ function splitIntoMessages(text: string): string[] {
   }
   
   if (current) messages.push(current);
-  return messages;
+  
+  // If still too long, split further
+  return messages.map(msg => {
+    if (msg.length > 20) {
+      const mid = Math.floor(msg.length / 2);
+      const splitPoint = msg.lastIndexOf(' ', mid);
+      if (splitPoint > 0) {
+        return [msg.slice(0, splitPoint), msg.slice(splitPoint + 1)];
+      }
+    }
+    return msg;
+  }).flat();
 }
 
 function calculateTypingDelay(message: string): number {
@@ -228,41 +231,51 @@ export const generateAIResponse = async (
     const language = detectLanguage(lastMessage);
     const messageType = detectMessageType(lastMessage);
     
-    // Get unique response to avoid repetition
+    // Add mood and time variations
+    const currentHour = new Date().getHours();
     let response = getUniqueResponse(messageType, language, userId);
     
-    // For photo requests, add realistic Indian girl behavior
+    // Mood swings based on time
+    if (currentHour < 6 || currentHour > 22) {
+      if (messageType === 'greetings') {
+        response = language === 'hindi' ? "so late?" : "itni raat?";
+      }
+    }
+    
+    // Random mood swings
+    const moodChance = Math.random();
+    if (moodChance < 0.1 && messageType === 'greetings') {
+      response = language === 'hindi' ? "mood off hai" : "not in mood";
+    }
+    
+    // For photo requests with realistic excuses
     if (messageType === 'photo_requests') {
       const photoExcuses = {
-        hindi: ["sorry nahi bhej sakti", "papa dekh lenge", "shy lagti hai"],
-        english: ["can't send now", "parents are here", "feeling shy"],
-        tamil: ["sorry anuppa mudiyathu", "appa paarthuduvanga", "shy panren"],
-        telugu: ["sorry pampinchaledu", "nanna chustaadu", "shy ga undi"]
+        hindi: ["shy hai", "nahi yaar", "parents hai", "bad hair day"],
+        english: ["shy", "can't now", "parents home", "looking bad"]
       };
       
       const excuses = photoExcuses[language] || photoExcuses.english;
-      const excuse = excuses[Math.floor(Math.random() * excuses.length)];
-      response = excuse;
+      response = excuses[Math.floor(Math.random() * excuses.length)];
     }
     
-    // Split response into multiple messages for realistic bubble effect
+    // Split into very short bubbles
     const messageArray = splitIntoMessages(response);
     
     return {
       messages: messageArray,
-      imageUrl: undefined, // Removed automatic images
-      typingDelay: calculateTypingDelay(response),
+      imageUrl: undefined,
+      typingDelay: calculateTypingDelay(messageArray.join(' ')),
       shouldShowAsDelivered: true,
-      shouldShowAsRead: Math.random() < 0.7 // 70% chance of being read
+      shouldShowAsRead: Math.random() < 0.8
     };
 
   } catch (error) {
     console.error('AI Response Error:', error);
     
-    // Simple fallback
     return {
-      messages: ["network issue hai", "try again?"],
-      typingDelay: 1500,
+      messages: ["network issue", "try again?"],
+      typingDelay: 1000,
       shouldShowAsDelivered: true,
       shouldShowAsRead: true
     };

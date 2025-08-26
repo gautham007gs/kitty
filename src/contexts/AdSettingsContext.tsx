@@ -29,6 +29,7 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     try {
+      // Supabase query to fetch ad settings
       const { data, error } = await supabase
         .from('app_configurations')
         .select('settings')

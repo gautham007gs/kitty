@@ -27,6 +27,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [visibleMessages, setVisibleMessages] = React.useState<Message[]>([]);
 
   // Use pagination hook if enabled
   const pagination = useMessagePagination({
@@ -51,9 +52,28 @@ const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  // Handle staggered message display for AI bubbles
+  useEffect(() => {
+    if (messages.length > visibleMessages.length) {
+      const newMessages = messages.slice(visibleMessages.length);
+      let delay = 0;
+      
+      newMessages.forEach((msg, index) => {
+        if (msg.sender === 'ai') {
+          // Stagger AI messages by 800-1500ms each
+          delay += 800 + Math.random() * 700;
+        }
+        
+        setTimeout(() => {
+          setVisibleMessages(prev => [...prev, msg]);
+        }, delay);
+      });
+    }
+  }, [messages]);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isAiTyping]); // Re-scroll if messages or typing status changes
+  }, [visibleMessages, isAiTyping]);
 
   return (
     <div
@@ -74,7 +94,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         </div>
       )}
 
-      {displayMessages.map((msg, index) => (
+      {(enablePagination ? pagination.messages : visibleMessages).map((msg, index) => (
         <React.Fragment key={`fragment-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}>
           <MessageBubble
             key={`bubble-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}
