@@ -619,49 +619,50 @@ const KruthikaChatPage: NextPage = () => {
       console.log('📥 API Response:', result);
 
       if (result.responses && Array.isArray(result.responses)) {
-        const responses = result.responses.map((res: any) => res.message);
-        const newMood = result.newMood;
-
-        console.log('🤖 Processing AI responses:', responses);
-
-        // Add AI messages with staggered delays (breadcrumb effect)
+        // Process AI responses with natural delay between messages
+      const processAIResponses = async (responses: any[]) => {
         for (let i = 0; i < responses.length; i++) {
-          const bubbleText = responses[i];
-          const delay = i * (1200 + Math.random() * 800); // Increased delay for better effect
+          const response = responses[i];
 
+          // Use the natural delay calculated by AI (or fallback)
+          const naturalDelay = response.delay || (i === 0 ? 1000 : 1500);
+
+          console.log(`⏱️ Natural delay for message ${i + 1}: ${naturalDelay}ms`);
+
+          // Add typing indicator for first message
+          if (i === 0) {
+            setIsAiTyping(true);
+            console.log('⌨️ Started typing indicator');
+          }
+
+          // Wait for NATURAL typing delay
+          await new Promise(resolve => setTimeout(resolve, naturalDelay));
+
+          // Add the message with natural timing
+          const aiMessageId = addMessage(response.message, false);
+          console.log('📝 Added AI message with natural timing:', response.message);
+
+          // Remove typing indicator after last message
+          if (i === responses.length - 1) {
+            setIsAiTyping(false);
+            console.log('⌨️ Stopped typing indicator');
+          }
+
+          // Show read status after natural delay
           setTimeout(() => {
-            const aiMessage: Message = {
-              id: `ai-${Date.now()}-${i}`,
-              text: bubbleText,
-              sender: 'ai',
-              timestamp: new Date(),
-              status: 'read', // Set initial status as read
-              aiAvatarUrl: globalAIProfile?.avatarUrl,
-              ...(result.aiImageUrl && i === responses.length - 1 && { aiImageUrl: result.aiImageUrl }),
-              ...(result.audioUrl && i === responses.length - 1 && { audioUrl: result.audioUrl })
-            };
-
-            console.log('📝 Adding AI message:', aiMessage);
-            setMessages(prev => [...prev, aiMessage]);
-
-            // Update mood and interactions after last bubble
-            if (i === responses.length - 1) {
-              setAiMood(newMood);
-              const aiInteraction = `AI: ${responses.join(' ')}`;
-              setRecentInteractions(prev => [...prev.slice(-9), aiInteraction]);
-              setIsAiTyping(false);
-            }
-          }, delay);
+            setMessages(prev => prev.map(msg => 
+              msg.id === aiMessageId ? { ...msg, status: 'read' } : msg
+            ));
+          }, 600);
         }
+      };
+        await processAIResponses(result.responses);
 
-        userPersonalization.incrementMessageCount();
-        if (tokenUsageStatus) {
-          setTokenUsageStatus(prev => prev ? {
-            ...prev,
-            used: prev.used + 1,
-            percentage: Math.round(((prev.used + 1) / prev.limit) * 100)
-          } : null);
-        }
+        const newMood = result.newMood;
+        setAiMood(newMood);
+        const aiInteraction = `AI: ${result.responses.map((res:any) => res.message).join(' ')}`;
+        setRecentInteractions(prev => [...prev.slice(-9), aiInteraction]);
+
       } else {
         setIsAiTyping(false);
       }

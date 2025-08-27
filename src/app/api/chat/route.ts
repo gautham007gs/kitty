@@ -1,19 +1,20 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAIResponse } from '@/ai/genkit';
 
-// Define the ChatResponse interface (assuming it's defined elsewhere or needs to be included)
 interface ChatResponse {
   id: string;
   message: string;
   timestamp: Date;
   sender: 'ai' | 'user';
   isTyping: boolean;
+  delay?: number; // Add delay for timing
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, userImageUri, timeOfDay, mood, recentInteractions, userId } = body;
+    const { message, userId = 'default' } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -22,47 +23,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🚀 Chat API: Processing message from user:', userId);
+    console.log('🚀 Chat API: Processing NATURAL message from user:', userId);
     console.log('📝 Message:', message.substring(0, 100) + '...');
 
-    // Generate AI response using Vertex AI - NO FALLBACKS, MUST use Vertex AI
-    let aiResponseBreadcrumbs: string[];
+    // Generate AI response using ONLY Vertex AI - NO FALLBACKS
+    let aiResponse: { breadcrumbs: string[]; delays: number[] };
     try {
-      console.log('🔄 Generating FRESH Vertex AI response...');
-      aiResponseBreadcrumbs = await generateAIResponse(message);
-      console.log('✅ FRESH Vertex AI response generated:', aiResponseBreadcrumbs);
+      console.log('🔄 Generating NATURAL Vertex AI response...');
+      aiResponse = await generateAIResponse(message, userId);
+      console.log('✅ NATURAL Vertex AI response generated:', aiResponse.breadcrumbs);
+      console.log('⏱️ With delays:', aiResponse.delays);
     } catch (error) {
-      console.error('❌ VERTEX AI FAILED - NO FALLBACKS ALLOWED:', error);
+      console.error('❌ VERTEX AI FAILED - NO FALLBACKS:', error);
       return NextResponse.json(
-        { error: `Vertex AI failed: ${error.message}. Please check AI configuration.` },
+        { error: `Vertex AI failed: ${error.message}. Check AI configuration.` },
         { status: 503 }
       );
     }
 
-    // Create multiple response objects for breadcrumb effect
-    const responses: ChatResponse[] = aiResponseBreadcrumbs.map((breadcrumb, index) => ({
+    // Create response objects with proper timing
+    const responses: ChatResponse[] = aiResponse.breadcrumbs.map((breadcrumb, index) => ({
       id: `ai-${Date.now()}-${index}`,
       message: breadcrumb,
       timestamp: new Date(),
       sender: 'ai',
-      isTyping: false
+      isTyping: false,
+      delay: aiResponse.delays[index] // Include typing delay
     }));
 
-    const newMood = mood || 'happy';
-
-    console.log('📤 Sending response:', { responses, newMood });
+    console.log('📤 Sending NATURAL response with delays:', responses);
 
     return NextResponse.json({
-      responses: responses, // Return array of responses for breadcrumb effect
-      newMood: newMood,
+      responses: responses,
+      newMood: 'natural', // Always natural now
       success: true
     });
 
   } catch (error) {
-    // This catch block now specifically handles errors during request parsing or unexpected issues
     console.error('❌ Chat API Error:', error);
     return NextResponse.json(
-      { error: 'An internal server error occurred.' },
+      { error: 'Internal server error occurred.' },
       { status: 500 }
     );
   }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    status: 'Chat API is working',
+    status: 'Natural Chat API is working - NO FALLBACKS',
     timestamp: new Date().toISOString()
   });
 }

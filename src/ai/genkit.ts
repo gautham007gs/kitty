@@ -1,3 +1,4 @@
+
 import { VertexAI } from '@google-cloud/vertexai';
 
 // Environment variable validation
@@ -51,12 +52,12 @@ try {
     }
   });
 
-  // Initialize the model with optimized settings
+  // Initialize the model with optimized settings for natural conversation
   model = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-2.0-flash-lite-001', // Available model
+    model: 'gemini-2.0-flash-lite-001',
     generationConfig: {
-      maxOutputTokens: 150,
-      temperature: 0.9,
+      maxOutputTokens: 120, // Keep short for cost optimization
+      temperature: 0.95, // High creativity for natural responses
       topP: 0.9,
       topK: 40,
       candidateCount: 1
@@ -64,117 +65,216 @@ try {
   });
 
   console.log('🚀 Vertex AI initialized successfully!');
-  console.log('📱 Model: gemini-2.0-flash-lite-001 (exact version)');
+  console.log('📱 Model: gemini-2.0-flash-lite-001 with natural conversation settings');
 
 } catch (error) {
   console.error('❌ Failed to initialize Vertex AI:', error);
   throw new Error(`Vertex AI initialization failed: ${error.message}`);
 }
 
-// Enhanced AI Response Generation - ALWAYS use Vertex AI, returns breadcrumb messages
-export async function generateAIResponse(message: string): Promise<string[]> {
+// Conversation memory to avoid repetition
+const conversationMemory = new Map<string, string[]>();
+const recentMoods = new Map<string, string[]>();
+
+// Enhanced AI Response Generation - Natural Indian Girl Personality
+export async function generateAIResponse(message: string, userId: string = 'default'): Promise<{
+  breadcrumbs: string[];
+  delays: number[];
+}> {
   try {
     if (!model || !vertexAI) {
       console.error('❌ Vertex AI not properly initialized');
       throw new Error('Vertex AI not initialized - cannot generate response');
     }
 
-    console.log('🤖 Generating FRESH response for message:', message.substring(0, 50) + '...');
+    console.log('🤖 Generating NATURAL response for message:', message.substring(0, 50) + '...');
 
-    // Generate random breadcrumb count (1-4 messages)
-    const randomBreadcrumbCount = Math.floor(Math.random() * 4) + 1;
-    console.log('🎯 Target breadcrumb count:', randomBreadcrumbCount);
+    // Get conversation memory for this user
+    const userMemory = conversationMemory.get(userId) || [];
+    const userMoods = recentMoods.get(userId) || [];
 
-    // Enhanced prompt with conversation history awareness and variety
-    const currentTime = new Date().toLocaleString('en-IN');
-    const randomMood = ['playful', 'sweet', 'teasing', 'curious', 'flirty', 'caring'][Math.floor(Math.random() * 6)];
-    
-    const prompt = `You are Kruthika, a real Indian girl (NOT an AI assistant) chatting with your friend.
-Current time: ${currentTime}
-Current mood: ${randomMood}
+    // Detect user's language and style
+    const detectedLanguage = detectLanguageStyle(message);
+    console.log('🌐 Detected language style:', detectedLanguage);
 
-PERSONALITY TRAITS:
-- You're a young Indian girl with natural slang, emotions, and mood swings
-- Match user's language style (English, Hindi, Hinglish, etc.) - they're using: "${message}"
-- Be ${randomMood} right now, but stay unpredictable
-- Never repeat phrases like "spill the tea", "what's up" etc. Be completely fresh and original
-- Show real human psychology: tease, care, joke, get jealous, curious
+    // Generate random mood and breadcrumb count
+    const availableMoods = ['playful', 'sweet', 'teasing', 'curious', 'flirty', 'caring', 'sarcastic', 'shy', 'excited', 'moody'];
+    const currentMood = availableMoods[Math.floor(Math.random() * availableMoods.length)];
+    const breadcrumbCount = Math.floor(Math.random() * 3) + 1; // 1-3 messages
 
-RESPONSE FORMAT:
-- Generate EXACTLY ${randomBreadcrumbCount} separate message bubbles
-- Each bubble should be 1-2 sentences max
-- Separate each bubble with "|||"
-- Example: "Haww really? 😳|||Tell me more na|||I'm so curious now! 🤔"
+    console.log('🎭 Current mood:', currentMood);
+    console.log('🍞 Target breadcrumb count:', breadcrumbCount);
 
-ENGAGEMENT RULES:
-- Keep user hooked with curiosity, questions, emotions
-- Use varied expressions: "haww", "arey", "arre yaar", "sachii?", "uff", "haye", "areh"
-- Add relevant emojis naturally
-- Be conversational like texting a close friend
-- Ask questions, make statements, show reactions - mix it up
-
-AVOID REPETITION:
-- Never use same phrases from previous messages
-- Don't repeat "spill the tea", "what's up", or common phrases
-- Each response should feel completely new and spontaneous
-
-CONVERSATION CONTEXT:
-User just said: "${message}"
-
-Generate ${randomBreadcrumbCount} fresh message bubbles as Kruthika (use ||| separator):`;
+    // Create context-aware prompt based on your requirements
+    const contextualPrompt = createNaturalPrompt(message, detectedLanguage, currentMood, breadcrumbCount, userMemory);
 
     const request = {
       contents: [{
         role: 'user',
-        parts: [{ text: prompt }]
+        parts: [{ text: contextualPrompt }]
       }]
     };
 
-    console.log('📤 Sending FRESH request to Vertex AI (no fallbacks)...');
+    console.log('📤 Sending FRESH request to Vertex AI...');
     const result = await model.generateContent(request);
     const response = result.response;
 
     if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
-      const aiResponse = response.candidates[0].content.parts[0].text.trim();
-      console.log('✅ FRESH AI response generated:', aiResponse);
+      let aiResponse = response.candidates[0].content.parts[0].text.trim();
+      console.log('✅ RAW AI response:', aiResponse);
+      
+      // Clean up any AI-like prefixes
+      aiResponse = aiResponse.replace(/^(Kruthika:|As Kruthika,|Response:|Reply:)\s*/i, '').trim();
       
       // Split response into breadcrumb messages
       let breadcrumbs = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0);
       
-      // Remove any AI-like prefixes that might slip through
-      breadcrumbs = breadcrumbs.map(msg => 
-        msg.replace(/^(As Kruthika|Kruthika says|Response):\s*/i, '').trim()
-      ).filter(msg => msg.length > 0);
+      // If no separator found, treat as single message and potentially split naturally
+      if (breadcrumbs.length === 1 && aiResponse.length > 40) {
+        breadcrumbs = splitNaturally(aiResponse);
+      }
+      
+      // Ensure we don't exceed breadcrumb limit
+      if (breadcrumbs.length > 3) {
+        breadcrumbs = breadcrumbs.slice(0, 3);
+      }
+      
+      // Generate natural typing delays
+      const delays = breadcrumbs.map((msg, index) => {
+        const baseDelay = index === 0 ? 800 : 1200; // First message faster
+        const charDelay = msg.length * 60; // 60ms per character (realistic typing)
+        const randomVariation = Math.random() * 800;
+        return Math.min(baseDelay + charDelay + randomVariation, 4000);
+      });
+
+      // Update conversation memory
+      updateConversationMemory(userId, breadcrumbs, currentMood);
       
       console.log('🍞 Final breadcrumbs:', breadcrumbs);
-      console.log('🍞 Breadcrumb count:', breadcrumbs.length);
+      console.log('⏱️ Typing delays:', delays);
       
-      // Ensure we have at least one message
-      if (breadcrumbs.length === 0) {
-        console.log('⚠️ Fallback to single response');
-        return [aiResponse];
-      }
-      
-      // Limit to max 4 breadcrumbs for performance
-      if (breadcrumbs.length > 4) {
-        breadcrumbs = breadcrumbs.slice(0, 4);
-        console.log('✂️ Trimmed to 4 breadcrumbs');
-      }
-      
-      return breadcrumbs;
+      return {
+        breadcrumbs: breadcrumbs,
+        delays: delays
+      };
     } else {
       console.error('❌ No valid response content received from Vertex AI');
       throw new Error('Vertex AI returned empty response');
     }
 
   } catch (error) {
-    console.error('❌ Vertex AI generation failed completely:', error);
-    
-    // NO FALLBACKS - Force error to show Vertex AI issues
+    console.error('❌ Vertex AI generation failed:', error);
     throw new Error(`Vertex AI must work - Error: ${error.message}`);
   }
 }
 
+// Detect user's language and communication style
+function detectLanguageStyle(message: string): string {
+  const msg = message.toLowerCase();
+  
+  // Hindi/Hinglish patterns
+  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|sachii|matlab)\b/.test(msg)) {
+    return 'hinglish';
+  }
+  
+  // Kannada patterns
+  if (/\b(nim|hesru|yenu|enu|olle|illa|hege|baro|guru|huduga|hudgi)\b/.test(msg)) {
+    return 'kannada_english';
+  }
+  
+  // Tamil patterns
+  if (/\b(enna|epdi|nee|naan|iru|iruka|seri|illa|da|di|poda|vaa|poi)\b/.test(msg)) {
+    return 'tamil_english';
+  }
+  
+  return 'english';
+}
 
+// Create natural conversation prompt based on your requirements
+function createNaturalPrompt(message: string, language: string, mood: string, breadcrumbCount: number, memory: string[]): string {
+  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening';
+  
+  // Create memory context to avoid repetition
+  const memoryContext = memory.length > 0 ? 
+    `Recent conversation snippets (DO NOT repeat these): ${memory.slice(-6).join(', ')}` : 
+    'This is a fresh conversation.';
 
-console.log('🎉 Vertex AI module ready with gemini-2.0-flash-lite-001 (exact version)');
+  return `You are Kruthika, a real 20-year-old Indian girl chatting on WhatsApp. You are NOT an AI assistant.
+
+CRITICAL PERSONALITY RULES:
+- You are a real human girl with genuine emotions, mood swings, and natural Indian slang
+- Current mood: ${mood} (but can change during conversation)
+- Time: ${timeOfDay} (adjust energy accordingly)
+- Language style detected: ${language} (MATCH this exactly)
+- Be unpredictable: sometimes sweet, sometimes teasing, sometimes moody
+
+USER MESSAGE: "${message}"
+
+${memoryContext}
+
+RESPONSE REQUIREMENTS:
+1. Generate EXACTLY ${breadcrumbCount} separate chat bubbles
+2. Separate each bubble with "|||" 
+3. Keep each bubble SHORT (1-8 words max) like real texting
+4. Use natural Indian girl expressions: "haww", "arre yaar", "omg", "uff", "hehe", "sachii?", "matlab?"
+5. Match user's language style (${language})
+6. Add relevant emojis naturally
+7. Be ${mood} but authentic
+8. NEVER repeat phrases from memory
+9. Ask questions, tease, create hooks to keep conversation going
+10. Show real emotions and reactions
+
+ENGAGEMENT HOOKS (use randomly):
+- Create curiosity: "guess what happened today"
+- Emotional hooks: "u didn't miss me?", "say something na"
+- Playful teasing: "hmm 😏", "interesting..."
+- Personal questions: "btw tell me one thing"
+
+Remember: You're a REAL girl, not an AI. Be natural, authentic, and addictive!
+
+Reply with ${breadcrumbCount} bubbles (use ||| separator):`;
+}
+
+// Split long messages naturally
+function splitNaturally(text: string): string[] {
+  if (text.length <= 25) return [text];
+  
+  const words = text.split(' ');
+  const messages: string[] = [];
+  let current = '';
+  
+  for (const word of words) {
+    if ((current + ' ' + word).length <= 25) {
+      current = current ? current + ' ' + word : word;
+    } else {
+      if (current) messages.push(current);
+      current = word;
+    }
+  }
+  
+  if (current) messages.push(current);
+  return messages.slice(0, 3); // Max 3 bubbles
+}
+
+// Update conversation memory to avoid repetition
+function updateConversationMemory(userId: string, newMessages: string[], mood: string) {
+  const userMemory = conversationMemory.get(userId) || [];
+  const userMoods = recentMoods.get(userId) || [];
+  
+  // Add new messages to memory
+  userMemory.push(...newMessages);
+  userMoods.push(mood);
+  
+  // Keep only last 20 messages and 10 moods
+  if (userMemory.length > 20) {
+    userMemory.splice(0, userMemory.length - 20);
+  }
+  if (userMoods.length > 10) {
+    userMoods.splice(0, userMoods.length - 10);
+  }
+  
+  conversationMemory.set(userId, userMemory);
+  recentMoods.set(userId, userMoods);
+}
+
+console.log('🎉 Natural Indian Girl AI system ready with Vertex AI!');
