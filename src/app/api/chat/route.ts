@@ -25,16 +25,16 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Chat API: Processing message from user:', userId);
     console.log('📝 Message:', message.substring(0, 100) + '...');
 
-    // Generate AI response using Vertex AI - no fallbacks, returns breadcrumbs
+    // Generate AI response using Vertex AI - NO FALLBACKS, MUST use Vertex AI
     let aiResponseBreadcrumbs: string[];
     try {
-      console.log('🔄 Attempting to generate AI response...');
+      console.log('🔄 Generating FRESH Vertex AI response...');
       aiResponseBreadcrumbs = await generateAIResponse(message);
-      console.log('✅ AI response generated:', aiResponseBreadcrumbs);
+      console.log('✅ FRESH Vertex AI response generated:', aiResponseBreadcrumbs);
     } catch (error) {
-      console.error('❌ Failed to get Vertex AI response:', error);
+      console.error('❌ VERTEX AI FAILED - NO FALLBACKS ALLOWED:', error);
       return NextResponse.json(
-        { error: 'AI service temporarily unavailable. Please try again.' },
+        { error: `Vertex AI failed: ${error.message}. Please check AI configuration.` },
         { status: 503 }
       );
     }

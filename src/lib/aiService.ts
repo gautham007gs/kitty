@@ -226,45 +226,15 @@ export const generateAIResponse = async (
   userProfile?: any,
   userId: string = 'default'
 ): Promise<AIResponse> => {
-  try {
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    const language = detectLanguage(lastMessage);
-    const messageType = detectMessageType(lastMessage);
-    
-    // Add mood and time variations
-    const currentHour = new Date().getHours();
-    let response = getUniqueResponse(messageType, language, userId);
-    
-    // Mood swings based on time
-    if (currentHour < 6 || currentHour > 22) {
-      if (messageType === 'greetings') {
-        response = language === 'hindi' ? "so late?" : "itni raat?";
-      }
-    }
-    
-    // Random mood swings
-    const moodChance = Math.random();
-    if (moodChance < 0.1 && messageType === 'greetings') {
-      response = language === 'hindi' ? "mood off hai" : "not in mood";
-    }
-    
-    // For photo requests with realistic excuses
-    if (messageType === 'photo_requests') {
-      const photoExcuses = {
-        hindi: ["shy hai", "nahi yaar", "parents hai", "bad hair day"],
-        english: ["shy", "can't now", "parents home", "looking bad"]
-      };
-      
-      const excuses = photoExcuses[language] || photoExcuses.english;
-      response = excuses[Math.floor(Math.random() * excuses.length)];
-    }
-    
-    // Split into very short bubbles
-    const messageArray = splitIntoMessages(response);
-    
-    return {
-      messages: messageArray,
-      imageUrl: undefined,
+  // THIS FUNCTION IS DEPRECATED - ALL RESPONSES NOW COME FROM VERTEX AI
+  // Redirect to the main Vertex AI function
+  throw new Error('This fallback AI service is disabled. Use Vertex AI genkit.ts only.');
+  
+  // The actual AI generation should happen in src/ai/genkit.ts
+  // This ensures no cached/fallback responses are used
+  return {
+    messages: ['ERROR: Use Vertex AI only'],
+    imageUrl: undefinedfined,
       typingDelay: calculateTypingDelay(messageArray.join(' ')),
       shouldShowAsDelivered: true,
       shouldShowAsRead: Math.random() < 0.8
