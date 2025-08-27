@@ -121,10 +121,10 @@ const MessageBubble = memo(({
                 <Check className="h-3 w-3 text-gray-300" />
               )}
               {isDelivered && !isRead && (
-                <CheckCheck className="h-3 w-3 text-gray-400" />
+                <Check className="h-3 w-3 text-gray-400" />
               )}
               {isRead && (
-                <CheckCheck className="h-3 w-3 text-blue-500" />
+                <CheckCheck className="h-3 w-3 text-blue-600 ml-[-2px] font-bold" />
               )}
             </div>
           )}

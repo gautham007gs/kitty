@@ -146,14 +146,27 @@ Reply as a real Indian girl would (short, natural, addictive, separated by |||):
     const result = await model.generateContent(request);
     const response = result.response;
 
+    console.log('📋 Raw Vertex AI response structure:', {
+      hasCandidates: !!response.candidates,
+      candidatesLength: response.candidates?.length || 0,
+      firstCandidate: response.candidates?.[0] ? 'exists' : 'missing'
+    });
+
     if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
       const aiResponse = response.candidates[0].content.parts[0].text.trim();
       console.log('✅ AI response generated successfully');
-      console.log('📝 Response preview:', aiResponse.substring(0, 100) + '...');
+      console.log('📝 Full AI response:', aiResponse);
       
       // Split response into breadcrumb messages
       const breadcrumbs = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0);
-      console.log('🍞 Breadcrumb messages count:', breadcrumbs.length);
+      console.log('🍞 Breadcrumb messages:', breadcrumbs);
+      console.log('🍞 Breadcrumb count:', breadcrumbs.length);
+      
+      // Ensure we have at least one message
+      if (breadcrumbs.length === 0) {
+        console.log('⚠️ No breadcrumbs found, using original response');
+        return [aiResponse];
+      }
       
       return breadcrumbs;
     } else {

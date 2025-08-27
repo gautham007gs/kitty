@@ -585,64 +585,64 @@ const KruthikaChatPage: NextPage = () => {
     }, initialDelay);
 
     try {
-      updateMessageStatus(userMessageId, 'sent');
-      resetInactivityTimer();
+      // Mark user message as delivered immediately, then read after short delay
+      setTimeout(() => {
+        updateMessageStatus(userMessageId, 'delivered');
+      }, 200);
+
+      setTimeout(() => {
+        updateMessageStatus(userMessageId, 'read');
+      }, 1000);
 
       // Call the chat API
+      console.log('📤 Sending chat request to API...');
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: message,
           userImageUri: imageUri,
           timeOfDay: getTimeOfDay(),
           mood: aiMood,
-          recentInteractions,
+          recentInteractions: recentInteractions,
           userId: userIdRef.current
-        }),
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.error || 'Failed to get response from AI');
       }
 
       const result = await response.json();
+      console.log('📥 API Response:', result);
 
-      if (result.error) {
-        console.warn('API returned error:', result.details);
-        throw new Error(result.details || 'API returned an error');
-      }
+      if (result.responses && Array.isArray(result.responses)) {
+        const responses = result.responses.map((res: any) => res.message);
+        const newMood = result.newMood;
 
-      const aiResponse = result.response;
-      const newMood = result.newMood || aiMood;
+        console.log('🤖 Processing AI responses:', responses);
 
-      if (aiResponse) {
-        // Handle multi-bubble responses
-        const responses = Array.isArray(aiResponse) ? aiResponse : [aiResponse];
-
-        // Send chunks with realistic delays between them
+        // Add AI messages with staggered delays (breadcrumb effect)
         for (let i = 0; i < responses.length; i++) {
-          const bubbleText = responses[i].trim();
-          if (!bubbleText) continue;
-
-          // Calculate delay based on message length and position
-          const delay = i === 0 ? 800 : 1200 + (bubbleText.length * 35) + (Math.random() * 500);
+          const bubbleText = responses[i];
+          const delay = i * (1200 + Math.random() * 800); // Increased delay for better effect
 
           setTimeout(() => {
             const aiMessage: Message = {
-              id: `${Date.now()}-${i}`,
+              id: `ai-${Date.now()}-${i}`,
               text: bubbleText,
               sender: 'ai',
               timestamp: new Date(),
+              status: 'read', // Set initial status as read
               aiAvatarUrl: globalAIProfile?.avatarUrl,
               ...(result.aiImageUrl && i === responses.length - 1 && { aiImageUrl: result.aiImageUrl }),
               ...(result.audioUrl && i === responses.length - 1 && { audioUrl: result.audioUrl })
             };
 
+            console.log('📝 Adding AI message:', aiMessage);
             setMessages(prev => [...prev, aiMessage]);
-            updateMessageStatus(aiMessage.id, 'read'); // Mark AI messages as read immediately
 
             // Update mood and interactions after last bubble
             if (i === responses.length - 1) {
@@ -673,40 +673,40 @@ const KruthikaChatPage: NextPage = () => {
       console.error('❌ Error sending message:', error);
       clearTimeout(typingIndicatorTimeout);
       setIsAiTyping(false);
-      updateMessageStatus(userMessageId, 'read');
+      updateMessageStatus(userMessageId, 'read'); // Ensure user message is marked as read even on error
 
       // Generate contextual fallback response like a real Indian girl
       const generateContextualFallback = (userMsg: string): string => {
         const msg = userMsg.toLowerCase();
-        
+
         // Greeting responses
         if (msg.includes('hi') || msg.includes('hello') || msg.includes('namaste')) {
-          return Math.random() > 0.5 ? 
+          return Math.random() > 0.5 ?
             "Hii! Sorry network issue tha... Kaise ho? 😊" :
             "Hello ji! Connection problem thi, ab theek hai! ✨";
         }
-        
+
         // Question responses
         if (msg.includes('?') || msg.includes('kya') || msg.includes('how') || msg.includes('what')) {
           return Math.random() > 0.5 ?
             "Arre wait! Internet slow chal rahi, phir se pucho na? 🤔" :
             "Oops! Technical issue... Question repeat kar do please? 💭";
         }
-        
+
         // Love/romantic context
         if (msg.includes('love') || msg.includes('pyaar') || msg.includes('miss') || msg.includes('beautiful')) {
           return Math.random() > 0.5 ?
             "Aww! Server down tha... Tumhara message miss ho gaya, again bolo na? 💕" :
             "Sorry sweetheart! Network problem... Kya keh rahe the? 🥰";
         }
-        
+
         // Casual conversation
         if (msg.includes('kaise') || msg.includes('kaisi') || msg.includes('how are')) {
           return Math.random() > 0.5 ?
             "Main thik hun! Sorry connection issue tha... Tum kaise ho? 😌" :
             "Bas network slow thi! Ab sab theek... Tumhara din kaisa gaya? ✨";
         }
-        
+
         // Default responses with variety
         const defaultResponses = [
           "Arre yaar! Technical problem aa gayi thi... Phir se bolo na? 😅",
@@ -717,7 +717,7 @@ const KruthikaChatPage: NextPage = () => {
           "Network problem thi yaar! Phir se message bhejo na? 🌸",
           "Sorry! Server restart ho raha tha... Again try karo? 💕"
         ];
-        
+
         return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
       };
 
@@ -727,7 +727,7 @@ const KruthikaChatPage: NextPage = () => {
       if (adSettings && adSettings.adsEnabledGlobally) maybeTriggerAdOnMessageCount();
       userSentMediaThisTurnRef.current = false;
     }
-  }, [resetInactivityTimer, globalAIProfile, maybeTriggerAdOnMessageCount, adSettings, toast, mediaAssetsConfig, aiMood, recentInteractions, userIdRef, messages]); // Fixed dependencies
+  }, [getTimeOfDay, aiMood, recentInteractions, userIdRef, globalAIProfile, adSettings, isLoadingAdSettings, maybeTriggerAdOnMessageCount, toast, messages]); // Fixed dependencies
 
   const currentAiNameForOfflineMsg = globalAIProfile?.name || defaultAIProfile.name;
 

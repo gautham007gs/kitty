@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
     // Generate AI response using Vertex AI - no fallbacks, returns breadcrumbs
     let aiResponseBreadcrumbs: string[];
     try {
+      console.log('🔄 Attempting to generate AI response...');
       aiResponseBreadcrumbs = await generateAIResponse(message);
+      console.log('✅ AI response generated:', aiResponseBreadcrumbs);
     } catch (error) {
       console.error('❌ Failed to get Vertex AI response:', error);
       return NextResponse.json(
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Create multiple response objects for breadcrumb effect
     const responses: ChatResponse[] = aiResponseBreadcrumbs.map((breadcrumb, index) => ({
-      id: `${Date.now()}-${index}`,
+      id: `ai-${Date.now()}-${index}`,
       message: breadcrumb,
       timestamp: new Date(),
       sender: 'ai',
@@ -47,6 +49,8 @@ export async function POST(request: NextRequest) {
     }));
 
     const newMood = mood || 'happy';
+
+    console.log('📤 Sending response:', { responses, newMood });
 
     return NextResponse.json({
       responses: responses, // Return array of responses for breadcrumb effect

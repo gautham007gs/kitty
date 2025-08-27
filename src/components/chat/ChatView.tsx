@@ -52,23 +52,9 @@ const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  // Handle staggered message display for AI bubbles
+  // Handle immediate message display for better performance
   useEffect(() => {
-    if (messages.length > visibleMessages.length) {
-      const newMessages = messages.slice(visibleMessages.length);
-      let delay = 0;
-      
-      newMessages.forEach((msg, index) => {
-        if (msg.sender === 'ai') {
-          // Stagger AI messages by 800-1500ms each
-          delay += 800 + Math.random() * 700;
-        }
-        
-        setTimeout(() => {
-          setVisibleMessages(prev => [...prev, msg]);
-        }, delay);
-      });
-    }
+    setVisibleMessages(messages);
   }, [messages]);
 
   useEffect(() => {
