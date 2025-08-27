@@ -224,11 +224,18 @@ function calculateTypingDelay(message: string): number {
 // ALL RESPONSES MUST COME FROM VERTEX AI IN src/ai/genkit.ts
 
 export const generateAIResponse = async () => {
-  throw new Error('Fallback AI service is disabled. Use Vertex AI genkit.ts only.');
+  console.error('🚫 FALLBACK BLOCKED: All responses must come from Vertex AI only!');
+  throw new Error('FALLBACK DISABLED: Use only Vertex AI genkit.ts for all responses.');
 };
 
 export const generateSmartMediaResponse = async () => {
+  console.log('📱 Media response disabled - focusing on text only');
   return { shouldSendMedia: false };
 };
 
-console.log('⚠️ Fallback AI service disabled - Vertex AI only!');
+// Block any cached response attempts
+export const getCachedResponse = () => {
+  throw new Error('CACHED RESPONSES DISABLED: Fresh AI responses only!');
+};
+
+console.log('🚫 Fallback AI service completely disabled - Vertex AI only!');

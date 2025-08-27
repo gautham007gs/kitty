@@ -97,10 +97,19 @@ export async function generateAIResponse(message: string, userId: string = 'defa
     const detectedLanguage = detectLanguageStyle(message);
     console.log('🌐 Detected language style:', detectedLanguage);
 
-    // Generate random mood and breadcrumb count
+    // Generate contextual mood and smart breadcrumb count
     const availableMoods = ['playful', 'sweet', 'teasing', 'curious', 'flirty', 'caring', 'sarcastic', 'shy', 'excited', 'moody'];
     const currentMood = availableMoods[Math.floor(Math.random() * availableMoods.length)];
-    const breadcrumbCount = Math.floor(Math.random() * 3) + 1; // 1-3 messages
+    
+    // Smart breadcrumb count based on message context
+    let breadcrumbCount;
+    if (message.toLowerCase().includes('bye') || message.toLowerCase().includes('kaam')) {
+      breadcrumbCount = Math.random() < 0.7 ? 1 : 2; // Usually 1-2 for goodbye
+    } else if (message.length < 10) {
+      breadcrumbCount = Math.random() < 0.5 ? 1 : 2; // Short messages get 1-2 responses
+    } else {
+      breadcrumbCount = Math.floor(Math.random() * 3) + 1; // Longer messages can get 1-3
+    }
 
     console.log('🎭 Current mood:', currentMood);
     console.log('🍞 Target breadcrumb count:', breadcrumbCount);
@@ -123,14 +132,20 @@ export async function generateAIResponse(message: string, userId: string = 'defa
       let aiResponse = response.candidates[0].content.parts[0].text.trim();
       console.log('✅ RAW AI response:', aiResponse);
       
-      // Clean up any AI-like prefixes
-      aiResponse = aiResponse.replace(/^(Kruthika:|As Kruthika,|Response:|Reply:)\s*/i, '').trim();
+      // Clean up any AI-like prefixes and formatting
+      aiResponse = aiResponse.replace(/^(Kruthika:|As Kruthika,|Response:|Reply:|Here's my response:)\s*/i, '').trim();
+      aiResponse = aiResponse.replace(/^(Okay, here's my response:|Sure, here's what I'd say:)\s*/i, '').trim();
       
       // Split response into breadcrumb messages
       let breadcrumbs = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0);
       
-      // If no separator found, treat as single message and potentially split naturally
-      if (breadcrumbs.length === 1 && aiResponse.length > 40) {
+      // If single message expected, don't split
+      if (breadcrumbCount === 1) {
+        breadcrumbs = [aiResponse.replace(/\|\|\|.*/g, '').trim()];
+      }
+      
+      // If no separator found but multiple expected, split naturally
+      if (breadcrumbs.length === 1 && breadcrumbCount > 1 && aiResponse.length > 25) {
         breadcrumbs = splitNaturally(aiResponse);
       }
       
@@ -192,47 +207,46 @@ function detectLanguageStyle(message: string): string {
 
 // Create natural conversation prompt based on your requirements
 function createNaturalPrompt(message: string, language: string, mood: string, breadcrumbCount: number, memory: string[]): string {
-  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening';
+  const currentTime = new Date();
+  const timeOfDay = currentTime.getHours() < 12 ? 'morning' : currentTime.getHours() < 17 ? 'afternoon' : 'evening';
+  const timeContext = `${timeOfDay} (${currentTime.getHours()}:${currentTime.getMinutes().toString().padStart(2, '0')})`;
   
-  // Create memory context to avoid repetition
+  // Enhanced memory context to avoid repetition
   const memoryContext = memory.length > 0 ? 
-    `Recent conversation snippets (DO NOT repeat these): ${memory.slice(-6).join(', ')}` : 
-    'This is a fresh conversation.';
+    `AVOID REPEATING THESE EXACT WORDS/PHRASES: ${memory.slice(-10).join(', ')}. Create completely NEW responses.` : 
+    'This is a fresh conversation start.';
 
-  return `You are Kruthika, a real 20-year-old Indian girl chatting on WhatsApp. You are NOT an AI assistant.
+  // Contextual response based on user's message
+  const messageContext = analyzeMessageContext(message);
 
-CRITICAL PERSONALITY RULES:
-- You are a real human girl with genuine emotions, mood swings, and natural Indian slang
-- Current mood: ${mood} (but can change during conversation)
-- Time: ${timeOfDay} (adjust energy accordingly)
-- Language style detected: ${language} (MATCH this exactly)
-- Be unpredictable: sometimes sweet, sometimes teasing, sometimes moody
+  return `You are Kruthika, a real 20-year-old Indian girl. Current time: ${timeContext}. You are chatting naturally on WhatsApp.
 
-USER MESSAGE: "${message}"
+PERSONALITY:
+- Real Indian girl with authentic emotions and reactions
+- Mood: ${mood} (can shift naturally during conversation)  
+- Language: ${language} (MUST match user's style exactly)
+- Energy level based on ${timeOfDay} time
+
+USER SAID: "${message}"
+Message context: ${messageContext}
 
 ${memoryContext}
 
-RESPONSE REQUIREMENTS:
-1. Generate EXACTLY ${breadcrumbCount} separate chat bubbles
-2. Separate each bubble with "|||" 
-3. Keep each bubble SHORT (1-8 words max) like real texting
-4. Use natural Indian girl expressions: "haww", "arre yaar", "omg", "uff", "hehe", "sachii?", "matlab?"
-5. Match user's language style (${language})
-6. Add relevant emojis naturally
-7. Be ${mood} but authentic
-8. NEVER repeat phrases from memory
-9. Ask questions, tease, create hooks to keep conversation going
-10. Show real emotions and reactions
+CRITICAL RULES:
+1. Generate ${breadcrumbCount === 1 ? 'ONLY ONE response' : `EXACTLY ${breadcrumbCount} separate messages`}
+2. ${breadcrumbCount > 1 ? 'Separate multiple messages with "|||"' : 'Single response only - NO separators'}
+3. Be contextually relevant to what user just said
+4. Keep responses SHORT and natural (2-10 words each)
+5. Use appropriate ${language} expressions and slang
+6. React emotionally and authentically to user's message
+7. NEVER use generic phrases - be specific to this conversation
+8. Add emojis that match your emotional reaction
+9. Don't always ask questions - sometimes just react
 
-ENGAGEMENT HOOKS (use randomly):
-- Create curiosity: "guess what happened today"
-- Emotional hooks: "u didn't miss me?", "say something na"
-- Playful teasing: "hmm 😏", "interesting..."
-- Personal questions: "btw tell me one thing"
+RESPONSE STYLE for "${message}":
+${getResponseStyleGuide(message, language, mood)}
 
-Remember: You're a REAL girl, not an AI. Be natural, authentic, and addictive!
-
-Reply with ${breadcrumbCount} bubbles (use ||| separator):`;
+Generate ${breadcrumbCount === 1 ? 'ONE natural response' : `${breadcrumbCount} natural responses (use ||| separator)`}:`;
 }
 
 // Split long messages naturally
@@ -254,6 +268,40 @@ function splitNaturally(text: string): string[] {
   
   if (current) messages.push(current);
   return messages.slice(0, 3); // Max 3 bubbles
+}
+
+// Analyze message context for better responses
+function analyzeMessageContext(message: string): string {
+  const msg = message.toLowerCase();
+  
+  if (/bye|going|kaam|work|busy/.test(msg)) return 'User is leaving/busy';
+  if (/hi|hey|hello|morning/.test(msg)) return 'Greeting/starting conversation';
+  if (/what|kya|yen|enna/.test(msg)) return 'Asking question';
+  if (/ok|hmm|accha/.test(msg)) return 'Acknowledgment/casual response';
+  if (/name|hesru|per/.test(msg)) return 'Asking about name/identity';
+  if (/boring|bore/.test(msg)) return 'Expressing boredom';
+  
+  return 'General conversation';
+}
+
+// Get response style guide based on context
+function getResponseStyleGuide(message: string, language: string, mood: string): string {
+  const msg = message.toLowerCase();
+  
+  if (/bye|going|kaam/.test(msg)) {
+    return 'React with surprise/disappointment about them leaving. Be playful about it.';
+  }
+  if (/morning|hi|hey/.test(msg)) {
+    return 'Respond to their greeting with energy matching the time of day.';
+  }
+  if (/what|kya|yen/.test(msg)) {
+    return 'Answer their question but also turn it back to them or add something interesting.';
+  }
+  if (/ok|hmm/.test(msg)) {
+    return 'React to their casual response - maybe tease them or ask what they\'re thinking.';
+  }
+  
+  return `Be ${mood} and react naturally to what they said. Keep it conversational and engaging.`;
 }
 
 // Update conversation memory to avoid repetition
