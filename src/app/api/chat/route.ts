@@ -28,21 +28,37 @@ export async function POST(request: NextRequest) {
     // PURE VERTEX AI ONLY - NO FALLBACKS
     const aiResult = await generateAIResponse(message, userId);
 
-    // Create response objects with proper timing
+    // Handle busy state - AI is busy and won't respond
+    if (aiResult.busyUntil && aiResult.messages.length === 0) {
+      const minutesLeft = Math.ceil((aiResult.busyUntil - Date.now()) / (1000 * 60));
+      console.log(`😴 AI is busy for ${minutesLeft} more minutes - message seen but no response`);
+      
+      return NextResponse.json({
+        responses: [], // No responses when busy
+        isBusy: true,
+        busyUntil: aiResult.busyUntil,
+        busyMessage: `Kruthika is busy and will reply in ${minutesLeft} minutes`,
+        newMood: 'busy',
+        success: true
+      });
+    }
+
+    // Create response objects with REALISTIC timing
     const responses: ChatResponse[] = aiResult.messages.map((messageContent, index) => ({
       id: `ai-${Date.now()}-${index}`,
       message: messageContent,
       timestamp: new Date(),
       sender: 'ai',
       isTyping: false,
-      delay: aiResult.typingDelays[index] // Include typing delay
+      delay: aiResult.typingDelays[index] // Include REALISTIC typing delay
     }));
 
-    console.log('📤 Sending NATURAL response with delays:', responses);
+    console.log('📤 Sending NATURAL response with REALISTIC delays:', responses);
 
     return NextResponse.json({
       responses: responses,
-      newMood: 'natural', // Always natural now
+      newMood: 'natural', 
+      busyUntil: aiResult.busyUntil, // Include busy schedule if set
       success: true
     });
 
