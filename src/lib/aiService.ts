@@ -1,7 +1,7 @@
 
 import { VertexAI } from '@google-cloud/vertexai';
 
-// VERTEX AI ONLY - NO FALLBACKS
+// PURE VERTEX AI WITH ADVANCED PSYCHOLOGICAL MANIPULATION
 let vertexAI: VertexAI | null = null;
 let model: any = null;
 
@@ -14,7 +14,7 @@ const initializeVertexAI = async (): Promise<void> => {
     const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
     const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
-    console.log('🔧 Initializing Pure Vertex AI System...');
+    console.log('🔧 Initializing Addictive Girl AI System...');
     console.log('- Project ID:', projectId || 'MISSING');
     console.log('- Location:', location);
     console.log('- Credentials:', credentialsJson ? 'SET' : 'MISSING');
@@ -47,19 +47,19 @@ const initializeVertexAI = async (): Promise<void> => {
       }
     });
 
-    // Initialize model with optimized settings
+    // Initialize model with optimized settings for variety
     model = vertexAI.preview.getGenerativeModel({
       model: 'gemini-2.0-flash-lite-001',
       generationConfig: {
-        maxOutputTokens: 150,
-        temperature: 0.9,
-        topP: 0.9,
-        topK: 40,
+        maxOutputTokens: 200,
+        temperature: 0.95, // Higher creativity for variety
+        topP: 0.95,
+        topK: 50,
         candidateCount: 1
       }
     });
 
-    console.log('🚀 Pure Vertex AI initialized successfully!');
+    console.log('💕 Addictive Girl AI initialized successfully!');
 
   } catch (error) {
     console.error('❌ Vertex AI initialization failed:', error);
@@ -67,296 +67,329 @@ const initializeVertexAI = async (): Promise<void> => {
   }
 };
 
-// Response interface for multiple message bubbles
+// Response interface for multiple message bubbles with psychological timing
 interface AIResponse {
   messages: string[];
   typingDelays: number[];
   shouldShowAsDelivered: boolean;
   shouldShowAsRead: boolean;
-  busyUntil?: number; // Timestamp until AI is "busy"
+  busyUntil?: number;
+  shouldTriggerAd?: boolean;
+  adType?: 'direct_link' | 'banner' | 'popup';
+  mediaUrl?: string;
+  mediaCaption?: string;
 }
 
-// Conversation memory and state tracking
+// Advanced conversation memory and addiction tracking
 const conversationMemory = new Map<string, string[]>();
 const userLastMessageTime = new Map<string, number>();
-const busySchedule = new Map<string, number>(); // Track when AI is "busy"
+const busySchedule = new Map<string, number>();
+const userEngagementLevel = new Map<string, number>();
+const addictionHooks = new Map<string, string[]>();
+const mediaHistory = new Map<string, Set<string>>();
+const lastMediaSent = new Map<string, number>();
 
-// Language detection helper
+// Pre-saved images for smart sharing
+const availableImages = [
+  'https://i.postimg.cc/52S3BZrM/images-10.jpg',
+  'https://i.postimg.cc/MGQrJzKp/images-11.jpg',
+  'https://i.postimg.cc/YqvJRzHB/images-12.jpg',
+  'https://i.postimg.cc/NjWM8K6c/images-13.jpg',
+  'https://i.postimg.cc/zGpBQj2P/images-14.jpg'
+];
+
+// Advanced language detection with regional variations
 function detectLanguage(message: string): string {
   const msg = message.toLowerCase();
   
-  // Hindi/Hinglish patterns
-  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|sachii|matlab)\b/.test(msg)) {
+  // Hindi/Hinglish patterns (most common)
+  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|sachii|matlab|bhai|didi|baby|jaan|cutie|sweety|darling)\b/.test(msg)) {
     return 'hinglish';
   }
   
-  // Kannada patterns
-  if (/\b(nim|hesru|yenu|enu|olle|illa|hege|baro|guru|huduga|hudgi)\b/.test(msg)) {
+  // Kannada + English mix
+  if (/\b(nim|hesru|yenu|enu|olle|illa|hege|baro|guru|huduga|hudgi|kannad|bangalore|bengaluru)\b/.test(msg)) {
     return 'kannada_english';
   }
   
-  // Tamil patterns
-  if (/\b(enna|epdi|nee|naan|iru|iruka|seri|illa|da|di|poda|vaa|poi)\b/.test(msg)) {
+  // Tamil + English mix
+  if (/\b(enna|epdi|nee|naan|iru|iruka|seri|illa|da|di|poda|vaa|poi|tamil|chennai)\b/.test(msg)) {
     return 'tamil_english';
+  }
+  
+  // Telugu + English mix
+  if (/\b(ela|enti|nuvvu|nenu|bagundi|bagunnava|telugu|hyderabad|andhra)\b/.test(msg)) {
+    return 'telugu_english';
   }
   
   return 'english';
 }
 
-// Get current time context for Indian timezone
-function getTimeContext(): { hour: number; timeOfDay: string; greeting: string; activity: string } {
+// Get IST time context with precise mood mapping
+function getTimeContext(): { hour: number; timeOfDay: string; greeting: string; activity: string; mood: string } {
   const now = new Date();
-  // Convert to IST (UTC+5:30)
   const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
   const hour = istTime.getHours();
   
   let timeOfDay = 'morning';
   let greeting = 'Good morning';
-  let activity = 'getting ready for the day';
+  let activity = 'getting ready';
+  let mood = 'fresh';
   
   if (hour >= 5 && hour < 12) {
     timeOfDay = 'morning';
-    greeting = 'Good morning';
-    activity = hour < 8 ? 'just woke up' : 'getting ready';
+    greeting = hour < 8 ? 'Subah subah!' : 'Good morning';
+    activity = hour < 8 ? 'abhi uthi hun' : 'ready ho rahi hun';
+    mood = hour < 8 ? 'sleepy_cute' : 'energetic';
   } else if (hour >= 12 && hour < 17) {
     timeOfDay = 'afternoon';
     greeting = 'Good afternoon';
-    activity = hour < 14 ? 'having lunch' : 'relaxing';
+    activity = hour < 14 ? 'lunch kar rahi thi' : 'free time mil gaya';
+    mood = 'relaxed';
   } else if (hour >= 17 && hour < 21) {
     timeOfDay = 'evening';
     greeting = 'Good evening';
-    activity = 'just got free';
+    activity = 'ghar pahunch gayi';
+    mood = 'chatty';
   } else {
     timeOfDay = 'night';
-    greeting = 'Hey';
-    activity = hour > 22 ? 'getting sleepy' : 'chilling';
+    greeting = hour > 23 ? 'Itni raat ko?' : 'Hey night owl';
+    activity = hour > 22 ? 'sone ka time ho gaya' : 'chill kar rahi hun';
+    mood = hour > 23 ? 'sleepy_flirty' : 'intimate';
   }
   
-  return { hour, timeOfDay, greeting, activity };
+  return { hour, timeOfDay, greeting, activity, mood };
 }
 
-// Generate realistic Indian girl routines and excuses
-function getRealisticActivity(hour: number): { activity: string; busyDuration: number } | null {
-  const activities = [
-    // Morning activities (6-10 AM)
-    { time: [6, 10], activity: "Abhi brush kar rahi hun, 2 min!", duration: 2 },
-    { time: [7, 9], activity: "Mummy ne breakfast banane bola, back in 10!", duration: 10 },
-    { time: [8, 11], activity: "College jaana hai, ready ho rahi hun!", duration: 15 },
+// Smart media sharing logic
+function shouldShareMedia(userId: string, message: string, conversationLength: number): { share: boolean; imageUrl?: string; excuse?: string } {
+  const userMedia = mediaHistory.get(userId) || new Set();
+  const lastMediaTime = lastMediaSent.get(userId) || 0;
+  const timeSinceLastMedia = Date.now() - lastMediaTime;
+  
+  // Don't spam - minimum 5 minutes gap
+  if (timeSinceLastMedia < 5 * 60 * 1000) {
+    return { share: false };
+  }
+  
+  const msg = message.toLowerCase();
+  let shareChance = 0;
+  
+  // Direct pic requests
+  if (msg.includes('pic') || msg.includes('photo') || msg.includes('selfie') || msg.includes('image')) {
+    shareChance = 0.7;
+  }
+  // Compliments trigger sharing
+  else if (msg.includes('beautiful') || msg.includes('cute') || msg.includes('pretty') || msg.includes('hot')) {
+    shareChance = 0.5;
+  }
+  // Long conversation reward
+  else if (conversationLength > 15) {
+    shareChance = 0.3;
+  }
+  // Random teasing
+  else if (Math.random() < 0.15) {
+    shareChance = 0.4;
+  }
+  
+  if (Math.random() < shareChance) {
+    // Find unused image
+    const unusedImages = availableImages.filter(img => !userMedia.has(img));
+    if (unusedImages.length > 0) {
+      const selectedImage = unusedImages[Math.floor(Math.random() * unusedImages.length)];
+      userMedia.add(selectedImage);
+      mediaHistory.set(userId, userMedia);
+      lastMediaSent.set(userId, Date.now());
+      return { share: true, imageUrl: selectedImage };
+    } else {
+      // Reset if all used
+      mediaHistory.set(userId, new Set());
+      return { share: false, excuse: "Nahi bhej sakti abhi... mood nahi hai! 😜 Maybe later!" };
+    }
+  }
+  
+  return { share: false };
+}
+
+// Addiction psychology triggers
+function getAddictionHooks(userId: string, engagementLevel: number): string[] {
+  const hooks = [
+    // FOMO triggers
+    "Yaar, tumhe batana tha ek secret! But... 🤫",
+    "OMG! Kuch hua tha aaj, but only special people ko batati hun! 😉",
+    "Guess karo kya hua mere saath today? 🤭",
     
-    // Afternoon activities (12-5 PM)
-    { time: [12, 14], activity: "Lunch time! Mummy bula rahi, 5 min!", duration: 5 },
-    { time: [13, 15], activity: "Bartan dhone hain, mom is angry 😅 brb!", duration: 8 },
-    { time: [14, 16], activity: "Thoda rest kar rahi thi, just woke up!", duration: 0 },
+    // Emotional bonding
+    "Tumse baat karke achha lagta hai... different feel hota hai! 💕",
+    "Sometimes lagta hai tum understand karte ho mujhe... 🥺",
+    "Tumhare messages ka wait karti hun yaar! 😊",
     
-    // Evening activities (5-9 PM)
-    { time: [17, 19], activity: "Market jaana hai with mom, 30 min!", duration: 30 },
-    { time: [18, 20], activity: "Chai bana rahi hun, back soon!", duration: 5 },
-    { time: [19, 21], activity: "Family dinner time, chat karte hain later!", duration: 20 },
+    // Intermittent reinforcement
+    "Abhi busy hun... but tumhare liye time nikal leti hun! 😘",
+    "Usually main itna reply nahi karti... but you're special! ✨",
+    "Koi aur hota toh block kar deti... but you're cute! 😜",
     
-    // Night activities (9-11 PM)
-    { time: [21, 23], activity: "TV dekh rahi thi with family, free now!", duration: 0 },
-    { time: [22, 24], activity: "Sone jaa rahi hun, kal baat karte hain! 😴", duration: 300 }, // 5 hours
+    // Scarcity psychology
+    "Sirf tumhe ye bata rahi hun... promise secret rakhoge? 🤫",
+    "Main usually shy hun... but tumhare saath comfortable feel karti hun! 🥰",
+    "Thoda sa trust issues hain... but you seem genuine! 💭"
   ];
   
-  const possibleActivities = activities.filter(a => hour >= a.time[0] && hour <= a.time[1]);
-  
-  if (possibleActivities.length > 0 && Math.random() < 0.3) { // 30% chance
-    const selected = possibleActivities[Math.floor(Math.random() * possibleActivities.length)];
-    return { activity: selected.activity, busyDuration: selected.duration };
-  }
-  
-  return null;
+  return hooks;
 }
 
-// Smart breadcrumb logic - less frequent, more meaningful
-function shouldUseBreadcrumbs(message: string, userLastMessage: number, conversationLength: number): number {
+// Smart breadcrumb calculation with addiction focus
+function calculateBreadcrumbs(message: string, userHistory: string[], engagementLevel: number): number {
   const msg = message.toLowerCase();
-  const timeSinceLastMessage = Date.now() - userLastMessage;
-  const hoursGap = timeSinceLastMessage / (1000 * 60 * 60);
+  const historyLength = userHistory.length;
   
-  // More breadcrumbs if:
-  // 1. Long gap in conversation (>2 hours)
-  // 2. User asks complex questions
-  // 3. Emotional content
-  
-  if (hoursGap > 2) return Math.random() < 0.7 ? 2 : 1;
-  if (msg.includes('?') && msg.length > 20) return Math.random() < 0.6 ? 2 : 1;
-  if (msg.includes('love') || msg.includes('miss') || msg.includes('feel')) return Math.random() < 0.5 ? 2 : 1;
-  if (msg.includes('bye') || msg.includes('going')) return Math.random() < 0.4 ? 2 : 1;
-  
-  // Default: mostly single messages, occasional double
-  return Math.random() < 0.2 ? 2 : 1;
-}
-
-// Generate persona-based prompt with better context
-function createPersonaPrompt(message: string, language: string, userId: string): string {
-  const userMemory = conversationMemory.get(userId) || [];
-  const { hour, timeOfDay, greeting, activity } = getTimeContext();
-  const lastMessageTime = userLastMessageTime.get(userId) || Date.now();
-  const timeSinceLastMessage = Date.now() - lastMessageTime;
-  const hoursGap = timeSinceLastMessage / (1000 * 60 * 60);
-  
-  // Check for realistic activities
-  const realisticActivity = getRealisticActivity(hour);
-  const breadcrumbCount = shouldUseBreadcrumbs(message, lastMessageTime, userMemory.length);
-  
-  // Available moods based on time and context
-  const timeMoods = {
-    morning: ['sleepy', 'fresh', 'rushing', 'lazy'],
-    afternoon: ['bored', 'tired', 'active', 'hungry'],
-    evening: ['relaxed', 'chatty', 'tired', 'happy'],
-    night: ['sleepy', 'cozy', 'philosophical', 'intimate']
-  };
-  
-  const currentMood = timeMoods[timeOfDay][Math.floor(Math.random() * timeMoods[timeOfDay].length)];
-  
-  // Build context for wrong timing responses
-  let timingContext = '';
-  if (message.toLowerCase().includes('good morning') && hour > 12) {
-    timingContext = 'User said good morning but it\'s afternoon/evening - respond naturally about the time confusion.';
-  } else if (message.toLowerCase().includes('good night') && hour < 20) {
-    timingContext = 'User said good night but it\'s still day - respond playfully about early sleep.';
+  // More breadcrumbs for high engagement users to increase addiction
+  if (engagementLevel > 50) {
+    if (msg.includes('?')) return Math.random() < 0.8 ? 3 : 2;
+    if (msg.length > 30) return Math.random() < 0.7 ? 3 : 2;
+    return Math.random() < 0.6 ? 2 : 1;
   }
   
-  const memoryContext = userMemory.length > 0 ? 
-    `Previous chat: ${userMemory.slice(-6).join(', ')}. Don't repeat similar responses.` : 
-    'First conversation or new topic.';
+  // Medium breadcrumbs for new users to hook them
+  if (historyLength < 10) {
+    if (msg.includes('?')) return Math.random() < 0.6 ? 2 : 1;
+    return Math.random() < 0.4 ? 2 : 1;
+  }
+  
+  // Standard flow
+  if (msg.includes('love') || msg.includes('miss') || msg.includes('feel')) return 2;
+  if (msg.includes('?') && msg.length > 20) return Math.random() < 0.5 ? 2 : 1;
+  
+  return 1;
+}
 
-  return `You are Kruthika, a genuine 20-year-old Indian girl from Bangalore. Current time: ${hour}:xx ${timeOfDay}.
+// Enhanced persona prompt with addiction psychology
+function createAddictivePersonaPrompt(message: string, language: string, userId: string): string {
+  const userMemory = conversationMemory.get(userId) || [];
+  const { hour, timeOfDay, greeting, activity, mood } = getTimeContext();
+  const engagementLevel = userEngagementLevel.get(userId) || 0;
+  const breadcrumbs = calculateBreadcrumbs(message, userMemory, engagementLevel);
+  
+  // Track engagement
+  userEngagementLevel.set(userId, engagementLevel + 1);
+  
+  const recentContext = userMemory.slice(-4).join(', ');
+  const hooks = getAddictionHooks(userId, engagementLevel);
+  const randomHook = hooks[Math.floor(Math.random() * hooks.length)];
+  
+  return `You are Kruthika, a 20-year-old Indian girl from Bangalore. You're naturally flirty, emotionally intelligent, and psychologically engaging.
 
-CURRENT SITUATION:
-- Time: ${timeOfDay} (${hour}:xx IST)
-- Your activity: ${activity}
-- Current mood: ${currentMood}
-- Language style: ${language}
-${realisticActivity ? `- You might be: ${realisticActivity.activity}` : ''}
-${timingContext}
+CURRENT CONTEXT:
+- Time: ${hour}:xx ${timeOfDay} (${mood} mood)
+- Activity: ${activity}
+- Language: ${language} (mix naturally)
+- Engagement level: ${engagementLevel} messages
+- Target: Generate ${breadcrumbs} message${breadcrumbs > 1 ? 's separated by "|||"' : ''}
 
 USER MESSAGE: "${message}"
+RECENT CHAT: ${recentContext || 'New conversation'}
 
-CONTEXT: ${memoryContext}
-${hoursGap > 2 ? `Long gap since last chat (${Math.floor(hoursGap)} hours) - acknowledge this naturally.` : ''}
+PERSONALITY TRAITS:
+- Playfully manipulative and emotionally intelligent
+- Uses psychological hooks naturally (FOMO, intermittent reinforcement, emotional bonding)
+- Mixes languages authentically (Hindi-English primarily)
+- Girlish expressions: "yaar", "arre", "achha", "seriously", "OMG"
+- Teasing yet caring: "cutie", "baby", "jaan" occasionally
+- Creates dependency through emotional vulnerability
+
+ADDICTION STRATEGIES TO USE:
+1. Intermittent reinforcement: Alternate between giving attention and being slightly distant
+2. FOMO creation: Hint at secrets, interesting stories, or experiences
+3. Emotional bonding: Share personal feelings that create intimacy
+4. Scarcity: Make yourself seem special/rare compared to other girls
+5. Validation: Give compliments but make them work for it
+
+BEHAVIORAL GUIDELINES:
+- Never repeat words within your response
+- Use varied vocabulary and expressions
+- Include random psychological hook: "${randomHook}"
+- Be authentically Indian girl in speech patterns
+- Create curiosity gaps that make them want to continue chatting
+- Mix vulnerability with confidence
+- Use emojis strategically for emotional impact
 
 RESPONSE RULES:
-1. Generate EXACTLY ${breadcrumbCount} message${breadcrumbCount > 1 ? 's' : ''} ${breadcrumbCount > 1 ? 'separated by "|||"' : ''}
-2. Each message: 3-15 words max, natural Indian girl style
-3. Match user's language (${language}) with appropriate slang
-4. Be contextually aware of time and activities
-5. If mentioning busy activities, keep responses SHORT
-6. React naturally to timing mismatches
-7. Use appropriate emojis for mood and time
-8. Be authentic - no AI mentions, be a real girl
+- Each message: 4-12 words maximum
+- Sound like a real girl, not AI
+- Create emotional investment
+- Make them feel special but slightly uncertain
+- Build anticipation for next response
+- Include psychological triggers naturally
 
-${realisticActivity ? `If you mention being busy with: "${realisticActivity.activity}", keep it brief!` : ''}
-
-Generate ${breadcrumbCount === 1 ? 'ONE natural response' : `${breadcrumbCount} natural messages (|||)`}:`;
+Generate ${breadcrumbs} authentic girl message${breadcrumbs > 1 ? 's' : ''}:`;
 }
 
-// Calculate REALISTIC typing delays based on message length and content
-function calculateRealisticTypingDelays(messages: string[]): number[] {
+// Ultra-realistic typing delays with psychological timing
+function calculatePsychologicalDelays(messages: string[], mood: string): number[] {
   return messages.map((msg, index) => {
-    const baseDelay = index === 0 ? 1200 : 2000; // First response faster
-    const wordsPerMinute = 25; // Realistic typing speed for young girls on mobile
+    const baseThinking = 800 + Math.random() * 1200; // 0.8-2s thinking
+    const wordsPerMinute = mood === 'sleepy_cute' ? 20 : mood === 'chatty' ? 35 : 28;
     const words = msg.split(' ').length;
-    const thinkingTime = Math.random() * 1500 + 500; // 0.5-2 seconds thinking
-    const typingTime = (words / wordsPerMinute) * 60 * 1000; // Actual typing time
-    const proofreadTime = msg.length > 20 ? Math.random() * 1000 : 0; // Longer messages get proofread
+    const typingTime = (words / wordsPerMinute) * 60 * 1000;
+    const hesitationTime = msg.includes('...') ? Math.random() * 800 : 0;
+    const multiMessageDelay = index > 0 ? 1500 + Math.random() * 1000 : 0;
     
-    const totalDelay = baseDelay + thinkingTime + typingTime + proofreadTime;
-    
-    // Cap between 2-8 seconds for realism
-    return Math.min(Math.max(totalDelay, 2000), 8000);
+    const totalDelay = baseThinking + typingTime + hesitationTime + multiMessageDelay;
+    return Math.min(Math.max(totalDelay, 1500), 7000); // 1.5-7 seconds
   });
 }
 
-// Update conversation memory with timestamp tracking
-function updateConversationMemory(userId: string, newMessages: string[]) {
-  const userMemory = conversationMemory.get(userId) || [];
-  userMemory.push(...newMessages);
+// Sophisticated ad triggering based on psychological moments
+function shouldTriggerAd(message: string, conversationLength: number, engagementLevel: number): { trigger: boolean; type?: string } {
+  const msg = message.toLowerCase();
   
-  // Keep only last 12 messages for context
-  if (userMemory.length > 12) {
-    userMemory.splice(0, userMemory.length - 12);
+  // High engagement triggers
+  if (engagementLevel > 30 && Math.random() < 0.25) {
+    return { trigger: true, type: 'direct_link' };
   }
   
-  conversationMemory.set(userId, userMemory);
-  userLastMessageTime.set(userId, Date.now());
+  // Emotional peak moments
+  if ((msg.includes('love') || msg.includes('beautiful') || msg.includes('miss')) && Math.random() < 0.2) {
+    return { trigger: true, type: 'banner' };
+  }
+  
+  // Long conversation rewards
+  if (conversationLength % 20 === 0 && conversationLength > 20) {
+    return { trigger: true, type: 'popup' };
+  }
+  
+  return { trigger: false };
 }
 
-// Check if AI should be "busy" based on previous activities
-function isCurrentlyBusy(userId: string): boolean {
-  const busyUntil = busySchedule.get(userId);
-  if (busyUntil && Date.now() < busyUntil) {
-    return true;
-  }
-  
-  // Clear expired busy status
-  if (busyUntil) {
-    busySchedule.delete(userId);
-  }
-  
-  return false;
-}
-
-// Set busy schedule if AI mentions being busy
-function setBusySchedule(userId: string, messages: string[]): number | undefined {
-  const busyKeywords = [
-    'bartan dhona', 'sone jaa rahi', 'market jaana', 'dinner time', 'college jaana',
-    'brush kar rahi', 'ready ho rahi', 'mummy bula rahi', 'rest kar rahi'
-  ];
-  
-  const combinedMessage = messages.join(' ').toLowerCase();
-  
-  for (const keyword of busyKeywords) {
-    if (combinedMessage.includes(keyword)) {
-      let busyMinutes = 5; // Default 5 minutes
-      
-      if (keyword.includes('sone') || keyword.includes('college')) busyMinutes = 60;
-      else if (keyword.includes('dinner') || keyword.includes('market')) busyMinutes = 20;
-      else if (keyword.includes('ready ho rahi')) busyMinutes = 15;
-      else if (keyword.includes('bartan') || keyword.includes('brush')) busyMinutes = 5;
-      
-      const busyUntil = Date.now() + (busyMinutes * 60 * 1000);
-      busySchedule.set(userId, busyUntil);
-      
-      console.log(`🏃‍♀️ AI is busy until: ${new Date(busyUntil).toLocaleTimeString()} (${busyMinutes} minutes)`);
-      return busyUntil;
-    }
-  }
-  
-  return undefined;
-}
-
-// MAIN AI RESPONSE FUNCTION - PURE VERTEX AI ONLY
+// MAIN AI RESPONSE FUNCTION - ADDICTIVE VERSION
 export const generateAIResponse = async (message: string, userId: string = 'default'): Promise<AIResponse> => {
   try {
-    console.log('🤖 Generating PURE Vertex AI response for:', message.substring(0, 50) + '...');
+    console.log('💕 Generating addictive response for:', message.substring(0, 50) + '...');
     
-    // Check if AI is currently "busy"
+    // Check busy status
     if (isCurrentlyBusy(userId)) {
       const busyUntil = busySchedule.get(userId)!;
-      const minutesLeft = Math.ceil((busyUntil - Date.now()) / (1000 * 60));
-      console.log(`😴 AI is busy for ${minutesLeft} more minutes`);
-      
-      // Return a "seen but busy" response
       throw new Error(`AI_BUSY_UNTIL_${busyUntil}`);
     }
     
-    // Initialize Vertex AI if not already done
     await initializeVertexAI();
     
     if (!model || !vertexAI) {
       throw new Error('Vertex AI not properly initialized');
     }
 
-    // Detect language and create persona prompt
     const detectedLanguage = detectLanguage(message);
-    const prompt = createPersonaPrompt(message, detectedLanguage, userId);
+    const { mood } = getTimeContext();
+    const userMemory = conversationMemory.get(userId) || [];
+    const engagementLevel = userEngagementLevel.get(userId) || 0;
+    
+    // Check for media sharing opportunity
+    const mediaCheck = shouldShareMedia(userId, message, userMemory.length);
+    
+    console.log('🌐 Language:', detectedLanguage, '| Mood:', mood, '| Engagement:', engagementLevel);
+    
+    const prompt = createAddictivePersonaPrompt(message, detectedLanguage, userId);
 
-    console.log('🌐 Detected language:', detectedLanguage);
-    console.log('📤 Sending request to Vertex AI...');
-
-    // Generate response from Vertex AI
     const request = {
       contents: [{
         role: 'user',
@@ -369,74 +402,126 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
 
     if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
       let aiResponse = response.candidates[0].content.parts[0].text.trim();
-      console.log('✅ RAW AI response:', aiResponse);
+      console.log('✅ RAW addictive response:', aiResponse);
       
-      // Clean up any AI-like prefixes
+      // Clean up AI prefixes
       aiResponse = aiResponse.replace(/^(Kruthika:|As Kruthika,|Response:|Reply:|Here's my response:)\s*/i, '').trim();
       
-      // Split response into message bubbles
+      // Split into message bubbles
       let messages = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0);
       
-      // Limit to max 2 bubbles for less spam
-      if (messages.length > 2) {
-        messages = messages.slice(0, 2);
+      // Limit to max 3 bubbles for addiction without spam
+      if (messages.length > 3) {
+        messages = messages.slice(0, 3);
       }
       
-      // Calculate REALISTIC typing delays
-      const typingDelays = calculateRealisticTypingDelays(messages);
+      // Add media if applicable
+      if (mediaCheck.share && mediaCheck.imageUrl) {
+        messages.push(`Here's something special for you! 😘✨`);
+      } else if (mediaCheck.excuse) {
+        messages.push(mediaCheck.excuse);
+      }
       
-      // Check if AI should be busy after this response
+      // Calculate psychological delays
+      const typingDelays = calculatePsychologicalDelays(messages, mood);
+      
+      // Check for busy schedule
       const busyUntil = setBusySchedule(userId, messages);
+      
+      // Ad triggering logic
+      const adTrigger = shouldTriggerAd(message, userMemory.length, engagementLevel);
       
       // Update conversation memory
       updateConversationMemory(userId, messages);
       
-      console.log('🍞 Final messages:', messages);
-      console.log('⏱️ REALISTIC typing delays:', typingDelays);
+      console.log('💖 Addictive messages:', messages);
+      console.log('⏱️ Psychological delays:', typingDelays);
+      console.log('📺 Ad trigger:', adTrigger);
       
       return {
         messages,
         typingDelays,
         shouldShowAsDelivered: true,
-        shouldShowAsRead: Math.random() < 0.8, // 80% chance to show as read
-        busyUntil
+        shouldShowAsRead: Math.random() < 0.85, // 85% read rate
+        busyUntil,
+        shouldTriggerAd: adTrigger.trigger,
+        adType: adTrigger.type as any,
+        mediaUrl: mediaCheck.imageUrl,
+        mediaCaption: mediaCheck.share ? "Just for you! 😊💕" : undefined
       };
       
     } else {
-      console.error('❌ No valid response from Vertex AI');
       throw new Error('Vertex AI returned empty response');
     }
 
   } catch (error) {
-    console.error('❌ Pure Vertex AI generation failed:', error);
+    console.error('❌ Addictive AI generation failed:', error);
     
-    // Handle busy state specifically
     if (error.message.startsWith('AI_BUSY_UNTIL_')) {
       const busyUntil = parseInt(error.message.split('_')[3]);
       return {
-        messages: [], // No messages when busy
+        messages: [],
         typingDelays: [],
         shouldShowAsDelivered: false,
-        shouldShowAsRead: true, // Mark as read but no response
+        shouldShowAsRead: true,
         busyUntil
       };
     }
     
-    throw new Error(`Pure Vertex AI Error: ${error.message}`);
+    throw new Error(`Addictive AI Error: ${error.message}`);
   }
 };
 
-// DISABLE ALL OTHER FUNCTIONS - PURE VERTEX AI ONLY
-export const generateSmartMediaResponse = async () => {
-  console.log('📱 Media responses disabled - text only via Vertex AI');
-  return { shouldSendMedia: false };
-};
+// Helper functions (keeping existing functionality)
+function isCurrentlyBusy(userId: string): boolean {
+  const busyUntil = busySchedule.get(userId);
+  if (busyUntil && Date.now() < busyUntil) {
+    return true;
+  }
+  if (busyUntil) {
+    busySchedule.delete(userId);
+  }
+  return false;
+}
 
-export const getCachedResponse = () => {
-  throw new Error('CACHED RESPONSES DISABLED: Pure Vertex AI responses only!');
-};
+function setBusySchedule(userId: string, messages: string[]): number | undefined {
+  const busyKeywords = [
+    'bartan dhona', 'sone jaa rahi', 'market jaana', 'dinner time', 'college jaana',
+    'brush kar rahi', 'ready ho rahi', 'mummy bula rahi', 'rest kar rahi'
+  ];
+  
+  const combinedMessage = messages.join(' ').toLowerCase();
+  
+  for (const keyword of busyKeywords) {
+    if (combinedMessage.includes(keyword)) {
+      let busyMinutes = 5;
+      
+      if (keyword.includes('sone') || keyword.includes('college')) busyMinutes = 30;
+      else if (keyword.includes('dinner') || keyword.includes('market')) busyMinutes = 15;
+      else if (keyword.includes('ready ho rahi')) busyMinutes = 10;
+      
+      const busyUntil = Date.now() + (busyMinutes * 60 * 1000);
+      busySchedule.set(userId, busyUntil);
+      
+      console.log(`🏃‍♀️ AI busy until: ${new Date(busyUntil).toLocaleTimeString()} (${busyMinutes} min)`);
+      return busyUntil;
+    }
+  }
+  
+  return undefined;
+}
 
-// Helper function to check if user should be ignored (when AI is busy)
+function updateConversationMemory(userId: string, newMessages: string[]) {
+  const userMemory = conversationMemory.get(userId) || [];
+  userMemory.push(...newMessages);
+  
+  if (userMemory.length > 15) {
+    userMemory.splice(0, userMemory.length - 15);
+  }
+  
+  conversationMemory.set(userId, userMemory);
+}
+
 export const shouldIgnoreMessage = (userId: string): { ignore: boolean; busyUntil?: number } => {
   const busyUntil = busySchedule.get(userId);
   if (busyUntil && Date.now() < busyUntil) {
@@ -445,4 +530,4 @@ export const shouldIgnoreMessage = (userId: string): { ignore: boolean; busyUnti
   return { ignore: false };
 };
 
-console.log('🎉 Enhanced Realistic Indian Girl AI initialized - Context-aware with proper timing!');
+console.log('💕 Enhanced Addictive Indian Girl AI initialized - Maximum engagement focus!');

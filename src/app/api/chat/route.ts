@@ -43,22 +43,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create response objects with REALISTIC timing
+    // Create response objects with ADDICTIVE timing and media
     const responses: ChatResponse[] = aiResult.messages.map((messageContent, index) => ({
       id: `ai-${Date.now()}-${index}`,
       message: messageContent,
       timestamp: new Date(),
       sender: 'ai',
       isTyping: false,
-      delay: aiResult.typingDelays[index] // Include REALISTIC typing delay
+      delay: aiResult.typingDelays[index],
+      // Include media if available
+      ...(index === aiResult.messages.length - 1 && aiResult.mediaUrl ? {
+        aiImageUrl: aiResult.mediaUrl,
+        mediaCaption: aiResult.mediaCaption
+      } : {})
     }));
 
-    console.log('📤 Sending NATURAL response with REALISTIC delays:', responses);
+    console.log('📤 Sending ADDICTIVE response with psychological delays:', responses);
+    console.log('📱 Media shared:', aiResult.mediaUrl ? 'YES' : 'NO');
+    console.log('📺 Ad trigger:', aiResult.shouldTriggerAd ? aiResult.adType : 'NO');
 
     return NextResponse.json({
       responses: responses,
-      newMood: 'natural', 
-      busyUntil: aiResult.busyUntil, // Include busy schedule if set
+      newMood: 'addictive', 
+      busyUntil: aiResult.busyUntil,
+      shouldTriggerAd: aiResult.shouldTriggerAd,
+      adType: aiResult.adType,
       success: true
     });
 

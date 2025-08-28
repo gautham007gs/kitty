@@ -650,7 +650,7 @@ const KruthikaChatPage: NextPage = () => {
 
           // Show read status after natural delay
           setTimeout(() => {
-            setMessages(prev => prev.map(msg => 
+            setMessages(prev => prev.map(msg =>
               msg.id === aiMessageId ? { ...msg, status: 'read' } : msg
             ));
           }, 600);
