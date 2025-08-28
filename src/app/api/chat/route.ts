@@ -1,6 +1,5 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAIResponse } from '@/ai/genkit';
+import { generateAIResponse } from '@/lib/aiService';
 
 interface ChatResponse {
   id: string;
@@ -26,29 +25,17 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Chat API: Processing NATURAL message from user:', userId);
     console.log('📝 Message:', message.substring(0, 100) + '...');
 
-    // Generate AI response using ONLY Vertex AI - NO FALLBACKS
-    let aiResponse: { breadcrumbs: string[]; delays: number[] };
-    try {
-      console.log('🔄 Generating NATURAL Vertex AI response...');
-      aiResponse = await generateAIResponse(message, userId);
-      console.log('✅ NATURAL Vertex AI response generated:', aiResponse.breadcrumbs);
-      console.log('⏱️ With delays:', aiResponse.delays);
-    } catch (error) {
-      console.error('❌ VERTEX AI FAILED - NO FALLBACKS:', error);
-      return NextResponse.json(
-        { error: `Vertex AI failed: ${error.message}. Check AI configuration.` },
-        { status: 503 }
-      );
-    }
+    // PURE VERTEX AI ONLY - NO FALLBACKS
+    const aiResult = await generateAIResponse(message, userId);
 
     // Create response objects with proper timing
-    const responses: ChatResponse[] = aiResponse.breadcrumbs.map((breadcrumb, index) => ({
+    const responses: ChatResponse[] = aiResult.messages.map((messageContent, index) => ({
       id: `ai-${Date.now()}-${index}`,
-      message: breadcrumb,
+      message: messageContent,
       timestamp: new Date(),
       sender: 'ai',
       isTyping: false,
-      delay: aiResponse.delays[index] // Include typing delay
+      delay: aiResult.typingDelays[index] // Include typing delay
     }));
 
     console.log('📤 Sending NATURAL response with delays:', responses);

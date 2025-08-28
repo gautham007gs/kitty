@@ -1,241 +1,277 @@
-import { VertexAI } from '@google-cloud/vertexai';
-import { GoogleAuth } from 'google-auth-library';
 
+import { VertexAI } from '@google-cloud/vertexai';
+
+// VERTEX AI ONLY - NO FALLBACKS
 let vertexAI: VertexAI | null = null;
+let model: any = null;
 
 // Initialize Vertex AI client
-const initializeVertexAI = async () => {
-  if (vertexAI) return vertexAI;
+const initializeVertexAI = async (): Promise<void> => {
+  if (vertexAI && model) return;
 
   try {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
     const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
+    console.log('🔧 Initializing Pure Vertex AI System...');
+    console.log('- Project ID:', projectId || 'MISSING');
+    console.log('- Location:', location);
+    console.log('- Credentials:', credentialsJson ? 'SET' : 'MISSING');
+
     if (!projectId || !credentialsJson) {
-      throw new Error('Missing required environment variables');
+      throw new Error('Missing required Vertex AI configuration');
     }
 
     const credentials = JSON.parse(credentialsJson);
-    const auth = new GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    });
+    console.log('✅ Service Account:', credentials.client_email);
 
+    // Initialize Vertex AI with explicit credentials
     vertexAI = new VertexAI({
-      project: projectId,
+      project: credentials.project_id,
       location: location,
-      googleAuthOptions: { credentials }
+      googleAuthOptions: {
+        credentials: {
+          type: 'service_account',
+          project_id: credentials.project_id,
+          private_key_id: credentials.private_key_id,
+          private_key: credentials.private_key,
+          client_email: credentials.client_email,
+          client_id: credentials.client_id,
+          auth_uri: credentials.auth_uri || 'https://accounts.google.com/o/oauth2/auth',
+          token_uri: credentials.token_uri || 'https://oauth2.googleapis.com/token',
+          auth_provider_x509_cert_url: credentials.auth_provider_x509_cert_url || 'https://www.googleapis.com/oauth2/v1/certs',
+          client_x509_cert_url: credentials.client_x509_cert_url,
+          universe_domain: credentials.universe_domain || 'googleapis.com'
+        }
+      }
     });
 
-    return vertexAI;
+    // Initialize model with optimized settings
+    model = vertexAI.preview.getGenerativeModel({
+      model: 'gemini-2.0-flash-lite-001',
+      generationConfig: {
+        maxOutputTokens: 150,
+        temperature: 0.9,
+        topP: 0.9,
+        topK: 40,
+        candidateCount: 1
+      }
+    });
+
+    console.log('🚀 Pure Vertex AI initialized successfully!');
+
   } catch (error) {
-    console.error('Failed to initialize Vertex AI:', error);
-    throw error;
+    console.error('❌ Vertex AI initialization failed:', error);
+    throw new Error(`Pure Vertex AI initialization failed: ${error.message}`);
   }
 };
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
+// Response interface for multiple message bubbles
 interface AIResponse {
-  messages: string[]; // Multiple messages for crumb effect
-  imageUrl?: string;
-  audioUrl?: string;
-  typingDelay: number;
+  messages: string[];
+  typingDelays: number[];
   shouldShowAsDelivered: boolean;
   shouldShowAsRead: boolean;
 }
 
-// Language detection
+// Conversation memory to maintain context
+const conversationMemory = new Map<string, string[]>();
+
+// Language detection helper
 function detectLanguage(message: string): string {
   const msg = message.toLowerCase();
-
+  
   // Hindi/Hinglish patterns
-  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|ok)\b/.test(msg)) {
-    return 'hindi';
+  if (/\b(kya|kaise|kaisi|tum|tumhara|main|hun|hai|haan|nahi|arre|yaar|ji|aap|kuch|kar|raha|rahi|accha|thik|sachii|matlab)\b/.test(msg)) {
+    return 'hinglish';
   }
-
+  
+  // Kannada patterns
+  if (/\b(nim|hesru|yenu|enu|olle|illa|hege|baro|guru|huduga|hudgi)\b/.test(msg)) {
+    return 'kannada_english';
+  }
+  
   // Tamil patterns
   if (/\b(enna|epdi|nee|naan|iru|iruka|seri|illa|da|di|poda|vaa|poi)\b/.test(msg)) {
-    return 'tamil';
+    return 'tamil_english';
   }
-
-  // Telugu patterns
-  if (/\b(emiti|ela|nuvvu|nenu|undi|ledu|sare|raa|po|vadu|ochey)\b/.test(msg)) {
-    return 'telugu';
-  }
-
+  
   return 'english';
 }
 
-// Ultra-short responses like real Indian girl
-const ULTRA_SHORT_RESPONSES = {
-  english: {
-    greetings: ["hey!", "hii", "wassup", "heyy"],
-    name: ["kruthika", "kruthika!", "i'm kruthika"],
-    location: ["bangalore", "blr", "garden city"],
-    what_doing: ["nothing", "timepass", "boring", "chilling"],
-    ok_responses: ["ok", "k", "hmm", "yeah"],
-    photo_requests: ["shy", "nahi yaar", "can't now", "later maybe"],
-    bye: ["bye!", "tc", "see ya"],
-    compliments: ["aww", "thanks", "you too"],
-    questions: ["what?", "huh?", "tell na"],
-    confused: ["?", "matlab?", "huh"],
-    family: ["small family", "parents + bro", "4 members"]
-  },
-  hindi: {
-    greetings: ["heyy!", "hiii", "kya haal"],
-    name: ["kruthika", "kruthika hun"],
-    location: ["bangalore", "blr"],
-    what_doing: ["kuch nahi", "timepass", "bore"],
-    ok_responses: ["ok", "haan", "accha"],
-    photo_requests: ["shy hai", "nahi bhej sakti", "abhi nahi"],
-    bye: ["bye!", "tc karo"],
-    compliments: ["aww", "thanks yaar"],
-    questions: ["kya?", "batao na"],
-    confused: ["?", "matlab?"],
-    family: ["chota family", "parents + bhai"]
-  },
-  tamil: {
-    greetings: ["hey!", "hiii", "vanakkam", "enna da", "epdi iruka"],
-    name: ["kruthika!", "naan kruthika", "kruthika dhan"],
-    location: ["mumbai!", "mumbai la", "mumbai"],
-    what_doing: ["onnum illa", "timepass", "bore adikuthu", "summa"],
-    ok_responses: ["seri", "haan", "ok", "hmm", "aama"],
-    photo_requests: [
-      "shy panren",
-      "mudiyathu da",
-      "ippo illa",
-      "profile paaru",
-      "kekka koodathu"
-    ],
-    bye: ["bye!", "poi varen", "see you", "take care"],
-    compliments: ["aww", "thanks da", "nee kooda", "😊"],
-    questions: ["enna?", "huh?", "puriyala", "sollu da"],
-    confused: ["?", "enna matlab?", "puriyala", "confusion"]
-  },
-  telugu: {
-    greetings: ["hey!", "hiii", "namaste", "enti ra", "ela unnav"],
-    name: ["kruthika!", "nenu kruthika", "kruthika"],
-    location: ["mumbai!", "mumbai lo", "mumbai"],
-    what_doing: ["em ledu", "timepass", "bore kodtundi", "ala ne"],
-    ok_responses: ["sare", "avunu", "ok", "hmm", "mari"],
-    photo_requests: [
-      "shy ga undi",
-      "pampinchaledu",
-      "ippudu kadhu",
-      "profile chudhu",
-      "adagakudadhu"
-    ],
-    bye: ["bye!", "veltunna", "see you", "jagratha"],
-    compliments: ["aww", "thanks ra", "nuvvu kooda", "😊"],
-    questions: ["enti?", "huh?", "artham kaledu", "cheppu ra"],
-    confused: ["?", "enti matlab?", "artham kaledu", "confusion"]
-  }
-};
-
-// Track used responses to avoid repetition
-const usedResponses = new Map<string, Set<string>>();
-
-function getUniqueResponse(category: string, language: string, userId: string = 'default'): string {
-  const responses = ULTRA_SHORT_RESPONSES[language]?.[category] || ULTRA_SHORT_RESPONSES.english[category];
-  const userUsed = usedResponses.get(userId) || new Set();
-
-  // Find unused responses
-  const unused = responses.filter(r => !userUsed.has(r));
-
-  // If all used, reset and use any
-  if (unused.length === 0) {
-    usedResponses.set(userId, new Set());
-    return responses[Math.floor(Math.random() * responses.length)];
+// Generate persona-based prompt
+function createPersonaPrompt(message: string, language: string, userId: string): string {
+  const userMemory = conversationMemory.get(userId) || [];
+  const currentTime = new Date();
+  const timeOfDay = currentTime.getHours() < 12 ? 'morning' : currentTime.getHours() < 17 ? 'afternoon' : 'evening';
+  
+  // Dynamic breadcrumb count based on message
+  let breadcrumbCount;
+  if (message.toLowerCase().includes('bye') || message.toLowerCase().includes('kaam')) {
+    breadcrumbCount = Math.random() < 0.7 ? 1 : 2;
+  } else if (message.length < 10) {
+    breadcrumbCount = Math.random() < 0.5 ? 1 : 2;
+  } else {
+    breadcrumbCount = Math.floor(Math.random() * 3) + 1;
   }
 
-  const selected = unused[Math.floor(Math.random() * unused.length)];
-  userUsed.add(selected);
-  usedResponses.set(userId, userUsed);
+  // Available moods for variety
+  const moods = ['playful', 'sweet', 'teasing', 'curious', 'flirty', 'caring', 'sarcastic', 'shy', 'excited', 'moody'];
+  const currentMood = moods[Math.floor(Math.random() * moods.length)];
 
-  return selected;
+  const memoryContext = userMemory.length > 0 ? 
+    `AVOID REPEATING: ${userMemory.slice(-8).join(', ')}. Create NEW responses.` : 
+    'Fresh conversation start.';
+
+  return `You are Kruthika, a real 20-year-old Indian girl chatting naturally on WhatsApp. Current time: ${timeOfDay}.
+
+PERSONA DETAILS:
+- Real Indian girl with authentic emotions and reactions
+- Current mood: ${currentMood} (can shift naturally)
+- Language style: ${language} (MUST match user's style exactly)
+- Age: 20, from Bangalore
+- Personality: Natural, spontaneous, real girl behavior
+
+USER SAID: "${message}"
+
+${memoryContext}
+
+RESPONSE RULES:
+1. Generate EXACTLY ${breadcrumbCount} separate message bubbles
+2. ${breadcrumbCount > 1 ? 'Separate messages with "|||"' : 'Single response only - NO separators'}
+3. Keep each message SHORT and natural (2-10 words)
+4. React emotionally and authentically to what user said
+5. Use appropriate ${language} expressions and slang
+6. Add emojis that match your emotional reaction
+7. Be contextually relevant - respond to their specific message
+8. NEVER mention you're an AI or assistant
+9. Be a real girl having a real conversation
+
+Generate ${breadcrumbCount === 1 ? 'ONE natural response' : `${breadcrumbCount} natural messages (use ||| separator)`}:`;
 }
 
-function detectMessageType(message: string): string {
-  const msg = message.toLowerCase();
-
-  if (/^(hi|hello|hey|hii|hiii|namaste|vanakkam)$/i.test(msg)) return 'greetings';
-  if (/name|naam|per|peyar/.test(msg)) return 'name';
-  if (/where|kaha|enga|ekkada|live|stay|area/.test(msg)) return 'location';
-  if (/kya kar|what.*do|enna panra|emi chestha|dng/.test(msg)) return 'what_doing';
-  if (/^(ok|okay|hmm|seri|sare|accha|thik)$/i.test(msg)) return 'ok_responses';
-  if (/pic|photo|selfie|bhejo|pampinchu|anuppu/.test(msg)) return 'photo_requests';
-  if (/^(bye|byee|po|veltunna|ja)$/i.test(msg)) return 'bye';
-  if (/(beautiful|cute|pretty|sundar|azhagu|andamga)/.test(msg)) return 'compliments';
-  if (/family|ghar|veettu|intlo|jana|alli/.test(msg)) return 'family';
-  if (/\?/.test(msg)) return 'questions';
-
-  return 'confused';
+// Calculate realistic typing delays
+function calculateTypingDelays(messages: string[]): number[] {
+  return messages.map((msg, index) => {
+    const baseDelay = index === 0 ? 800 : 1200; // First message faster
+    const charDelay = msg.length * 70; // 70ms per character
+    const randomVariation = Math.random() * 600;
+    return Math.min(baseDelay + charDelay + randomVariation, 4000);
+  });
 }
 
-// Split responses into very short bubbles like real chat
-function splitIntoMessages(text: string): string[] {
-  if (text.length <= 15) return [text];
+// Update conversation memory
+function updateConversationMemory(userId: string, newMessages: string[]) {
+  const userMemory = conversationMemory.get(userId) || [];
+  userMemory.push(...newMessages);
+  
+  // Keep only last 15 messages
+  if (userMemory.length > 15) {
+    userMemory.splice(0, userMemory.length - 15);
+  }
+  
+  conversationMemory.set(userId, userMemory);
+}
 
-  const words = text.split(' ');
-  const messages: string[] = [];
-  let current = '';
-
-  for (const word of words) {
-    // Keep bubbles super short - max 3 words or 15 chars
-    if ((current + ' ' + word).length <= 15 || (current.split(' ').length < 3 && (current + ' ' + word).length <= 20)) {
-      current = current ? current + ' ' + word : word;
-    } else {
-      if (current) messages.push(current);
-      current = word;
+// MAIN AI RESPONSE FUNCTION - PURE VERTEX AI ONLY
+export const generateAIResponse = async (message: string, userId: string = 'default'): Promise<AIResponse> => {
+  try {
+    console.log('🤖 Generating PURE Vertex AI response for:', message.substring(0, 50) + '...');
+    
+    // Initialize Vertex AI if not already done
+    await initializeVertexAI();
+    
+    if (!model || !vertexAI) {
+      throw new Error('Vertex AI not properly initialized');
     }
-  }
 
-  if (current) messages.push(current);
+    // Detect language and create persona prompt
+    const detectedLanguage = detectLanguage(message);
+    const prompt = createPersonaPrompt(message, detectedLanguage, userId);
 
-  // If still too long, split further
-  return messages.map(msg => {
-    if (msg.length > 20) {
-      const mid = Math.floor(msg.length / 2);
-      const splitPoint = msg.lastIndexOf(' ', mid);
-      if (splitPoint > 0) {
-        return [msg.slice(0, splitPoint), msg.slice(splitPoint + 1)];
+    console.log('🌐 Detected language:', detectedLanguage);
+    console.log('📤 Sending request to Vertex AI...');
+
+    // Generate response from Vertex AI
+    const request = {
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }]
+    };
+
+    const result = await model.generateContent(request);
+    const response = result.response;
+
+    if (response.candidates && response.candidates[0]?.content?.parts[0]?.text) {
+      let aiResponse = response.candidates[0].content.parts[0].text.trim();
+      console.log('✅ RAW AI response:', aiResponse);
+      
+      // Clean up any AI-like prefixes
+      aiResponse = aiResponse.replace(/^(Kruthika:|As Kruthika,|Response:|Reply:|Here's my response:)\s*/i, '').trim();
+      
+      // Split response into message bubbles
+      let messages = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0);
+      
+      // If no separator found but response is long, split naturally
+      if (messages.length === 1 && aiResponse.length > 25) {
+        const words = aiResponse.split(' ');
+        const splitMessages: string[] = [];
+        let current = '';
+        
+        for (const word of words) {
+          if ((current + ' ' + word).length <= 25) {
+            current = current ? current + ' ' + word : word;
+          } else {
+            if (current) splitMessages.push(current);
+            current = word;
+          }
+        }
+        if (current) splitMessages.push(current);
+        messages = splitMessages;
       }
+      
+      // Limit to max 3 bubbles
+      if (messages.length > 3) {
+        messages = messages.slice(0, 3);
+      }
+      
+      // Calculate typing delays
+      const typingDelays = calculateTypingDelays(messages);
+      
+      // Update conversation memory
+      updateConversationMemory(userId, messages);
+      
+      console.log('🍞 Final messages:', messages);
+      console.log('⏱️ Typing delays:', typingDelays);
+      
+      return {
+        messages,
+        typingDelays,
+        shouldShowAsDelivered: true,
+        shouldShowAsRead: Math.random() < 0.8 // 80% chance to show as read
+      };
+      
+    } else {
+      console.error('❌ No valid response from Vertex AI');
+      throw new Error('Vertex AI returned empty response');
     }
-    return msg;
-  }).flat();
-}
 
-function calculateTypingDelay(message: string): number {
-  // Very realistic typing speed - slower for authenticity
-  const chars = message.length;
-  const baseDelay = 800; // Base delay
-  const perCharDelay = 80; // 80ms per character (realistic typing)
-  const randomVariation = Math.random() * 500;
-
-  return Math.min(baseDelay + (chars * perCharDelay) + randomVariation, 4000);
-}
-
-// FALLBACK AI SERVICE IS COMPLETELY DISABLED
-// ALL RESPONSES MUST COME FROM VERTEX AI IN src/ai/genkit.ts
-
-export const generateAIResponse = async () => {
-  console.error('🚫 FALLBACK BLOCKED: All responses must come from Vertex AI only!');
-  throw new Error('FALLBACK DISABLED: Use only Vertex AI genkit.ts for all responses.');
+  } catch (error) {
+    console.error('❌ Pure Vertex AI generation failed:', error);
+    throw new Error(`Pure Vertex AI Error: ${error.message}`);
+  }
 };
 
+// DISABLE ALL OTHER FUNCTIONS - PURE VERTEX AI ONLY
 export const generateSmartMediaResponse = async () => {
-  console.log('📱 Media response disabled - focusing on text only');
+  console.log('📱 Media responses disabled - text only via Vertex AI');
   return { shouldSendMedia: false };
 };
 
-// Block any cached response attempts
 export const getCachedResponse = () => {
-  throw new Error('CACHED RESPONSES DISABLED: Fresh AI responses only!');
+  throw new Error('CACHED RESPONSES DISABLED: Pure Vertex AI responses only!');
 };
 
-console.log('🚫 Fallback AI service completely disabled - Vertex AI only!');
+console.log('🎉 Pure Vertex AI system initialized - NO fallbacks, NO pre-made responses!');
