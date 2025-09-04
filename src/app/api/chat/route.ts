@@ -1,80 +1,66 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateAIResponse } from '@/lib/aiService';
 
-interface ChatResponse {
-  id: string;
-  message: string;
-  timestamp: Date;
-  sender: 'ai' | 'user';
-  isTyping: boolean;
-  delay?: number; // Add delay for timing
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { generateResponse, EmotionalStateInput } from '@/ai/actions/emotional-state-actions';
+
+// Keep track of conversation history in memory (for simplicity)
+// In a real-world app, you'd use a database like Redis or Supabase.
+const conversationHistory: { [userId: string]: string[] } = {};
+const userMoods: { [userId: string]: string } = {};
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, userId = 'default' } = body;
+    const { message, userId = 'default_user' } = body;
 
     if (!message || typeof message !== 'string') {
-      return NextResponse.json(
-        { error: 'Message is required and must be a string' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    console.log('🚀 Chat API: Processing NATURAL message from user:', userId);
-    console.log('📝 Message:', message.substring(0, 100) + '...');
-
-    // PURE VERTEX AI ONLY - NO FALLBACKS
-    const aiResult = await generateAIResponse(message, userId);
-
-    // Handle busy state - AI is busy and won't respond
-    if (aiResult.busyUntil && aiResult.messages.length === 0) {
-      const minutesLeft = Math.ceil((aiResult.busyUntil - Date.now()) / (1000 * 60));
-      console.log(`😴 AI is busy for ${minutesLeft} more minutes - message seen but no response`);
-      
-      return NextResponse.json({
-        responses: [], // No responses when busy
-        isBusy: true,
-        busyUntil: aiResult.busyUntil,
-        busyMessage: `Kruthika is busy and will reply in ${minutesLeft} minutes`,
-        newMood: 'busy',
-        success: true
-      });
+    // Initialize history for new users
+    if (!conversationHistory[userId]) {
+      conversationHistory[userId] = [];
     }
+    if (!userMoods[userId]) {
+      userMoods[userId] = 'neutral'; // Start with a neutral mood
+    }
+    
+    conversationHistory[userId].push(`User: ${message}`);
 
-    // Create response objects with ADDICTIVE timing and media
-    const responses: ChatResponse[] = aiResult.messages.map((messageContent, index) => ({
-      id: `ai-${Date.now()}-${index}`,
-      message: messageContent,
-      timestamp: new Date(),
-      sender: 'ai',
-      isTyping: false,
-      delay: aiResult.typingDelays[index],
-      // Include media if available
-      ...(index === aiResult.messages.length - 1 && aiResult.mediaUrl ? {
-        aiImageUrl: aiResult.mediaUrl,
-        mediaCaption: aiResult.mediaCaption
-      } : {})
-    }));
+    // --- Prepare input for the new generateResponse function ---
+    const emotionalInput: EmotionalStateInput = {
+      userMessage: message,
+      timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening',
+      mood: userMoods[userId],
+      recentInteractions: conversationHistory[userId].slice(-10),
+    };
 
-    console.log('📤 Sending ADDICTIVE response with psychological delays:', responses);
-    console.log('📱 Media shared:', aiResult.mediaUrl ? 'YES' : 'NO');
-    console.log('📺 Ad trigger:', aiResult.shouldTriggerAd ? aiResult.adType : 'NO');
+    // --- Call the new, refined AI action ---
+    const aiOutput = await generateResponse(emotionalInput);
+
+    // Update conversation history and mood using the actual bubbles
+    const aiResponsesTexts = aiOutput.humanizedResponse.bubbles.map(bubble => bubble.text);
+    aiResponsesTexts.forEach(resText => conversationHistory[userId].push(`AI: ${resText}`));
+    userMoods[userId] = aiOutput.newMood;
+
+    // --- Format the response for the frontend ---
+    // The humanizedResponse from aiOutput already has the correct structure for 'bubbles'
+    const formattedBubbles = aiOutput.humanizedResponse.bubbles;
+
+    console.log(`📤 Sending response to user ${userId}. New mood: ${aiOutput.newMood}`);
 
     return NextResponse.json({
-      responses: responses,
-      newMood: 'addictive', 
-      busyUntil: aiResult.busyUntil,
-      shouldTriggerAd: aiResult.shouldTriggerAd,
-      adType: aiResult.adType,
-      success: true
+      humanizedResponse: {
+        bubbles: formattedBubbles,
+      },
+      newMood: aiOutput.newMood,
+      success: true,
+      proactiveMediaUrl: aiOutput.proactiveMediaUrl, // Ensure proactiveMediaUrl is passed if available
     });
 
   } catch (error) {
     console.error('❌ Chat API Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error occurred.' },
+      { error: 'Oops! Something went wrong on my end. Try again in a bit?' },
       { status: 500 }
     );
   }
@@ -82,7 +68,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    status: 'Natural Chat API is working - NO FALLBACKS',
+    status: 'Chat API is active and running the new persona logic.',
     timestamp: new Date().toISOString()
   });
 }

@@ -78,9 +78,12 @@ export interface AdSettings {
 
 export interface AIMediaAsset {
   id: string;
-  type: 'image' | 'audio';
+  type: 'image' | 'audio' | 'video';
   url: string; // Full public URL for images, or path like '/media/sound.mp3' for audio
   description?: string; // Optional description for admin reference
+  category?: string; // e.g., 'sharable', 'profile', 'status', 'sent_by_ai'
+  mood?: string; // e.g., 'happy', 'sad', 'flirty'
+  sent_to_users?: string[]; // Array of user IDs this asset has been sent to
 }
 export interface AIMediaAssetsConfig {
   assets: AIMediaAsset[];

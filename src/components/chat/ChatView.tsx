@@ -1,120 +1,80 @@
-import React, { useEffect, useRef } from 'react';
-import type { Message } from '@/types';
-import MessageBubble from './MessageBubble';
-import TypingIndicator from './TypingIndicator';
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import MessageBubble from '@/components/chat/MessageBubble';
+import TypingIndicator from '@/components/chat/TypingIndicator';
 import { useMessagePagination } from '@/hooks/useMessagePagination';
-import { Button } from '@/components/ui/button';
-import BannerAdDisplay from './BannerAdDisplay';
+
+// Define the structure of a single message bubble
+interface Message {
+  id: string;
+  text: string;
+  sender: 'user' | 'ai';
+  timestamp: string | Date; // Allow both string and Date
+  proactiveMediaUrl?: string;
+  aiImageUrl?: string;
+  userImageUrl?: string;
+  audioUrl?: string;
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
+}
 
 interface ChatViewProps {
   messages: Message[];
   aiAvatarUrl: string;
   aiName: string;
   isAiTyping: boolean;
-  onTriggerAd?: () => void; // New prop for handling ad clicks from bubbles
-  userId?: string;
-  enablePagination?: boolean;
+  onTriggerAd: () => void;
 }
 
-const ChatView: React.FC<ChatViewProps> = ({
-  messages,
-  aiAvatarUrl,
-  aiName,
-  isAiTyping,
-  onTriggerAd,
-  userId,
-  enablePagination = false
-}) => {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [visibleMessages, setVisibleMessages] = React.useState<Message[]>([]);
+function ChatView({ messages, aiAvatarUrl, aiName, isAiTyping, onTriggerAd }: ChatViewProps) {
+  const { scrollRef } = useMessagePagination(messages);
 
-  // Use pagination hook if enabled
-  const pagination = useMessagePagination({
-    chatId: 'kruthika_chat', // This should likely be dynamic based on the conversation
-    userId: userId,
-    pageSize: 50
-  });
-
-  const displayMessages = enablePagination ? pagination.messages : messages;
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Helper to format timestamp
+  const formatTimestamp = (timestamp: string | Date): string => {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  // Handle scroll to load more messages
-  const handleScroll = () => {
-    if (!enablePagination || !messagesContainerRef.current) return;
-
-    const { scrollTop } = messagesContainerRef.current;
-    if (scrollTop === 0 && pagination.hasMore && !pagination.loading) {
-      pagination.loadMore();
-    }
-  };
-
-  // Handle immediate message display for better performance
-  useEffect(() => {
-    setVisibleMessages(messages);
-  }, [messages]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [visibleMessages, isAiTyping]);
 
   return (
-    <div
-      ref={messagesContainerRef}
-      className="flex-grow overflow-y-auto p-4 space-y-4 bg-chat-bg-default custom-scrollbar"
-      onScroll={handleScroll}
-    >
-      {enablePagination && pagination.hasMore && (
-        <div className="text-center py-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={pagination.loadMore}
-            disabled={pagination.loading}
+    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+      <AnimatePresence>
+        {messages.map((msg) => (
+          <motion.div
+            key={msg.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            layout
           >
-            {pagination.loading ? 'Loading...' : 'Load More Messages'}
-          </Button>
-        </div>
-      )}
-
-      {(enablePagination ? pagination.messages : visibleMessages).map((msg, index) => (
-        <React.Fragment key={`fragment-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}>
-          <MessageBubble
-            key={`bubble-${msg.id || `${index}-${msg.timestamp?.getTime()}`}`}
-            message={msg.text}
-            isUser={msg.sender === 'user'}
-            timestamp={msg.timestamp ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-            isRead={msg.sender === 'user' ? msg.status === 'read' : undefined}
-            isDelivered={msg.sender === 'user' ? msg.status !== 'sending' : undefined}
-            aiAvatarUrl={msg.sender === 'ai' ? aiAvatarUrl : undefined}
-            userImageUrl={msg.userImageUrl}
-            aiImageUrl={msg.aiImageUrl}
-            audioUrl={msg.audioUrl}
-            onTriggerAd={onTriggerAd}
-          />
-          {/* Show banner ad every 5 messages */}
-          {(index + 1) % 5 === 0 && msg.sender === 'ai' && (
-            <div key={`ad-${msg.id || index}-${index}`} className="my-4">
-              <div className="mx-auto w-full max-w-md">
-                <BannerAdDisplay
-                  adType="standard"
-                  placementKey={`chat-inline-${index}`}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          )}
-        </React.Fragment>
-      ))}
+            <MessageBubble
+              message={msg.text}
+              isUser={msg.sender === 'user'}
+              timestamp={formatTimestamp(msg.timestamp)}
+              isRead={msg.status === 'read'}
+              isDelivered={msg.status === 'delivered' || msg.status === 'read'}
+              aiAvatarUrl={msg.sender === 'ai' ? aiAvatarUrl : undefined}
+              aiImageUrl={msg.sender === 'ai' ? msg.aiImageUrl : undefined}
+              userImageUrl={msg.sender === 'user' ? msg.userImageUrl : undefined}
+              audioUrl={msg.audioUrl}
+              onTriggerAd={onTriggerAd}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
       {isAiTyping && (
-          <TypingIndicator avatarUrl={aiAvatarUrl} aiName={aiName} />
-        )}
-      <div ref={messagesEndRef} />
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            layout
+        >
+            <TypingIndicator avatarUrl={aiAvatarUrl} aiName={aiName} />
+        </motion.div>
+      )}
     </div>
   );
-};
+}
 
 export default ChatView;

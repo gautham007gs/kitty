@@ -4,6 +4,7 @@ import type { Message } from '@/types';
 import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 interface MessageBubbleProps {
   message: string;
@@ -116,7 +117,12 @@ const MessageBubble = memo(({
             {timestamp}
           </span>
           {isUser && (
-            <div className="flex items-center ml-1">
+            <motion.div 
+              className="flex items-center ml-1"
+              initial={false}
+              animate={isRead ? { scale: [1, 1.2, 1], color: '#3B82F6' } : { scale: 1, color: '#9CA3AF' }}
+              transition={{ duration: 0.3 }}
+            >
               {!isDelivered && (
                 <Check className="h-3 w-3 text-gray-300" />
               )}
@@ -124,9 +130,9 @@ const MessageBubble = memo(({
                 <Check className="h-3 w-3 text-gray-400" />
               )}
               {isRead && (
-                <CheckCheck className="h-3 w-3 text-blue-600 ml-[-2px] font-bold" />
+                <CheckCheck className="h-3 w-3 ml-[-2px] font-bold" />
               )}
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

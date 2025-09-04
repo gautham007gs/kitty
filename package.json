@@ -46,6 +46,7 @@
     "critters": "^0.0.23",
     "date-fns": "^3.6.0",
     "dotenv": "^16.6.1",
+    "framer-motion": "^12.23.12",
     "genkit": "^1.8.0",
     "google-auth-library": "^10.3.0",
     "lucide-react": "^0.475.0",

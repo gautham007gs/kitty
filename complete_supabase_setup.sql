@@ -17,8 +17,12 @@ DROP TABLE IF EXISTS chat_contexts CASCADE;
 -- Drop existing functions
 DROP FUNCTION IF EXISTS get_daily_message_counts(DATE);
 DROP FUNCTION IF EXISTS get_daily_active_user_counts(DATE);
-DROP FUNCTION IF EXISTS log_daily_activity(TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS log_daily_activity(TEXT, TEXT, TEXT); -- Old function, drop it
 DROP FUNCTION IF EXISTS log_daily_activity_optimized(TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
+DROP FUNCTION IF EXISTS cleanup_expired_contexts();
+DROP FUNCTION IF EXISTS get_chat_analytics(INTEGER);
+
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -54,7 +58,8 @@ CREATE TABLE messages_log (
     model_used TEXT DEFAULT 'vertex-ai',
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL -- Added for consistency
 );
 
 -- AI profile settings table (enhanced for admin panel)
@@ -213,6 +218,8 @@ CREATE INDEX idx_messages_log_created_at ON messages_log(created_at DESC);
 CREATE INDEX idx_messages_log_session_id ON messages_log(session_id);
 CREATE INDEX idx_messages_log_user_id ON messages_log(user_id);
 CREATE INDEX idx_messages_log_composite ON messages_log(chat_id, user_id, created_at DESC);
+CREATE INDEX idx_messages_log_timestamp ON public.messages_log(timestamp);
+
 
 -- Daily activity indexes
 CREATE INDEX idx_daily_activity_date ON daily_activity_log(activity_date DESC);
@@ -282,15 +289,34 @@ ALTER TABLE chat_contexts ENABLE ROW LEVEL SECURITY;
 -- ===================================================================
 
 -- Allow public access for all tables (development mode)
-CREATE POLICY "Allow public access" ON messages_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON ai_profile_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON ad_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON ai_media_assets FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON daily_activity_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON app_configurations FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON analytics_data FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON user_sessions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public access" ON chat_contexts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for messages_log" ON messages_log FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for ai_profile_settings" ON ai_profile_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for ad_settings" ON ad_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for ai_media_assets" ON ai_media_assets FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for daily_activity_log" ON daily_activity_log FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for analytics_data" ON analytics_data FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for user_sessions" ON user_sessions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access for chat_contexts" ON chat_contexts FOR ALL USING (true) WITH CHECK (true);
+
+-- Specific policies for app_configurations (as requested for admin)
+DROP POLICY IF EXISTS "Allow admin full access on app_configurations" ON app_configurations;
+DROP POLICY IF EXISTS "Allow public read access on app_configurations" ON app_configurations;
+
+CREATE POLICY "Allow public read access on app_configurations" ON app_configurations
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow admin full access on app_configurations" ON app_configurations
+  FOR ALL USING (
+    auth.uid() IN (
+      SELECT id FROM auth.users
+      WHERE email = 'gamingguruji095@gmail.com'
+    )
+  ) WITH CHECK (
+    auth.uid() IN (
+      SELECT id FROM auth.users
+      WHERE email = 'gamingguruji095@gmail.com'
+    )
+  );
 
 -- ===================================================================
 -- CREATE HELPER FUNCTIONS
@@ -344,7 +370,7 @@ BEGIN
     INSERT INTO daily_activity_log (user_pseudo_id, activity_date, chat_id, session_id, activity_count)
     VALUES (COALESCE(p_user_id, 'anonymous'), CURRENT_DATE, p_chat_id, p_session_id, 1)
     ON CONFLICT (user_pseudo_id, activity_date, chat_id)
-    DO UPDATE SET 
+    DO UPDATE SET
         activity_count = daily_activity_log.activity_count + 1,
         session_id = EXCLUDED.session_id,
         updated_at = NOW();
@@ -406,7 +432,7 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 -- ===================================================================
 
 -- Insert default AI profile settings
-INSERT INTO ai_profile_settings (id, name, avatar_url, status, status_story_text, status_story_image_url, settings) 
+INSERT INTO ai_profile_settings (id, name, avatar_url, status, status_story_text, status_story_image_url, settings)
 VALUES ('default', 'Kruthika', 'https://i.postimg.cc/52S3BZrM/images-10.jpg', '🌸 Living my best life! Let''s chat! 🌸', 'Ask me anything! 💬', 'https://i.postimg.cc/52S3BZrM/images-10.jpg', '{
     "personality": "friendly",
     "language": "multilingual",
@@ -415,8 +441,8 @@ VALUES ('default', 'Kruthika', 'https://i.postimg.cc/52S3BZrM/images-10.jpg', '�
     "vertexAiModel": "gemini-pro",
     "maxTokens": 1000,
     "temperature": 0.7
-}') 
-ON CONFLICT (id) DO UPDATE SET 
+}')
+ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   avatar_url = EXCLUDED.avatar_url,
   status = EXCLUDED.status,
@@ -441,7 +467,7 @@ atOptions = {
     "lastUpdated": "2024-01-01",
     "environment": "production"
 }')
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
   adsterra_direct_link = EXCLUDED.adsterra_direct_link,
   adsterra_popunder_code = EXCLUDED.adsterra_popunder_code,
   settings = EXCLUDED.settings,
@@ -457,7 +483,7 @@ VALUES ('default', '[
         "mood": "happy"
     },
     {
-        "id": "status_1", 
+        "id": "status_1",
         "url": "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
         "type": "status",
         "mood": "cheerful"
@@ -471,7 +497,7 @@ VALUES ('default', '[
     },
     {
         "id": "song_1",
-        "url": "/media/song.mp3", 
+        "url": "/media/song.mp3",
         "type": "background",
         "mood": "relaxed"
     }
@@ -489,7 +515,7 @@ VALUES ('default', '[
         "totalAssets": 4
     }
 }')
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
   available_images = EXCLUDED.available_images,
   available_audio = EXCLUDED.available_audio,
   assets = EXCLUDED.assets,
@@ -497,7 +523,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Insert default app configurations
 INSERT INTO app_configurations (id, config_type, settings)
-VALUES 
+VALUES
 ('ad_settings_kruthika_chat_v1', 'ads', '{
     "adsEnabledGlobally": true,
     "adsterraDirectLink": "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
@@ -520,7 +546,7 @@ VALUES
     "syncInterval": 1000,
     "cacheEnabled": true
 }')
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
   settings = EXCLUDED.settings,
   updated_at = NOW();
 
@@ -534,12 +560,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE ad_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE ai_media_assets;
 ALTER PUBLICATION supabase_realtime ADD TABLE app_configurations;
 ALTER PUBLICATION supabase_realtime ADD TABLE analytics_data;
+ALTER PUBLICATION supabase_realtime ADD TABLE daily_activity_log;
+ALTER PUBLICATION supabase_realtime ADD TABLE user_sessions;
+ALTER PUBLICATION supabase_realtime ADD TABLE chat_contexts;
+
 
 -- ===================================================================
 -- SUCCESS MESSAGE
 -- ===================================================================
 
-SELECT 'Maya Chat Database Setup Completed Successfully! 
+SELECT 'Maya Chat Database Setup Completed Successfully!
 ✅ All tables created with comprehensive schema
 ✅ Vertex AI integration ready
 ✅ Real-time admin panel functionality enabled
@@ -552,54 +582,3 @@ Next steps:
 2. Test the admin panel real-time updates
 3. Verify Vertex AI integration
 4. Review and adjust RLS policies for production' as setup_result;
-
-
-
-
-
-
-
-
-
-
-
-
--- Add missing timestamp column to existing messages_log table
--- Run this ONLY if the timestamp column is missing
-
--- First, check if the column already exists (optional check)
-DO $$
-BEGIN
-    -- Add the timestamp column if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.columns 
-        WHERE table_name = 'messages_log' 
-        AND column_name = 'timestamp'
-        AND table_schema = 'public'
-    ) THEN
-        -- Add the timestamp column
-        ALTER TABLE public.messages_log 
-        ADD COLUMN timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
-
-        -- Update existing rows to have the same timestamp as created_at
-        UPDATE public.messages_log 
-        SET timestamp = created_at 
-        WHERE timestamp IS NULL;
-
-        -- Create index for better performance
-        CREATE INDEX IF NOT EXISTS idx_messages_log_timestamp ON public.messages_log(timestamp);
-
-        RAISE NOTICE 'Successfully added timestamp column to messages_log table';
-    ELSE
-        RAISE NOTICE 'Timestamp column already exists in messages_log table';
-    END IF;
-END
-$$;
-
--- Verify the column was added
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns 
-WHERE table_name = 'messages_log' 
-AND table_schema = 'public'
-ORDER BY ordinal_position;

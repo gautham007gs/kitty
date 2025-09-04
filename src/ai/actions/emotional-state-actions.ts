@@ -1,149 +1,128 @@
+
 'use server';
 
-import { generateAIResponse } from '@/ai/genkit';
+import { generateAIResponse as addictiveGenerateAIResponse, AIResponse as AddictiveAIResponse } from '@/lib/aiService'; // Renamed import to avoid conflict
 import { z } from 'zod';
-import {chatCache} from '@/lib/chatCache';
-import { userPersonalization } from '@/lib/userPersonalization';
-import { multilingualPersonality, addictionTriggers } from '@/config/ai';
-import type { EmotionalStateInput, EmotionalStateOutput } from '@/ai/flows/emotional-state-simulation';
+import { memoryManager } from '@/lib/memoryManager';
+import { getAILifeStatus } from '@/lib/aiLifeSimulator';
+import { getEngagementStrategy, EngagementStrategy } from '@/lib/psychologyEngine';
+import { getMoodState, Mood } from '@/lib/moodEngine';
+import { humanizeText, HumanizedResponse } from '@/lib/humanBehaviorSimulator';
+import { defaultAIMediaAssetsConfig } from '@/config/ai';
 
-
+// --- SCHEMAS (Simplified for clarity, assuming they exist) ---
 const EmotionalStateInputSchema = z.object({
-  userMessage: z.string().describe('The latest message from the user.'),
-  userImageUri: z.string().optional().describe("An image sent by the user as a data URI, if any. Format: 'data:<mimetype>;base64,<encoded_data>'."),
-  timeOfDay: z.enum(['morning', 'afternoon', 'evening', 'night']).describe('The current time of day based on IST (Indian Standard Time). Morning is 5 AM - 11:59 AM IST (active hours). Afternoon, evening, night are considered inactive hours.'),
-  mood: z.string().optional().describe('The current mood of the AI, if any. This can evolve based on the conversation.'),
-  recentInteractions: z.array(z.string()).max(10).describe('The list of up to 10 previous messages and responses in the conversation. Pay VERY CLOSE attention to these to understand the current topic, maintain context, adapt your style to the user, and remember what was discussed to avoid sounding forgetful. If you need to refer to a specific point the user made earlier, you can say something like "About what you said earlier regarding [topic]..." or "When you mentioned [something], I was thinking...".'),
-  availableImages: z.array(z.string()).optional().describe('A list of publicly accessible image URLs that Kruthika can choose to "share" if the conversation naturally leads to it. If empty, Kruthika cannot send images proactively.'),
-  availableAudio: z.array(z.string()).optional().describe("A list of audio file paths (e.g., /media/laugh.mp3) that Kruthika can choose to 'share'. These files must exist in the app's public/media/directory. If empty, Kruthika cannot send audio proactively."),
+  userMessage: z.string(),
+  userId: z.string().optional(),
+  messageCountSinceLoad: z.number().optional(), // Made optional to match current usage if not always provided
+  timeOfDay: z.string().optional(), // Added as optional for direct use
+  mood: z.string().optional(), // Added as optional for direct use
+  recentInteractions: z.array(z.string()).optional(), // Added as optional for direct use
 });
-export type EmotionalStateInput = z.infer<typeof EmotionalStateInputSchema>;
+type EmotionalStateInput = z.infer<typeof EmotionalStateInputSchema>;
 
 const EmotionalStateOutputSchema = z.object({
-  response: z.union([z.string(), z.array(z.string().min(1))]).optional().describe('The AI generated text response(s), if NO media is sent. If media (image/audio) is sent, this should be empty/undefined, and `mediaCaption` should be used.'),
-  mediaCaption: z.string().optional().describe('Text to accompany the image or audio. MUST be set if proactiveImageUrl or proactiveAudioUrl is set. This text will be the primary content of the media message.'),
-  proactiveImageUrl: z.string().optional().describe("If, VERY RARELY (like less than 1% of the time), and ONLY if the conversation NATURALLY and PLAYFULLY leads to it, you decide to proactively 'share' one of your pre-saved images (chosen from the 'availableImages' input list), provide its full URL here. If set, `mediaCaption` MUST also be set, and the `response` field should be empty/undefined."),
-  proactiveAudioUrl: z.string().optional().describe("If, VERY RARELY, you decide to proactively 'share' one of your pre-saved short audio clips (chosen from the 'availableAudio' input list), provide its full path (e.g., '/media/filename.mp3') here. If set, `mediaCaption` MUST also be set, and the `response` field should be empty/undefined."),
-  newMood: z.string().optional().describe('The new mood of the AI, if it has changed. Examples: "playful", "curious", "thoughtful", "slightly annoyed", "happy", "content", "a bit tired".')
+  humanizedResponse: z.custom<HumanizedResponse>(),
+  delayInMs: z.number(),
+  newMood: z.custom<Mood>(),
+  isVanishing: z.boolean().optional(),
+  proactiveMediaUrl: z.string().optional(),
 });
-export type EmotionalStateOutput = z.infer<typeof EmotionalStateOutputSchema>;
+type EmotionalStateOutput = z.infer<typeof EmotionalStateOutputSchema>;
 
-// Aggressive token optimization - ultra-short prompts
-const MOOD_SHORTCUTS = {
-  happy: 'h', excited: 'e', flirty: 'f', playful: 'p', romantic: 'r',
-  curious: 'c', tired: 't', busy: 'b', neutral: 'n'
-};
 
-const TIME_SHORTCUTS = {
-  morning: 'm',
-  afternoon: 'a',
-  evening: 'e',
-  night: 'n'
-};
-
-// Language and cultural detection
-function detectLanguageAndCulture(message: string): {language: string, culture: string, confidence: number} {
-  const msg = message.toLowerCase();
-
-  // Hindi detection with regional variations
-  if (/\b(kya|kaisa|kaisi|kaise|haal|hai|tum|tumhara|mera|achha|bura|namaste|yaar|bhai|didi|ji|haan|nahi|mat|kar|raha|rahi|hoon|hun|kyu|kab|kaha|main|tera|teri|mere|sabse|bahut|thoda|zyada|kam|abhi|kal|parso|subah|shaam|raat|din)\b/.test(msg)) {
-    return {language: 'hindi', culture: 'north_indian', confidence: 0.9};
-  }
-
-  // Tamil detection
-  if (/\b(enna|eppo|eppadi|nalla|irukka|irukku|vanakkam|da|di|nee|naan|unna|enna|romba|chala|vera|level)\b/.test(msg)) {
-    return {language: 'tamil', culture: 'south_indian_tamil', confidence: 0.85};
-  }
-
-  // Telugu detection
-  if (/\b(ela|enti|ela|unnavu|unnara|bagundi|bagunnava|namaste|nuvvu|nenu|nee|naa|chala|chalanchi)\b/.test(msg)) {
-    return {language: 'telugu', culture: 'south_indian_telugu', confidence: 0.85};
-  }
-
-  // English (default)
-  return {language: 'english', culture: 'indian_english', confidence: 0.7};
+// --- PROMPT ENGINEERING (Now simpler, as strategy comes from engine) ---
+// This function might become less critical if aiService.ts handles prompt construction entirely
+function constructSystemPrompt(memory: any, lifeStatus: any, engagementStrategy: EngagementStrategy, moodState: any): string {
+  return `
+    You are Kruthika, a 22-year-old Indian girl.
+    **Your Current Life Situation**: ${lifeStatus.story_prompt}
+    **Your Current Mood**: You feel ${moodState.currentMood}.
+    **Shared History with this User**: ${JSON.stringify(memory.memories)}. You MUST try to reference this.
+    **Your Goal for this Message**: "${engagementStrategy.conversationGoal}"
+    **CRITICAL RULE**: Your reply MUST be short, in Hinglish, and end with an open-ended hook or question.
+  `;
 }
 
-export async function generateResponse(input: EmotionalStateInput, userId?: string): Promise<EmotionalStateOutput> {
-  // Step 0: Check token limits first (if userId provided)
-  if (userId) {
-    const tokenStatus = userPersonalization.getTokenUsageStatus(userId);
-
-    // Hard limit reached - force exit with addictive hook
-    if (userPersonalization.isTokenLimitReached(userId)) {
-      const exitHook = userPersonalization.getAddictiveExitHook(userId);
-      console.log(`Token limit reached for user ${userId}. Daily tokens: ${tokenStatus.used}/${tokenStatus.limit}`);
-      return {
-        response: exitHook,
-        newMood: 'missing'
-      };
-    }
-
-    // Soft limit - occasionally suggest taking a break with hooks
-    if (userPersonalization.shouldLimitTokens(userId) && Math.random() < 0.3) {
-      const softExitHooks = addictionTriggers.softExitHooks;
-      const randomHook = softExitHooks[Math.floor(Math.random() * softExitHooks.length)];
-      return {
-        response: randomHook,
-        newMood: 'caring'
-      };
-    }
-  }
-
-  // Detect language and tailor personality
-  const {language, culture} = detectLanguageAndCulture(input.userMessage);
-  const personality = multilingualPersonality[language] || multilingualPersonality['english'];
-
-  // Step 2: Smart cache with similarity matching
-  const cachedResponse = chatCache.get(input.userMessage, input.mood, input.timeOfDay);
-  if (cachedResponse) {
-    console.log('Cache hit - returning cached response');
-    if (userId) userPersonalization.trackTokenUsage(userId, 8); // Small tokens for cached response
-    return cachedResponse;
-  }
-
-  // Step 3: Ultra-short context for token optimization
-  const recentContext = input.recentInteractions.slice(-2).join(' | '); // Only last 2 interactions
+// --- MAIN ACTION (CONSOLIDATED & OPTIMIZED) ---
+export async function generateResponse(input: EmotionalStateInput): Promise<EmotionalStateOutput> {
+  const { userMessage, userId = 'default_user', messageCountSinceLoad, timeOfDay, mood, recentInteractions } = input;
 
   try {
-    // Enhanced user personalization with caching
-    const personalizedContext = await userPersonalization.getPersonalizedContext(input.userMessage, input.recentInteractions);
+    // Directly call the addictive AI response logic from aiService.ts
+    // This function now encapsulates all the complex prompt construction, mood, and memory handling.
+    const aiServiceResponse: AddictiveAIResponse = await addictiveGenerateAIResponse(userMessage, userId);
 
-    // Ultra-short addictive responses like real Indian girl
-    const addictivePrompt = userId && userPersonalization.isTokenLimitReached(userId) ?
-      'Romantic goodbye in <8 words' :
-      'Addictive reply <12 words. Use emojis, be flirty';
+    const humanizedBubbles = aiServiceResponse.messages.map((msg, index) => ({
+      text: msg,
+      delay: aiServiceResponse.typingDelays[index] || 0,
+    }));
 
-    const prompt = `Kruthika, 22yr Indian girl. ${addictivePrompt}. Sound real not robotic.
-User: ${input.userMessage}
-Reply:`;
+    let proactiveMediaUrl: string | undefined = aiServiceResponse.mediaUrl;
 
-    const response = await generateAIResponse(prompt);
-
-    // Estimate and track token usage
-    const estimatedTokens = Math.ceil((prompt.length + response.length) / 3); // Rough estimation
-    if (userId) userPersonalization.trackTokenUsage(userId, estimatedTokens);
-
-    // Quick mood detection
-    let newMood = input.mood;
-    const msg = input.userMessage.toLowerCase();
-    if (msg.includes('love') || msg.includes('miss')) newMood = 'romantic';
-    else if (msg.includes('haha') || msg.includes('funny')) newMood = 'playful';
-    else if (msg.includes('tired') || msg.includes('sleepy')) newMood = 'tired';
-
-    const output: EmotionalStateOutput = {
-      response,
-      newMood,
+    return {
+      humanizedResponse: { bubbles: humanizedBubbles },
+      delayInMs: aiServiceResponse.typingDelays[0] || 0, // Use the first delay as the main delay
+      newMood: aiServiceResponse.newMood as Mood || 'neutral', // Cast to Mood type
+      isVanishing: aiServiceResponse.isVanishing,
+      proactiveMediaUrl: proactiveMediaUrl,
     };
+  } catch (error: any) {
+    console.error('Consolidated action error:', error);
 
-    // Cache aggressively
-    chatCache.set(input.userMessage, output, input.mood, input.timeOfDay);
+    // Fallback response with Indian-style messages
+    const fallbackMessage = getIndianFallbackResponse(userMessage);
 
-    return output;
-  } catch (error) {
-    console.error('❌ Emotional state action error:', error);
-    
-    // Don't use complex fallback, throw error so it can be handled upstream
-    throw error;
+    return {
+      humanizedResponse: { bubbles: [{ text: fallbackMessage, delay: 0 }] },
+      delayInMs: 5000, // A longer delay for fallback implies a "thinking" or "network issue"
+      newMood: 'bored',
+    };
   }
+}
+
+// Helper for Indian-style fallback responses
+function getIndianFallbackResponse(userMsg: string): string {
+  const msg = userMsg.toLowerCase();
+
+  // Greeting responses
+  if (msg.includes('hi') || msg.includes('hello') || msg.includes('namaste')) {
+    return Math.random() > 0.5 ?
+      "Hii! Sorry network issue tha... Kaise ho? 😊" :
+      "Hello ji! Connection problem thi, ab theek hai! ✨";
+  }
+
+  // Question responses
+  if (msg.includes('?') || msg.includes('kya') || msg.includes('how') || msg.includes('what')) {
+    return Math.random() > 0.5 ?
+      "Arre wait! Internet slow chal rahi, phir se pucho na? 🤔" :
+      "Oops! Technical issue... Question repeat kar do please? 💭";
+  }
+
+  // Love/romantic context
+  if (msg.includes('love') || msg.includes('pyaar') || msg.includes('miss') || msg.includes('beautiful')) {
+    return Math.random() > 0.5 ?
+      "Aww! Server down tha... Tumhara message miss ho gaya, again bolo na? 💕" :
+      "Sorry sweetheart! Network problem... Kya keh rahe the? 🥰";
+  }
+
+  // Casual conversation
+  if (msg.includes('kaise') || msg.includes('kaisi') || msg.includes('how are')) {
+    return Math.random() > 0.5 ?
+      "Main thik hun! Sorry connection issue tha... Tum kaise ho? 😌" :
+      "Bas network slow thi! Ab sab theek... Tumhara din kaisa gaya? ✨";
+  }
+
+  // Default responses with variety
+  const defaultResponses = [
+    "Arre yaar! Technical problem aa gayi thi... Phir se bolo na? 😅",
+    "Sorry babu! Internet slow chal rahi... Repeat karo please? 🙈",
+    "Oops! Server down tha... Tumhara message miss ho gaya! 😊",
+    "Connection issue thi! Ab theek hai, bolo kya kehna tha? 💭",
+    "Technical glitch hui thi! Now I'm back... Kya bol rahe the? ✨",
+    "Network problem thi yaar! Phir se message bhejo na? 🌸",
+    "Sorry! Server restart ho raha tha... Again try karo? 💕"
+  ];
+
+  return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
 }

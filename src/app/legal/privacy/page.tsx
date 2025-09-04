@@ -13,7 +13,7 @@ const PrivacyPolicyPage = () => {
         <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Privacy Policy for WhatApp</CardTitle>
-            <CardDescription>Last Updated: January 2025</CardDescription>
+            <CardDescription>Last Updated: [January 2025 - **PLEASE UPDATE**]</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
@@ -33,30 +33,38 @@ const PrivacyPolicyPage = () => {
               </p>
               <p className="text-muted-foreground mt-2">
                 The character "Kruthika" you interact with is an Artificial Intelligence (AI) companion designed to provide
-                engaging social interaction. Your conversations are with this AI system and are intended for entertainment purposes.
+                engaging social interaction, personalized memory, and an evolving backstory. Your conversations are with this AI system and are primarily intended for entertainment purposes.
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mt-4 mb-2">2. Information Collection and Use</h2>
               <p className="text-muted-foreground">
-                We collect information primarily to provide and improve our Service to you.
+                We collect information to provide, improve, and personalize our Service to you, specifically to enable Kruthika's advanced AI functionalities.
               </p>
               <h3 className="text-lg font-medium mt-3 mb-1">Types of Data Collected</h3>
               
               <h4 className="text-md font-medium mt-2">Chat Data & AI Interaction</h4>
                <p className="text-muted-foreground">
-                When you use Kruthika Chat, the messages you send and receive (including text and any images you choose to upload) are processed to provide the chat functionality.
-                This data is sent to third-party Generative AI service providers (e.g., Google via Genkit for the Gemini model) to generate Kruthika's responses.
+                When you use Kruthika Chat, the messages you send and receive (including text content and indicators of uploaded images), along with associated metadata (such as timestamps, chat IDs, and a unique, pseudo-anonymous user ID), are collected and **stored permanently on our secure Supabase servers.**
+                This data is also sent to third-party Generative AI service providers (e.g., Google via Genkit for the Gemini model) to generate Kruthika's responses.
                 These providers have their own privacy policies governing their use of data.
                </p>
                <p className="text-muted-foreground mt-1">
-                We temporarily store your chat history in your browser's local storage to maintain conversation context during your session.
-                We do not permanently store your detailed chat conversations or uploaded images on our servers beyond what is necessary for the AI to respond and for you to view your current session history.
-                Images you send are processed by the AI and are not retained by our application servers after processing.
+                **Purpose of Storage:** This persistent storage of your chat history is fundamental to the AI's core functionality. It allows Kruthika to:
+               </p>
+               <ul className="list-disc list-inside ml-4 text-muted-foreground">
+                  <li>Maintain long-term memory of your conversations.</li>
+                  <li>Personalize her responses based on your past interactions.</li>
+                  <li>Enable the progression of your simulated "relationship" with her.</li>
+                  <li>Contribute to her evolving backstory and dynamic life events.</li>
+                  <li>Improve the overall realism and addictiveness of the AI experience.</li>
+               </ul>
+               <p className="text-muted-foreground mt-1">
+                Images you send are processed by the AI for contextual understanding and are not retained by our application servers as raw image files after processing, but their presence is logged.
                </p>
                <p className="text-[10px] text-muted-foreground/80 mt-1">
-                Please be aware: You acknowledge that you are interacting with an AI language model, not a human. Do not share highly sensitive personal information that you would not want processed by an AI system.
+                **Please be aware:** You acknowledge that you are interacting with an AI language model, not a human. Due to the persistent storage of chat history, **do not share highly sensitive personal information** (e.g., financial details, government IDs, precise health information, or any information you would not want permanently recorded and processed by an AI system) through the chat interface.
                </p>
 
               <h4 className="text-md font-medium mt-2">Usage Data</h4>
@@ -77,7 +85,7 @@ const PrivacyPolicyPage = () => {
 
               <h4 className="text-md font-medium mt-2">Personal Data (If you implement accounts)</h4>
               <p className="text-muted-foreground">
-                Currently, Kruthika Chat does not require user accounts. If, in the future, we implement user accounts, we might collect Personal Data such as an email address or username. This policy will be updated accordingly.
+                Currently, Kruthika Chat does not require user accounts directly. User chat history is associated with a unique, pseudo-anonymous user ID generated by your client. If, in the future, we implement full user accounts requiring Personal Data such as an email address or username, this policy will be updated accordingly.
               </p>
             </section>
 
@@ -88,6 +96,9 @@ const PrivacyPolicyPage = () => {
               </p>
               <ul className="list-disc list-inside ml-4 text-muted-foreground">
                 <li>Provide, operate, and maintain our Service.</li>
+                <li>**Enable Kruthika's long-term memory and personalized responses.**</li>
+                <li>**Facilitate the progression of your simulated relationship with Kruthika.**</li>
+                <li>**Integrate and respond to Kruthika's evolving backstory and dynamic life events.**</li>
                 <li>Improve, personalize, and expand our Service.</li>
                 <li>Understand and analyze how you use our Service (via aggregated analytics).</li>
                 <li>Generate AI responses to your interactions.</li>
@@ -102,7 +113,7 @@ const PrivacyPolicyPage = () => {
                 <p className="text-muted-foreground">
                     You are solely responsible for the content you send, upload, or otherwise share through the Service ("User Content").
                     You agree not to share User Content that is illegal, obscene, defamatory, threatening, infringing of intellectual property rights, invasive of privacy, or otherwise injurious or objectionable.
-                    You should not share highly sensitive personal information (e.g., financial details, government IDs, precise health information) through the chat interface.
+                    **Due to the persistent storage of chat history, you should specifically refrain from sharing highly sensitive personal information** (e.g., financial details, government IDs, precise health information) through the chat interface.
                     We reserve the right, but not the obligation, to monitor and remove User Content that violates our Terms of Service or this Privacy Policy.
                 </p>
             </section>
@@ -113,7 +124,7 @@ const PrivacyPolicyPage = () => {
                 We do not sell your personal information. We may share information under the following circumstances:
               </p>
               <ul className="list-disc list-inside ml-4 text-muted-foreground">
-                  <li><strong>With Service Providers:</strong> We share chat data (text and images you provide) with third-party GenAI service providers (e.g., Google) to enable Kruthika's responses. We use Supabase for analytics data storage and processing if configured. These providers are bound by their own privacy policies.</li>
+                  <li><strong>With Service Providers:</strong> We share chat data (text and images you provide) with third-party GenAI service providers (e.g., Google) to enable Kruthika's responses. We use Supabase for persistent storage of chat history and for analytics data storage and processing. These providers are bound by their own privacy policies.</li>
                   <li><strong>For Legal Reasons:</strong> We may disclose your information if required to do so by law or in response to valid requests by public authorities (e.g., a court or a government agency).</li>
                   <li><strong>To Protect Rights:</strong> We may disclose information where we believe it necessary to investigate, prevent, or take action regarding illegal activities, suspected fraud, situations involving potential threats to the safety of any person, violations of our Terms of Service, or as evidence in litigation.</li>
                   <li><strong>Business Transfers:</strong> If we are involved in a merger, acquisition, or asset sale, your information may be transferred.</li>
@@ -124,7 +135,7 @@ const PrivacyPolicyPage = () => {
             <section>
               <h2 className="text-xl font-semibold mt-4 mb-2">6. Data Retention</h2>
               <p className="text-muted-foreground">
-                Chat messages are stored in your browser's `localStorage` and persist until you clear your browser data.
+                **Chat history (messages, images indicators, metadata) stored on our Supabase servers is retained for the lifetime of your interaction with the Service, or until you request its deletion,** to ensure Kruthika's continuous memory, personalization, and relationship progression.
                 Analytics data in Supabase is retained as per Supabase's policies and our configuration (typically for trend analysis).
                 Data sent to third-party AI providers is subject to their retention policies.
               </p>
@@ -142,9 +153,9 @@ const PrivacyPolicyPage = () => {
             <section>
               <h2 className="text-xl font-semibold mt-4 mb-2">8. Your Data Protection Rights</h2>
               <p className="text-muted-foreground">
-                Depending on your location, you may have certain data protection rights. These may include the right to access, correct, update, or request deletion of your personal information.
-                Since we primarily store chat data in your browser's `localStorage`, you can manage or delete this data by clearing your browser's cache and site data.
-                For requests regarding data held by our third-party service providers (like GenAI providers or Supabase), you would need to consult their respective privacy policies or contact them directly.
+                Depending on your location, you may have certain data protection rights, including the right to access, correct, update, or request deletion of your personal information.
+                **To request access to or deletion of your chat history stored on our Supabase servers, please contact us at [Your Contact Email Address].** We will process such requests in accordance with applicable laws.
+                For requests regarding data held by our third-party service providers (like GenAI providers or Supabase for their own platform data), you would need to consult their respective privacy policies or contact them directly.
               </p>
             </section>
 
@@ -168,7 +179,7 @@ const PrivacyPolicyPage = () => {
             <section>
               <h2 className="text-xl font-semibold mt-4 mb-2">11. Contact Us</h2>
               <p className="text-muted-foreground">
-                If you have any questions about this Privacy Policy, please contact us at: [Your Contact Email Address]
+                If you have any questions about this Privacy Policy, please contact us at: [Your Contact Email Address - **PLEASE UPDATE**]
               </p>
             </section>
             <div className="pt-4 flex justify-center">
