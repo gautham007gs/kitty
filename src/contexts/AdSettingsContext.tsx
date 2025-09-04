@@ -5,7 +5,7 @@ import type { AdSettings } from '@/types';
 import { AD_SETTINGS_CONFIG_KEY } from '@/types'; // Corrected import path
 import { defaultAdSettings } from '@/config/ai'; // defaultAdSettings is still from config/ai
 import { supabase } from '@/lib/supabaseClient';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 
 interface AdSettingsContextType {

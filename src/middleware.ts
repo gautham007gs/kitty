@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -22,14 +21,14 @@ export function middleware(request: NextRequest) {
     const ip = request.ip || 'anonymous';
     const now = Date.now();
     const windowStart = now - 60000; // 1 minute window
-    
+
     const requests = rateLimitMap.get(ip) || [];
     const recentRequests = requests.filter((time: number) => time > windowStart);
-    
+
     if (recentRequests.length >= 60) { // 60 requests per minute
       return new NextResponse('Too Many Requests', { status: 429 });
     }
-    
+
     rateLimitMap.set(ip, [...recentRequests, now]);
   }
 
@@ -38,10 +37,10 @@ export function middleware(request: NextRequest) {
 
   // Only apply the trick if it's an Instagram browser, the flag isn't set, and it's not an API/static asset path
   if (isInstagramInAppBrowserServer(userAgent) && !hasRedirectAttemptedFlag) {
-    
+
     // More robustly ignore common asset paths and API routes
-    if (pathname.startsWith('/_next/') || 
-        pathname.startsWith('/api/') || 
+    if (pathname.startsWith('/_next/') ||
+        pathname.startsWith('/api/') ||
         pathname.startsWith('/media/') || // Assuming /media/ for local assets like audio
         pathname.includes('.') // General check for file extensions like .png, .ico, .css, .js
        ) {
@@ -108,7 +107,7 @@ export function middleware(request: NextRequest) {
 
   // Add security headers to the response
   const response = NextResponse.next();
-  
+
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
