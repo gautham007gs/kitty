@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { NextPage } from 'next';
@@ -25,13 +26,13 @@ const KruthikaChatPage: NextPage = () => {
   const router = useRouter();
   const { adSettings, isLoadingAdSettings } = useAdSettings();
   const { aiProfile: globalAIProfile, isLoadingAIProfile } = useAIProfile();
-
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-
+  
   const [showZoomedAvatarDialog, setShowZoomedAvatarDialog] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-
+  
   const { toast } = useToast();
   const userIdRef = useRef<string | null>(null);
 
@@ -48,7 +49,7 @@ const KruthikaChatPage: NextPage = () => {
     if (!globalAIProfile?.avatar_url) return;
     setShowZoomedAvatarDialog(true);
   };
-
+  
   const handleToggleOptionsMenu = () => {
     setShowOptionsMenu(prevState => !prevState);
   };
@@ -128,7 +129,7 @@ const KruthikaChatPage: NextPage = () => {
       }
 
       const result = await response.json();
-
+      
       const { humanizedResponse, newMood, proactiveMediaUrl } = result; // Destructure newMood and proactiveMediaUrl
 
       if (humanizedResponse && humanizedResponse.bubbles) {
@@ -162,7 +163,7 @@ const KruthikaChatPage: NextPage = () => {
       setIsAiTyping(false);
     }
   }, []);
-
+  
   useEffect(() => {
     if (isAiTyping) {
       setMessages(prev =>
@@ -213,7 +214,7 @@ const KruthikaChatPage: NextPage = () => {
               <div className="relative">
                 <Avatar className="h-10 w-10 cursor-pointer border-2 border-white/20" onClick={handleOpenAvatarZoom}>
                   <AvatarImage
-                    src={displayAIProfile.avatar_url || displayAIProfile.avatarUrl}
+                    src={displayAIProfile.avatar_url}
                     alt={displayAIProfile.name}
                     className="object-cover"
                   />
@@ -293,7 +294,7 @@ const KruthikaChatPage: NextPage = () => {
           isAiTyping={isAiTyping}
           onTriggerAd={() => {}}
         />
-
+        
         <BannerAdDisplay
           adType="standard"
           placementKey="chatViewBottomStandard"
@@ -305,13 +306,15 @@ const KruthikaChatPage: NextPage = () => {
         <Dialog open={showZoomedAvatarDialog} onOpenChange={setShowZoomedAvatarDialog}>
           <DialogContent className="max-w-md w-auto p-0 bg-transparent border-0">
             <DialogTitle className="sr-only">{displayAIProfile.name}'s Profile Picture</DialogTitle>
-            {(displayAIProfile.avatar_url || displayAIProfile.avatarUrl) && (
+            {displayAIProfile.avatar_url && (
               <Image
-                src={displayAIProfile.avatar_url || displayAIProfile.avatarUrl}
+                src={displayAIProfile.avatar_url}
                 alt={`${displayAIProfile.name}'s avatar`}
-                width={500}
-                height={500}
-                className="rounded-lg object-cover"
+                width={500} // Set a reasonable default width
+                height={500} // Set a reasonable default height
+                layout="responsive" // Make it responsive
+                objectFit="contain" // Ensure the image fits within the dialog
+                className="rounded-lg"
               />
             )}
           </DialogContent>

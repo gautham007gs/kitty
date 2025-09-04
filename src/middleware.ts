@@ -1,8 +1,6 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-// Rate limiting map
-const rateLimitMap = new Map();
 
 function isInstagramInAppBrowserServer(userAgent: string | null): boolean {
   if (userAgent) {
@@ -13,47 +11,22 @@ function isInstagramInAppBrowserServer(userAgent: string | null): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams, origin } = request.nextUrl;
+  const { pathname, searchParams, origin, search } = request.nextUrl;
   const userAgent = request.headers.get('user-agent');
-
-  // Add security headers to all responses
-  const response = NextResponse.next();
-
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-  // Basic rate limiting for API routes
-  if (pathname.startsWith('/api/')) {
-    const ip = request.ip || 'anonymous';
-    const now = Date.now();
-    const windowStart = now - 60000; // 1 minute window
-
-    const requests = rateLimitMap.get(ip) || [];
-    const recentRequests = requests.filter((time: number) => time > windowStart);
-
-    if (recentRequests.length >= 60) { // 60 requests per minute
-      return new NextResponse('Too Many Requests', { status: 429 });
-    }
-
-    rateLimitMap.set(ip, [...recentRequests, now]);
-  }
 
   // Check if our redirect trick has already been attempted for this request flow
   const hasRedirectAttemptedFlag = searchParams.has('external_redirect_attempted');
 
-  // Only apply the Instagram trick if it's an Instagram browser, the flag isn't set, and it's not an API/static asset path
+  // Only apply the trick if it's an Instagram browser, the flag isn't set, and it's not an API/static asset path
   if (isInstagramInAppBrowserServer(userAgent) && !hasRedirectAttemptedFlag) {
-
+    
     // More robustly ignore common asset paths and API routes
     if (pathname.startsWith('/_next/') || 
         pathname.startsWith('/api/') || 
         pathname.startsWith('/media/') || // Assuming /media/ for local assets like audio
         pathname.includes('.') // General check for file extensions like .png, .ico, .css, .js
        ) {
-      // If it's an asset/API, let it pass through after security headers are set
-      return response; 
+      return NextResponse.next();
     }
 
     // Construct the target URL for the meta-refresh, preserving original path and query params,
@@ -114,13 +87,60 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // If no Instagram redirect, return the response with security headers
-  return response;
+  return NextResponse.next();
 }
 
 // Configure the matcher to run on most page routes, excluding API, static assets, etc.
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - /media/ (local media assets like audio)
+     * - and other files with extensions (e.g. .png, .jpg)
+     */
     '/((?!api|_next/static|_next/image|favicon.ico|media/|.*\\.[^.]+$).*)',
   ],
 };
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Rate limiting map
+const rateLimitMap = new Map()
+
+export function middleware(request: NextRequest) {
+  // Add security headers
+  const response = NextResponse.next()
+  
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  // Basic rate limiting for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const ip = request.ip || 'anonymous'
+    const now = Date.now()
+    const windowStart = now - 60000 // 1 minute window
+    
+    const requests = rateLimitMap.get(ip) || []
+    const recentRequests = requests.filter((time: number) => time > windowStart)
+    
+    if (recentRequests.length >= 60) { // 60 requests per minute
+      return new NextResponse('Too Many Requests', { status: 429 })
+    }
+    
+    rateLimitMap.set(ip, [...recentRequests, now])
+  }
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}
