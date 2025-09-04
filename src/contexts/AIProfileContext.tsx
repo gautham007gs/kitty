@@ -49,25 +49,61 @@ export const AIProfileProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
 
     try {
+      // First try the new dedicated table
       const { data, error } = await supabase
-        .from('app_configurations')
-        .select('settings')
-        .eq('id', AI_PROFILE_CONFIG_KEY)
+        .from('ai_profile_settings')
+        .select('*')
+        .eq('id', 'default')
         .single();
 
-      console.log("[AIProfileContext] fetchAIProfile: Fetched from Supabase - raw data:", JSON.stringify(data, null, 2), "error:", error);
+      console.log("[AIProfileContext] fetchAIProfile: Fetched from ai_profile_settings - raw data:", JSON.stringify(data, null, 2), "error:", error);
 
       if (error && error.code !== 'PGRST116') {
-        console.error('[AIProfileContext] fetchAIProfile: Error fetching AI profile from Supabase:', error);
-        toast({ title: "Error Loading AI Profile", description: `Could not load AI profile. Using defaults. ${error.message}`, variant: "destructive" });
-        setAIProfile(defaultAIProfile);
-        console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (Supabase error):", JSON.stringify(defaultAIProfile, null, 2));
-      } else if (data && data.settings) {
-        let fetchedProfile = data.settings as Partial<AIProfile>;
-        console.log("[AIProfileContext] fetchAIProfile: Raw profile settings from Supabase:", JSON.stringify(fetchedProfile, null, 2));
+        console.error('[AIProfileContext] fetchAIProfile: Error fetching AI profile from ai_profile_settings:', error);
+        toast({ title: "Error Loading AI Profile", description: `Could not load AI profile from dedicated table. Trying app_configurations. ${error.message}`, variant: "destructive" });
 
+        // Fallback to the old table if the new one fails
+        const { data: oldData, error: oldError } = await supabase
+          .from('app_configurations')
+          .select('settings')
+          .eq('id', AI_PROFILE_CONFIG_KEY)
+          .single();
+
+        console.log("[AIProfileContext] fetchAIProfile: Fetched from app_configurations (fallback) - raw data:", JSON.stringify(oldData, null, 2), "error:", oldError);
+
+        if (oldError && oldError.code !== 'PGRST116') {
+          console.error('[AIProfileContext] fetchAIProfile: Error fetching AI profile from app_configurations:', oldError);
+          toast({ title: "Error Loading AI Profile", description: `Could not load AI profile from either table. Using defaults. ${oldError.message}`, variant: "destructive" });
+          setAIProfile(defaultAIProfile);
+          console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (fallback Supabase error):", JSON.stringify(defaultAIProfile, null, 2));
+        } else if (oldData && oldData.settings) {
+          let fetchedProfile = oldData.settings as Partial<AIProfile>;
+          console.log("[AIProfileContext] fetchAIProfile: Raw profile settings from app_configurations (fallback):", JSON.stringify(fetchedProfile, null, 2));
+          
+          if (!fetchedProfile.avatarUrl || typeof fetchedProfile.avatarUrl !== 'string' || fetchedProfile.avatarUrl.trim() === '' || (!fetchedProfile.avatarUrl.startsWith('http') && !fetchedProfile.avatarUrl.startsWith('data:'))) {
+              console.warn(`[AIProfileContext] fetchAIProfile: Fetched avatarUrl ('${fetchedProfile.avatarUrl}') is invalid or empty. Falling back to default AI avatarUrl: ${defaultAIProfile.avatarUrl}`);
+              fetchedProfile.avatarUrl = defaultAIProfile.avatarUrl;
+          }
+
+          const mergedProfile: AIProfile = {
+            ...defaultAIProfile,
+            ...fetchedProfile
+          };
+
+          setAIProfile(mergedProfile);
+          console.log("[AIProfileContext] fetchAIProfile: Set AI profile from app_configurations (fallback, merged with defaults):", JSON.stringify(mergedProfile, null, 2));
+        } else {
+          console.log("[AIProfileContext] fetchAIProfile: No AI profile found in app_configurations (fallback). Using default values.");
+          setAIProfile(defaultAIProfile);
+          console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (no data in fallback Supabase):", JSON.stringify(defaultAIProfile, null, 2));
+        }
+      } else if (data) { // Data from ai_profile_settings
+        let fetchedProfile = data as Partial<AIProfile>; // Assuming the structure matches AIProfile
+        console.log("[AIProfileContext] fetchAIProfile: Raw profile settings from ai_profile_settings:", JSON.stringify(fetchedProfile, null, 2));
+
+        // Ensure avatarUrl is valid, fallback to default if necessary
         if (!fetchedProfile.avatarUrl || typeof fetchedProfile.avatarUrl !== 'string' || fetchedProfile.avatarUrl.trim() === '' || (!fetchedProfile.avatarUrl.startsWith('http') && !fetchedProfile.avatarUrl.startsWith('data:'))) {
-            console.warn(`[AIProfileContext] fetchAIProfile: Fetched avatarUrl ('${fetchedProfile.avatarUrl}') is invalid or empty. Falling back to default AI avatarUrl: ${defaultAIProfile.avatarUrl}`);
+            console.warn(`[AIProfileContext] fetchAIProfile: Fetched avatarUrl ('${fetchedProfile.avatarUrl}') from ai_profile_settings is invalid or empty. Falling back to default AI avatarUrl: ${defaultAIProfile.avatarUrl}`);
             fetchedProfile.avatarUrl = defaultAIProfile.avatarUrl;
         }
 
@@ -77,11 +113,11 @@ export const AIProfileProvider: React.FC<{ children: ReactNode }> = ({ children 
         };
 
         setAIProfile(mergedProfile);
-        console.log("[AIProfileContext] fetchAIProfile: Set AI profile from Supabase (merged with defaults):", JSON.stringify(mergedProfile, null, 2));
+        console.log("[AIProfileContext] fetchAIProfile: Set AI profile from ai_profile_settings (merged with defaults):", JSON.stringify(mergedProfile, null, 2));
       } else {
-        console.log("[AIProfileContext] fetchAIProfile: No AI profile found in Supabase (error code PGRST116 or no data.settings). Using default values.");
+        console.log("[AIProfileContext] fetchAIProfile: No AI profile found in ai_profile_settings (error code PGRST116 or no data). Using default values.");
         setAIProfile(defaultAIProfile);
-        console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (no data in Supabase):", JSON.stringify(defaultAIProfile, null, 2));
+        console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (no data in ai_profile_settings):", JSON.stringify(defaultAIProfile, null, 2));
       }
     } catch (e: any) {
       console.error('[AIProfileContext] fetchAIProfile: Unexpected error fetching AI profile:', e);
@@ -127,22 +163,23 @@ export const AIProfileProvider: React.FC<{ children: ReactNode }> = ({ children 
     setAIProfile(optimisticProfile); // Optimistic UI update
 
     try {
+      // Upsert to the new dedicated table
       const { error: upsertError } = await supabase
-        .from('app_configurations')
+        .from('ai_profile_settings')
         .upsert(
-          { id: AI_PROFILE_CONFIG_KEY, settings: optimisticProfile, updated_at: new Date().toISOString() },
+          { id: 'default', ...optimisticProfile, updated_at: new Date().toISOString() },
           { onConflict: 'id' }
         );
 
       if (upsertError) {
-        console.error("[AIProfileContext] updateAIProfile: Failed to save AI profile to Supabase:", upsertError);
+        console.error("[AIProfileContext] updateAIProfile: Failed to save AI profile to ai_profile_settings:", upsertError);
         toast({ title: "Error Saving AI Profile", description: `Could not save AI profile to Supabase. ${upsertError.message || ''}. Reverting optimistic update.`, variant: "destructive" });
         setAIProfile(currentProfileForUpdate); // Revert optimistic update on error
         await fetchAIProfile(); // Re-fetch from DB to ensure consistency
         return;
       }
 
-      console.log("[AIProfileContext] updateAIProfile: AI Profile successfully saved to Supabase.");
+      console.log("[AIProfileContext] updateAIProfile: AI Profile successfully saved to ai_profile_settings.");
       toast({ title: "AI Profile Saved!", description: "Kruthika's profile has been saved globally to Supabase." });
 
       // Re-fetch after successful save to ensure UI reflects DB state, though optimistic update helps.

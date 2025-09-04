@@ -309,13 +309,31 @@ const AdminProfilePage: React.FC = () => {
         statusImageUrl: adminStatus.statusImageUrl?.trim() === '' ? undefined : adminStatus.statusImageUrl,
     };
     try {
+      // Save to dedicated table
       const { error } = await supabase
+        .from('admin_status_display')
+        .upsert(
+          { 
+            id: 'default',
+            name: statusToSave.name,
+            avatar_url: statusToSave.avatarUrl,
+            status_text: statusToSave.statusText,
+            status_image_url: statusToSave.statusImageUrl,
+            has_update: statusToSave.hasUpdate,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'id' }
+        );
+      if (error) throw error;
+      
+      // Also save to app_configurations for backward compatibility
+      await supabase
         .from('app_configurations')
         .upsert(
           { id: ADMIN_OWN_STATUS_CONFIG_KEY, settings: statusToSave, updated_at: new Date().toISOString() },
           { onConflict: 'id' }
         );
-      if (error) throw error;
+      
       await fetchGlobalStatuses();
 
       // Emit global event to notify all users
@@ -368,13 +386,35 @@ const AdminProfilePage: React.FC = () => {
       return;
     }
     try {
-      const { error } = await supabase
+      // Save each contact to dedicated table
+      for (const contact of managedContactStatuses) {
+        const { error } = await supabase
+          .from('managed_demo_contacts')
+          .upsert(
+            {
+              id: contact.id,
+              name: contact.name,
+              avatar_url: contact.avatarUrl,
+              status_text: contact.statusText || '',
+              status_image_url: contact.statusImageUrl || null,
+              has_update: contact.hasUpdate || false,
+              enabled: contact.enabled !== false,
+              data_ai_hint: contact.dataAiHint || 'profile person',
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'id' }
+          );
+        if (error) throw error;
+      }
+      
+      // Also save to app_configurations for backward compatibility
+      await supabase
         .from('app_configurations')
         .upsert(
           { id: MANAGED_DEMO_CONTACTS_CONFIG_KEY, settings: managedContactStatuses, updated_at: new Date().toISOString() },
           { onConflict: 'id' }
         );
-      if (error) throw error;
+      
       await fetchGlobalStatuses();
 
       // Emit global event to notify all users

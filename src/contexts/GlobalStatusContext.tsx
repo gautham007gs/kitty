@@ -43,77 +43,95 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
 
     try {
-      // Fetch Admin's Own Status
+      // Fetch admin own status from dedicated table
       const { data: adminStatusData, error: adminStatusError } = await supabase
-        .from('app_configurations')
-        .select('settings')
-        .eq('id', ADMIN_OWN_STATUS_CONFIG_KEY)
+        .from('admin_status_display')
+        .select('*')
+        .eq('id', 'default')
         .single();
 
       if (adminStatusError && adminStatusError.code !== 'PGRST116') {
-        console.error('Error fetching admin own status from Supabase:', adminStatusError);
-        toast({ title: "Error Loading Admin Status", description: `Could not load global admin status. Using defaults. ${adminStatusError.message}`, variant: "destructive" });
-        setAdminOwnStatus({
-          name: defaultAIProfile.name,
-          status: defaultAIProfile.status,
-          avatarUrl: defaultAIProfile.avatarUrl,
-          statusStoryText: defaultAIProfile.statusStoryText,
-          statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,
-          statusStoryHasUpdate: defaultAIProfile.statusStoryHasUpdate
-        });
-      } else if (adminStatusData && adminStatusData.settings) {
-        setAdminOwnStatus({ ...defaultAdminStatusDisplay, ...(adminStatusData.settings as AdminStatusDisplay) });
+        console.warn('[GlobalStatusContext] Admin status error, using defaults:', adminStatusError);
+        setAdminOwnStatus(defaultAdminStatusDisplay);
+      } else if (adminStatusData) {
+        const adminStatus: AdminStatusDisplay = {
+          name: adminStatusData.name || defaultAdminStatusDisplay.name,
+          avatarUrl: adminStatusData.avatar_url || defaultAdminStatusDisplay.avatarUrl,
+          statusText: adminStatusData.status_text || defaultAdminStatusDisplay.statusText,
+          statusImageUrl: adminStatusData.status_image_url || defaultAdminStatusDisplay.statusImageUrl,
+          hasUpdate: adminStatusData.has_update || defaultAdminStatusDisplay.hasUpdate
+        };
+        setAdminOwnStatus(adminStatus);
       } else {
-        setAdminOwnStatus({
-          name: defaultAIProfile.name,
-          status: defaultAIProfile.status,
-          avatarUrl: defaultAIProfile.avatarUrl,
-          statusStoryText: defaultAIProfile.statusStoryText,
-          statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,
-          statusStoryHasUpdate: defaultAIProfile.statusStoryHasUpdate
-        });
+        setAdminOwnStatus(defaultAdminStatusDisplay);
       }
 
-      // Fetch Managed Demo Contacts
-      const { data: demoContactsData, error: demoContactsError } = await supabase
-        .from('app_configurations')
-        .select('settings')
-        .eq('id', MANAGED_DEMO_CONTACTS_CONFIG_KEY)
-        .single();
+      // Fetch managed demo contacts from dedicated table
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('managed_demo_contacts')
+        .select('*')
+        .eq('enabled', true)
+        .order('id');
 
-      if (demoContactsError && demoContactsError.code !== 'PGRST116') {
-        console.error('Error fetching managed demo contacts from Supabase:', demoContactsError);
-        toast({ title: "Error Loading Demo Contacts", description: `Could not load global demo contacts. Using defaults. ${demoContactsError.message}`, variant: "destructive" });
+      if (contactsError) {
+        console.warn('[GlobalStatusContext] Contacts error, using defaults:', contactsError);
         setManagedDemoContacts(defaultManagedContactStatuses);
-      } else if (demoContactsData && Array.isArray(demoContactsData.settings) && demoContactsData.settings.length > 0) {
-         // Merge fetched data with defaults to ensure all contacts are present
-        const fetchedContacts = demoContactsData.settings as ManagedContactStatus[];
-        
-        // Create a map of fetched contacts by ID
-        const fetchedContactsMap = new Map();
-        fetchedContacts.forEach(contact => {
-          fetchedContactsMap.set(contact.id, contact);
-        });
-        
-        // Merge with defaults, preferring fetched data where available
-        const mergedContacts = defaultManagedContactStatuses.map(defaultContact => {
-          const fetchedContact = fetchedContactsMap.get(defaultContact.id);
-          return fetchedContact ? { ...defaultContact, ...fetchedContact, enabled: fetchedContact.enabled !== false } : { ...defaultContact, enabled: true };
-        });
-        
-        // Add any extra fetched contacts not in defaults
-        fetchedContacts.forEach(fetchedContact => {
-          if (!defaultManagedContactStatuses.find(def => def.id === fetchedContact.id)) {
-            mergedContacts.push(fetchedContact);
+      } else if (contactsData && contactsData.length > 0) {
+        const contacts: ManagedContactStatus[] = contactsData.map(contact => ({
+          id: contact.id,
+          name: contact.name,
+          avatarUrl: contact.avatar_url,
+          statusText: contact.status_text || '',
+          statusImageUrl: contact.status_image_url || undefined,
+          hasUpdate: contact.has_update || false,
+          enabled: contact.enabled !== false,
+          dataAiHint: contact.data_ai_hint || 'profile person'
+        }));
+        setManagedDemoContacts(contacts);
+      } else {
+        setManagedDemoContacts(defaultManagedContactStatuses);
+      }
+
+      // Also try backward compatibility with app_configurations
+      if (!adminStatusData || !contactsData?.length) {
+        console.log('[GlobalStatusContext] Trying backward compatibility with app_configurations');
+
+        if (!adminStatusData) {
+          const { data: backupAdminData } = await supabase
+            .from('app_configurations')
+            .select('settings')
+            .eq('id', ADMIN_OWN_STATUS_CONFIG_KEY)
+            .single();
+
+          if (backupAdminData?.settings) {
+            const adminStatusSettings = backupAdminData.settings as Partial<AdminStatusDisplay>;
+            const mergedAdminStatus: AdminStatusDisplay = { 
+              ...defaultAdminStatusDisplay, 
+              ...adminStatusSettings 
+            };
+            setAdminOwnStatus(mergedAdminStatus);
           }
-        });
-        
-        setManagedDemoContacts(mergedContacts);
-      } else {
-        console.log("[GlobalStatusContext] Using all default managed contacts:", defaultManagedContactStatuses.length);
-        setManagedDemoContacts(defaultManagedContactStatuses);
+        }
+
+        if (!contactsData?.length) {
+          const { data: backupContactsData } = await supabase
+            .from('app_configurations')
+            .select('settings')
+            .eq('id', MANAGED_DEMO_CONTACTS_CONFIG_KEY)
+            .single();
+
+          if (backupContactsData?.settings) {
+            const contactsSettings = backupContactsData.settings as ManagedContactStatus[];
+            const finalContacts = (contactsSettings && Array.isArray(contactsSettings) && contactsSettings.length > 0) 
+              ? contactsSettings 
+              : defaultManagedContactStatuses;
+
+            setManagedDemoContacts(finalContacts);
+          }
+        }
       }
 
+      console.log('[GlobalStatusContext] Successfully fetched global statuses');
     } catch (e: any) {
       console.error('Unexpected error fetching global statuses:', e);
       toast({ title: "Error Loading Global Statuses", description: `Unexpected error. Using defaults. ${e.message}`, variant: "destructive" });
@@ -133,7 +151,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   useEffect(() => {
     fetchGlobalStatuses();
-    
+
     // Set up real-time subscription for global status changes
     if (supabase && typeof supabase.channel === 'function') {
       const channel = supabase
