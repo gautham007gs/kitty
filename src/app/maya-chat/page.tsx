@@ -213,7 +213,7 @@ const KruthikaChatPage: NextPage = () => {
               <div className="relative">
                 <Avatar className="h-10 w-10 cursor-pointer border-2 border-white/20" onClick={handleOpenAvatarZoom}>
                   <AvatarImage
-                    src={displayAIProfile.avatar_url}
+                    src={displayAIProfile.avatar_url || displayAIProfile.avatarUrl}
                     alt={displayAIProfile.name}
                     className="object-cover"
                   />
@@ -305,15 +305,13 @@ const KruthikaChatPage: NextPage = () => {
         <Dialog open={showZoomedAvatarDialog} onOpenChange={setShowZoomedAvatarDialog}>
           <DialogContent className="max-w-md w-auto p-0 bg-transparent border-0">
             <DialogTitle className="sr-only">{displayAIProfile.name}'s Profile Picture</DialogTitle>
-            {displayAIProfile.avatar_url && (
+            {(displayAIProfile.avatar_url || displayAIProfile.avatarUrl) && (
               <Image
-                src={displayAIProfile.avatar_url}
+                src={displayAIProfile.avatar_url || displayAIProfile.avatarUrl}
                 alt={`${displayAIProfile.name}'s avatar`}
-                width={500} // Set a reasonable default width
-                height={500} // Set a reasonable default height
-                layout="responsive" // Make it responsive
-                objectFit="contain" // Ensure the image fits within the dialog
-                className="rounded-lg"
+                width={500}
+                height={500}
+                className="rounded-lg object-cover"
               />
             )}
           </DialogContent>

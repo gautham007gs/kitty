@@ -45,9 +45,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   };
 
   // Use AI profile context for real-time syncing
-  let avatarUrlToUse = aiProfile?.avatarUrl || aiAvatarUrl;
+  let avatarUrlToUse = aiProfile?.avatar_url || aiProfile?.avatarUrl || aiAvatarUrl;
   if (!avatarUrlToUse || typeof avatarUrlToUse !== 'string' || avatarUrlToUse.trim() === '' || (!avatarUrlToUse.startsWith('http') && !avatarUrlToUse.startsWith('data:'))) {
-    avatarUrlToUse = defaultAIProfile.avatarUrl;
+    avatarUrlToUse = defaultAIProfile.avatar_url || defaultAIProfile.avatarUrl;
   }
 
   const handleAvatarClick = () => {

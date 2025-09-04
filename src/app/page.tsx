@@ -93,7 +93,7 @@ export default function HomePage() {
             <div className="relative">
               <Avatar className="h-14 w-14 ring-2 ring-[#25D366] p-0.5">
                 <AvatarImage 
-                  src={effectiveProfile.avatarUrl} 
+                  src={effectiveProfile.avatar_url || effectiveProfile.avatarUrl} 
                   alt={effectiveProfile.name}
                   className="object-cover"
                 />

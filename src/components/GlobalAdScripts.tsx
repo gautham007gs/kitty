@@ -119,50 +119,44 @@ export default function GlobalAdScripts() {
       document.head.appendChild(bannerScript);
     }
 
-    // Inject Adsterra Popunder if enabled
-    if (adSettings.adsterraPopunderEnabled && adSettings.adsterraPopunderCode) {
-      console.log("GlobalAdScripts: Injecting Adsterra Popunder");
-      const popunderScript = document.createElement('script');
-      popunderScript.type = 'text/javascript';
-      popunderScript.innerHTML = `
-        (function() {
+    // Inject Adsterra Popunder - with delay to ensure proper loading
+    if (adSettings.adsterraPopunderEnabled && adSettings.adsEnabledGlobally) {
+      console.log('GlobalAdScripts: Injecting Adsterra Popunder');
+
+      setTimeout(() => {
+        const popunderScript = document.createElement('script');
+        popunderScript.innerHTML = `
           var atOptions = {
-            'key': '2dc1e58e3be02dd1e015a64b5d1d7d69',
+            'key': '71e22bd92a34cc8da8bb2aff0c04e66c',
             'format': 'iframe',
-            'height': 50,
-            'width': 320,
+            'height': 60,
+            'width': 468,
             'params': {}
           };
-          var script = document.createElement('script');
-          script.type = 'text/javascript';
-          script.src = 'https://www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d7d69/invoke.js';
-          document.head.appendChild(script);
-        })();
-      `;
-      document.head.appendChild(popunderScript);
+          document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/71e22bd92a34cc8da8bb2aff0c04e66c/invoke.js"></scr' + 'ipt>');
+        `;
+        document.body.appendChild(popunderScript);
+      }, 2000);
     }
 
-    // Inject Adsterra Social Bar if enabled
-    if (adSettings.adsterraSocialBarEnabled && adSettings.adsterraSocialBarCode) {
-      console.log("GlobalAdScripts: Injecting Adsterra Social Bar");
-      const socialBarScript = document.createElement('script');
-      socialBarScript.type = 'text/javascript';
-      socialBarScript.innerHTML = `
-        (function() {
+    // Inject Adsterra Social Bar
+    if (adSettings.adsterraSocialBarEnabled && adSettings.adsEnabledGlobally) {
+      console.log('GlobalAdScripts: Injecting Adsterra Social Bar');
+
+      setTimeout(() => {
+        const socialBarScript = document.createElement('script');
+        socialBarScript.innerHTML = `
           var atOptions = {
-            'key': '2dc1e58e3be02dd1e015a64b5d7d69',
+            'key': 'e8f8bac5fa1d92ca7df7c0ea6b6ca2b4',
             'format': 'iframe',
-            'height': 250,
-            'width': 300,
+            'height': 90,
+            'width': 728,
             'params': {}
           };
-          var script = document.createElement('script');
-          script.type = 'text/javascript';
-          script.src = 'https://www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js';
-          document.head.appendChild(script);
-        })();
-      `;
-      document.head.appendChild(socialBarScript);
+          document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/e8f8bac5fa1d92ca7df7c0ea6b6ca2b4/invoke.js"></scr' + 'ipt>');
+        `;
+        document.body.appendChild(socialBarScript);
+      }, 3000);
     }
 
     // Direct link ads handling
