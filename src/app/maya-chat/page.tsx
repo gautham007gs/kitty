@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { NextPage } from 'next';
@@ -26,13 +25,13 @@ const KruthikaChatPage: NextPage = () => {
   const router = useRouter();
   const { adSettings, isLoadingAdSettings } = useAdSettings();
   const { aiProfile: globalAIProfile, isLoadingAIProfile } = useAIProfile();
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  
+
   const [showZoomedAvatarDialog, setShowZoomedAvatarDialog] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  
+
   const { toast } = useToast();
   const userIdRef = useRef<string | null>(null);
 
@@ -49,7 +48,7 @@ const KruthikaChatPage: NextPage = () => {
     if (!globalAIProfile?.avatar_url) return;
     setShowZoomedAvatarDialog(true);
   };
-  
+
   const handleToggleOptionsMenu = () => {
     setShowOptionsMenu(prevState => !prevState);
   };
@@ -129,7 +128,7 @@ const KruthikaChatPage: NextPage = () => {
       }
 
       const result = await response.json();
-      
+
       const { humanizedResponse, newMood, proactiveMediaUrl } = result; // Destructure newMood and proactiveMediaUrl
 
       if (humanizedResponse && humanizedResponse.bubbles) {
@@ -163,7 +162,7 @@ const KruthikaChatPage: NextPage = () => {
       setIsAiTyping(false);
     }
   }, []);
-  
+
   useEffect(() => {
     if (isAiTyping) {
       setMessages(prev =>
@@ -200,10 +199,27 @@ const KruthikaChatPage: NextPage = () => {
   return (
     <>
       <GlobalAdScripts />
+
+      {/* Banner Ad at top */}
+      <BannerAdDisplay 
+        adType="standard" 
+        placementKey="top-banner" 
+        className="mb-2"
+      />
+
+      {/* Native Banner Ad */}
+      <BannerAdDisplay 
+        adType="native" 
+        placementKey="native-banner" 
+        className="mb-2"
+        contextual={true}
+      />
+
+      {/* Social Bar Ad at the bottom */}
       <SocialBarAdDisplay />
 
+      {/* Header */}
       <div className="flex flex-col h-screen max-w-3xl mx-auto bg-gray-100 shadow-lg">
-        {/* WhatsApp-style header with call icons and menu */}
         <div className="bg-[#25D366] text-white px-4 py-3 shadow-md sticky top-0 z-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -294,7 +310,7 @@ const KruthikaChatPage: NextPage = () => {
           isAiTyping={isAiTyping}
           onTriggerAd={() => {}}
         />
-        
+
         <BannerAdDisplay
           adType="standard"
           placementKey="chatViewBottomStandard"
