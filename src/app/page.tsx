@@ -50,7 +50,7 @@ export default function HomePage() {
       <GlobalAdScripts />
       <SocialBarAdDisplay />
 
-      <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-lg">
+      <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-lg relative overflow-hidden">
         {/* Header with lighter green color */}
         <div className="bg-[#25D366] text-white px-4 py-3 shadow-md">
           <div className="flex items-center justify-between">
@@ -85,7 +85,7 @@ export default function HomePage() {
         </div>
 
         {/* Chat List Container */}
-        <div className="flex-grow overflow-y-auto bg-white">
+        <div className="flex-grow overflow-y-auto bg-white scrollbar-hide">
           {/* Main Chat Entry */}
           <div 
             className="flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-all duration-200 active:bg-gray-100"

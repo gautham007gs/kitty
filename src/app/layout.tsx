@@ -10,6 +10,7 @@ import { AIProfileProvider } from '@/contexts/AIProfileContext';
 import { GlobalStatusProvider } from '@/contexts/GlobalStatusContext';
 import { AIMediaAssetsProvider } from '@/contexts/AIMediaAssetsContext';
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -35,7 +36,9 @@ export default function RootLayout({
                 <AIMediaAssetsProvider>
                   <InstagramBrowserPrompt />
                   <GlobalAdScripts />
-                  {children}
+                  <ErrorBoundary>
+                    {children}
+                  </ErrorBoundary>
                   <SocialBarAdDisplay /> {/* Add SocialBarAdDisplay here */}
                   <Toaster />
                 </AIMediaAssetsProvider>

@@ -105,3 +105,42 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|media/|.*\\.[^.]+$).*)',
   ],
 };
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Rate limiting map
+const rateLimitMap = new Map()
+
+export function middleware(request: NextRequest) {
+  // Add security headers
+  const response = NextResponse.next()
+  
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  // Basic rate limiting for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const ip = request.ip || 'anonymous'
+    const now = Date.now()
+    const windowStart = now - 60000 // 1 minute window
+    
+    const requests = rateLimitMap.get(ip) || []
+    const recentRequests = requests.filter((time: number) => time > windowStart)
+    
+    if (recentRequests.length >= 60) { // 60 requests per minute
+      return new NextResponse('Too Many Requests', { status: 429 })
+    }
+    
+    rateLimitMap.set(ip, [...recentRequests, now])
+  }
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}
