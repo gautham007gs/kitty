@@ -1,133 +1,104 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-function isInstagramInAppBrowserServer(userAgent: string | null): boolean {
-  if (userAgent) {
-    // Common patterns for Instagram's in-app browser user agent string
-    return /instagram/i.test(userAgent) || /mozilla\/5\.0 \([^)]+\) applewebkit\/[^ ]+ \(khtml, like gecko\) mobile\/[^ ]+ instagram/i.test(userAgent);
-  }
-  return false;
-}
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 // Rate limiting map
-const rateLimitMap = new Map();
+const rateLimitMap = new Map()
 
-export function middleware(request: NextRequest) {
-  const { pathname, searchParams, origin } = request.nextUrl;
-  const userAgent = request.headers.get('user-agent');
+// Simple rate limiting function
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const requests = rateLimitMap.get(ip) || []
 
-  // Basic rate limiting for API routes
-  if (pathname.startsWith('/api/')) {
-    const ip = request.ip || 'anonymous';
-    const now = Date.now();
-    const windowStart = now - 60000; // 1 minute window
+  // Filter out requests older than 1 minute
+  const recentRequests = requests.filter((time: number) => now - time < 60000)
 
-    const requests = rateLimitMap.get(ip) || [];
-    const recentRequests = requests.filter((time: number) => time > windowStart);
-
-    if (recentRequests.length >= 60) { // 60 requests per minute
-      return new NextResponse('Too Many Requests', { status: 429 });
-    }
-
-    rateLimitMap.set(ip, [...recentRequests, now]);
+  // Allow max 30 requests per minute
+  if (recentRequests.length >= 30) {
+    return true
   }
 
-  // Check if our redirect trick has already been attempted for this request flow
-  const hasRedirectAttemptedFlag = searchParams.has('external_redirect_attempted');
-
-  // Only apply the trick if it's an Instagram browser, the flag isn't set, and it's not an API/static asset path
-  if (isInstagramInAppBrowserServer(userAgent) && !hasRedirectAttemptedFlag) {
-
-    // More robustly ignore common asset paths and API routes
-    if (pathname.startsWith('/_next/') ||
-        pathname.startsWith('/api/') ||
-        pathname.startsWith('/media/') || // Assuming /media/ for local assets like audio
-        pathname.includes('.') // General check for file extensions like .png, .ico, .css, .js
-       ) {
-      return NextResponse.next();
-    }
-
-    // Construct the target URL for the meta-refresh, preserving original path and query params,
-    // and adding our flag.
-    const targetUrl = new URL(pathname, origin);
-    // Append existing search params
-    searchParams.forEach((value, key) => {
-        if (key !== 'external_redirect_attempted') { // Avoid duplicating our flag
-            targetUrl.searchParams.append(key, value);
-        }
-    });
-    targetUrl.searchParams.set('external_redirect_attempted', 'true');
-    const targetUrlString = targetUrl.toString();
-
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opening in Browser...</title>
-    <meta http-equiv="refresh" content="0;url=${targetUrlString}">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; margin: 0; padding: 25px; background-color: #fafafa; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 90vh; text-align: center; color: #262626; }
-        .container { background-color: #ffffff; padding: 20px 30px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); max-width: 400px; width: 90%; }
-        p { margin-bottom: 18px; font-size: 17px; line-height: 1.65; }
-        a { color: #0095f6; text-decoration: none; font-weight: 600; }
-        a:hover { text-decoration: underline; }
-        .loader { border: 4px solid #dbdbdb; border-top: 4px solid #0095f6; border-radius: 50%; width: 35px; height: 35px; animation: spin 1.2s linear infinite; margin: 25px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .small-text { font-size: 13px; color: #8e8e8e; margin-top: 25px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <p>Taking you to the full experience...</p>
-        <div class="loader"></div>
-        <p>If you're not redirected, please <a href="${targetUrlString}">click here</a>.</p>
-        <p class="small-text">This helps ensure all features work correctly by using your phone's main browser.</p>
-    </div>
-    <script type="text/javascript">
-      // The meta refresh is the primary method.
-      // A direct window.location.href might be too quick and less likely to trigger OS intervention.
-      // No additional JS needed for this specific trick; meta-refresh + Content-Disposition is the core.
-    </script>
-</body>
-</html>`;
-
-    return new Response(htmlContent, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="open-maya-chat.html"`, // Filename hints to browser/OS
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-    });
-  }
-
-  // Add security headers to the response
-  const response = NextResponse.next();
-
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-  return response;
+  // Update the map with recent requests plus current request
+  rateLimitMap.set(ip, [...recentRequests, now])
+  return false
 }
 
-// Configure the matcher to run on most page routes, excluding API, static assets, etc.
+// Helper to get client IP
+function getClientIP(request: NextRequest): string {
+  // Try various headers that might contain the real IP
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+  const cfIP = request.headers.get('cf-connecting-ip')
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim()
+  }
+
+  if (realIP) {
+    return realIP
+  }
+
+  if (cfIP) {
+    return cfIP
+  }
+
+  // Fallback to a default IP for development
+  return request.ip || '127.0.0.1'
+}
+
+// Security headers middleware
+export function middleware(request: NextRequest) {
+  // Get client IP for rate limiting
+  const clientIP = getClientIP(request)
+
+  // Apply rate limiting to API routes and chat endpoints
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    if (isRateLimited(clientIP)) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Please try again later.',
+          retryAfter: 60 
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Retry-After': '60'
+          } 
+        }
+      )
+    }
+  }
+
+  // Create response with security headers
+  const response = NextResponse.next()
+
+  // Security headers for all routes
+  response.headers.set('X-DNS-Prefetch-Control', 'on')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+
+  // Content Security Policy - relaxed for development
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.adsterra.com https://*.monetag.com https://*.highrevenuegate.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: http: https://*.postimg.cc https://*.githubusercontent.com",
+    "media-src 'self' data: https: http:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://*.googleapis.com https://*.adsterra.com https://*.monetag.com",
+    "frame-src 'self' https://*.adsterra.com https://*.monetag.com"
+  ].join('; ')
+
+  response.headers.set('Content-Security-Policy', csp)
+
+  return response
+}
+
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - /media/ (local media assets like audio)
-     * - and other files with extensions (e.g. .png, .jpg)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|media/|.*\\.[^.]+$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
