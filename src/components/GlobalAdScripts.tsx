@@ -50,7 +50,7 @@ class GlobalEventSystem {
 
 
 export default function GlobalAdScripts() {
-  const { adSettings, isLoadingAdSettings } = useAdSettings();
+  const { adSettings, isLoadingAdSettings, refreshAdSettings } = useAdSettings();
 
   // Listen for admin updates
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function GlobalAdScripts() {
       unsubscribeAdUpdate();
       unsubscribeForceRefresh();
     };
-  }, [refreshAdSettings]);
+  }, []);
 
 
   useEffect(() => {
