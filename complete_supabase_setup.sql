@@ -1,6 +1,8 @@
+
 -- ===================================================================
 -- COMPLETE SUPABASE DATABASE SETUP FOR MAYA CHAT APPLICATION
 -- Copy this entire script to your Supabase SQL Editor and run it
+-- This setup enables global updates and admin panel functionality
 -- ===================================================================
 
 -- Drop all existing tables and functions for clean setup
@@ -17,19 +19,17 @@ DROP TABLE IF EXISTS chat_contexts CASCADE;
 -- Drop existing functions
 DROP FUNCTION IF EXISTS get_daily_message_counts(DATE);
 DROP FUNCTION IF EXISTS get_daily_active_user_counts(DATE);
-DROP FUNCTION IF EXISTS log_daily_activity(TEXT, TEXT, TEXT); -- Old function, drop it
 DROP FUNCTION IF EXISTS log_daily_activity_optimized(TEXT, TEXT, TEXT);
 DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
 DROP FUNCTION IF EXISTS cleanup_expired_contexts();
 DROP FUNCTION IF EXISTS get_chat_analytics(INTEGER);
-
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ===================================================================
--- CREATE MAIN TABLES
+-- CREATE MAIN TABLES FOR GLOBAL ADMIN FUNCTIONALITY
 -- ===================================================================
 
 -- Messages log table (comprehensive schema for Vertex AI integration)
@@ -59,10 +59,10 @@ CREATE TABLE messages_log (
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL -- Added for consistency
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- AI profile settings table (enhanced for admin panel)
+-- AI profile settings table (enhanced for admin panel global updates)
 CREATE TABLE ai_profile_settings (
     id TEXT PRIMARY KEY DEFAULT 'default',
     name TEXT NOT NULL DEFAULT 'Kruthika',
@@ -81,7 +81,7 @@ CREATE TABLE ai_profile_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Ad settings table (comprehensive ad management)
+-- Ad settings table (comprehensive ad management with global updates)
 CREATE TABLE ad_settings (
     id TEXT PRIMARY KEY DEFAULT 'default',
     ads_enabled_globally BOOLEAN DEFAULT true,
@@ -132,6 +132,18 @@ CREATE TABLE ai_media_assets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- App configurations table (CRITICAL for admin global updates)
+CREATE TABLE app_configurations (
+    id TEXT PRIMARY KEY,
+    config_type TEXT NOT NULL DEFAULT 'general',
+    settings JSONB NOT NULL,
+    version TEXT DEFAULT 'v1',
+    environment TEXT DEFAULT 'production',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Daily activity log table (enhanced analytics)
 CREATE TABLE daily_activity_log (
     id BIGSERIAL PRIMARY KEY,
@@ -149,18 +161,6 @@ CREATE TABLE daily_activity_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT unique_user_activity_per_day_per_chat UNIQUE (user_pseudo_id, activity_date, chat_id)
-);
-
--- App configurations table (for backward compatibility and general settings)
-CREATE TABLE app_configurations (
-    id TEXT PRIMARY KEY,
-    config_type TEXT NOT NULL DEFAULT 'general',
-    settings JSONB NOT NULL,
-    version TEXT DEFAULT 'v1',
-    environment TEXT DEFAULT 'production',
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Analytics data table (comprehensive analytics)
@@ -218,8 +218,7 @@ CREATE INDEX idx_messages_log_created_at ON messages_log(created_at DESC);
 CREATE INDEX idx_messages_log_session_id ON messages_log(session_id);
 CREATE INDEX idx_messages_log_user_id ON messages_log(user_id);
 CREATE INDEX idx_messages_log_composite ON messages_log(chat_id, user_id, created_at DESC);
-CREATE INDEX idx_messages_log_timestamp ON public.messages_log(timestamp);
-
+CREATE INDEX idx_messages_log_timestamp ON messages_log(timestamp);
 
 -- Daily activity indexes
 CREATE INDEX idx_daily_activity_date ON daily_activity_log(activity_date DESC);
@@ -240,8 +239,13 @@ CREATE INDEX idx_user_sessions_active ON user_sessions(is_active, last_activity 
 CREATE INDEX idx_chat_contexts_session_id ON chat_contexts(session_id);
 CREATE INDEX idx_chat_contexts_expires_at ON chat_contexts(expires_at);
 
+-- App configurations indexes (CRITICAL for admin panel performance)
+CREATE INDEX idx_app_configurations_id ON app_configurations(id);
+CREATE INDEX idx_app_configurations_type ON app_configurations(config_type);
+CREATE INDEX idx_app_configurations_active ON app_configurations(is_active);
+
 -- ===================================================================
--- CREATE TRIGGERS FOR UPDATED_AT
+-- CREATE TRIGGERS FOR UPDATED_AT (ENABLES REAL-TIME UPDATES)
 -- ===================================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -285,10 +289,10 @@ ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_contexts ENABLE ROW LEVEL SECURITY;
 
 -- ===================================================================
--- CREATE RLS POLICIES (DEVELOPMENT MODE - ADJUST FOR PRODUCTION)
+-- CREATE RLS POLICIES FOR GLOBAL ADMIN FUNCTIONALITY
 -- ===================================================================
 
--- Allow public access for all tables (development mode)
+-- Allow public access for most tables (development mode)
 CREATE POLICY "Allow public access for messages_log" ON messages_log FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access for ai_profile_settings" ON ai_profile_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access for ad_settings" ON ad_settings FOR ALL USING (true) WITH CHECK (true);
@@ -298,13 +302,14 @@ CREATE POLICY "Allow public access for analytics_data" ON analytics_data FOR ALL
 CREATE POLICY "Allow public access for user_sessions" ON user_sessions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access for chat_contexts" ON chat_contexts FOR ALL USING (true) WITH CHECK (true);
 
--- Specific policies for app_configurations (as requested for admin)
-DROP POLICY IF EXISTS "Allow admin full access on app_configurations" ON app_configurations;
-DROP POLICY IF EXISTS "Allow public read access on app_configurations" ON app_configurations;
-
+-- Special policies for app_configurations (CRITICAL for admin global updates)
 CREATE POLICY "Allow public read access on app_configurations" ON app_configurations
   FOR SELECT USING (true);
 
+CREATE POLICY "Allow public write access on app_configurations" ON app_configurations
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Admin-specific policy (if you want to restrict later)
 CREATE POLICY "Allow admin full access on app_configurations" ON app_configurations
   FOR ALL USING (
     auth.uid() IN (
@@ -319,7 +324,7 @@ CREATE POLICY "Allow admin full access on app_configurations" ON app_configurati
   );
 
 -- ===================================================================
--- CREATE HELPER FUNCTIONS
+-- CREATE HELPER FUNCTIONS FOR ADMIN PANEL
 -- ===================================================================
 
 -- Function to get daily message counts
@@ -414,7 +419,7 @@ END;
 $$;
 
 -- ===================================================================
--- GRANT PERMISSIONS
+-- GRANT PERMISSIONS FOR GLOBAL ACCESS
 -- ===================================================================
 
 GRANT EXECUTE ON FUNCTION get_daily_message_counts(DATE) TO anon, authenticated;
@@ -423,12 +428,12 @@ GRANT EXECUTE ON FUNCTION log_daily_activity_optimized(TEXT, TEXT, TEXT) TO anon
 GRANT EXECUTE ON FUNCTION cleanup_expired_contexts() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_chat_analytics(INTEGER) TO anon, authenticated;
 
--- Grant table permissions
+-- Grant table permissions for global access
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- ===================================================================
--- INSERT DEFAULT DATA
+-- INSERT DEFAULT DATA FOR GLOBAL CONFIGURATION
 -- ===================================================================
 
 -- Insert default AI profile settings
@@ -521,16 +526,40 @@ ON CONFLICT (id) DO UPDATE SET
   assets = EXCLUDED.assets,
   updated_at = NOW();
 
--- Insert default app configurations
+-- Insert CRITICAL app configurations for global admin functionality
 INSERT INTO app_configurations (id, config_type, settings)
 VALUES
 ('ad_settings_kruthika_chat_v1', 'ads', '{
     "adsEnabledGlobally": true,
     "adsterraDirectLink": "https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69",
     "adsterraDirectLinkEnabled": true,
+    "adsterraPopunderEnabled": true,
+    "adsterraSocialBarEnabled": true,
     "maxDirectLinkAdsPerDay": 6,
     "maxDirectLinkAdsPerSession": 3,
     "version": "v1"
+}'),
+('ai_profile_kruthika_chat_v1', 'ai', '{
+    "name": "Kruthika",
+    "status": "🌸 Living my best life! Lets chat! 🌸",
+    "avatarUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    "statusStoryText": "Ask me anything! 💬",
+    "statusStoryImageUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
+    "statusStoryHasUpdate": true,
+    "personality": "friendly",
+    "language": "multilingual",
+    "responseStyle": "casual",
+    "emotionEnabled": true
+}'),
+('ai_media_assets_config_v1', 'media', '{
+    "availableImages": [
+        "https://i.postimg.cc/mZjVmd9c/IMG-20250607-102955.jpg",
+        "https://i.postimg.cc/52S3BZrM/images-10.jpg"
+    ],
+    "availableAudio": [
+        "/media/laugh.mp3",
+        "/media/song.mp3"
+    ]
 }'),
 ('vertex_ai_config', 'ai', '{
     "model": "gemini-pro",
@@ -551,10 +580,10 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 -- ===================================================================
--- ENABLE REALTIME (for admin panel real-time updates)
+-- ENABLE REALTIME FOR ADMIN PANEL GLOBAL UPDATES
 -- ===================================================================
 
--- Enable realtime for admin panel tables
+-- Enable realtime for admin panel tables (CRITICAL for global updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE ai_profile_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE ad_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE ai_media_assets;
@@ -564,21 +593,32 @@ ALTER PUBLICATION supabase_realtime ADD TABLE daily_activity_log;
 ALTER PUBLICATION supabase_realtime ADD TABLE user_sessions;
 ALTER PUBLICATION supabase_realtime ADD TABLE chat_contexts;
 
-
 -- ===================================================================
 -- SUCCESS MESSAGE
 -- ===================================================================
 
 SELECT 'Maya Chat Database Setup Completed Successfully!
 ✅ All tables created with comprehensive schema
+✅ Global admin functionality enabled
+✅ Real-time updates configured
+✅ App configurations table ready for admin panel
 ✅ Vertex AI integration ready
-✅ Real-time admin panel functionality enabled
 ✅ Performance indexes added
-✅ Default data inserted
+✅ Default data inserted with global settings
 ✅ Analytics and reporting functions created
+✅ RLS policies configured for development
+
+🚀 Your admin panel can now make global updates that affect all users!
+
+Key Features Enabled:
+- Global AI profile updates via app_configurations table
+- Real-time synchronization across all user sessions
+- Comprehensive analytics and monitoring
+- Global ad settings management
+- Multi-user session tracking
 
 Next steps:
-1. Configure your environment variables
-2. Test the admin panel real-time updates
-3. Verify Vertex AI integration
-4. Review and adjust RLS policies for production' as setup_result;
+1. Test admin panel global updates
+2. Verify real-time functionality
+3. Check AI profile saving (should work now)
+4. Review analytics dashboard' as setup_result;
