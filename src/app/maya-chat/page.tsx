@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { NextPage } from 'next';
@@ -26,13 +25,13 @@ const KruthikaChatPage: NextPage = () => {
   const router = useRouter();
   const { adSettings, isLoadingAdSettings } = useAdSettings();
   const { aiProfile: globalAIProfile, isLoadingAIProfile } = useAIProfile();
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  
+
   const [showZoomedAvatarDialog, setShowZoomedAvatarDialog] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  
+
   const { toast } = useToast();
   const userIdRef = useRef<string | null>(null);
 
@@ -49,7 +48,7 @@ const KruthikaChatPage: NextPage = () => {
     if (!globalAIProfile?.avatar_url) return;
     setShowZoomedAvatarDialog(true);
   };
-  
+
   const handleToggleOptionsMenu = () => {
     setShowOptionsMenu(prevState => !prevState);
   };
@@ -129,7 +128,7 @@ const KruthikaChatPage: NextPage = () => {
       }
 
       const result = await response.json();
-      
+
       const { humanizedResponse, newMood, proactiveMediaUrl } = result; // Destructure newMood and proactiveMediaUrl
 
       if (humanizedResponse && humanizedResponse.bubbles) {
@@ -163,7 +162,7 @@ const KruthikaChatPage: NextPage = () => {
       setIsAiTyping(false);
     }
   }, []);
-  
+
   useEffect(() => {
     if (isAiTyping) {
       setMessages(prev =>
@@ -294,7 +293,7 @@ const KruthikaChatPage: NextPage = () => {
           isAiTyping={isAiTyping}
           onTriggerAd={() => {}}
         />
-        
+
         <BannerAdDisplay
           adType="standard"
           placementKey="chatViewBottomStandard"

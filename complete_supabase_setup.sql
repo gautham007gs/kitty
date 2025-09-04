@@ -35,7 +35,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Messages log table (comprehensive schema for Vertex AI integration)
 CREATE TABLE messages_log (
     id BIGSERIAL PRIMARY KEY,
-    message_id TEXT NOT NULL,
+    message_id TEXT NOT NULL DEFAULT gen_random_uuid(),
     sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'ai')),
     chat_id TEXT NOT NULL DEFAULT 'kruthika_chat',
     user_id TEXT,
@@ -94,7 +94,7 @@ CREATE TABLE ad_settings (
     adsterra_direct_link_enabled BOOLEAN DEFAULT true,
     adsterra_banner_enabled BOOLEAN DEFAULT true,
     adsterra_native_banner_enabled BOOLEAN DEFAULT false,
-    adsterra_social_bar_enabled BOOLEAN DEFAULT false,
+    adsterra_social_bar_enabled BOOLEAN DEFAULT true,
     adsterra_popunder_enabled BOOLEAN DEFAULT true,
     adsterra_popunder_code TEXT,
     adsterra_banner_code TEXT,
@@ -309,20 +309,6 @@ CREATE POLICY "Allow public read access on app_configurations" ON app_configurat
 CREATE POLICY "Allow public write access on app_configurations" ON app_configurations
   FOR ALL USING (true) WITH CHECK (true);
 
--- Admin-specific policy (if you want to restrict later)
-CREATE POLICY "Allow admin full access on app_configurations" ON app_configurations
-  FOR ALL USING (
-    auth.uid() IN (
-      SELECT id FROM auth.users
-      WHERE email = 'gamingguruji095@gmail.com'
-    )
-  ) WITH CHECK (
-    auth.uid() IN (
-      SELECT id FROM auth.users
-      WHERE email = 'gamingguruji095@gmail.com'
-    )
-  );
-
 -- ===================================================================
 -- CREATE HELPER FUNCTIONS FOR ADMIN PANEL
 -- ===================================================================
@@ -456,9 +442,10 @@ ON CONFLICT (id) DO UPDATE SET
   settings = EXCLUDED.settings,
   updated_at = NOW();
 
--- Insert default ad settings
-INSERT INTO ad_settings (id, adsterra_direct_link, adsterra_popunder_code, settings)
-VALUES ('default', 'https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69', '<script type="text/javascript">
+-- Insert default ad settings with proper Adsterra configuration
+INSERT INTO ad_settings (id, adsterra_direct_link, adsterra_popunder_code, adsterra_social_bar_code, settings)
+VALUES ('default', 'https://www.highrevenuegate.com/p8ks4fn2?key=2dc1e58e3be02dd1e015a64b5d1d7d69', 
+'<script type="text/javascript">
 atOptions = {
     ''key'' : ''2dc1e58e3be02dd1e015a64b5d1d7d69'',
     ''format'' : ''iframe'',
@@ -467,7 +454,18 @@ atOptions = {
     ''params'' : {}
 };
 </script>
-<script type="text/javascript" src="//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js"></script>', '{
+<script type="text/javascript" src="//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js"></script>',
+'<script type="text/javascript">
+atOptions = {
+    ''key'' : ''2dc1e58e3be02dd1e015a64b5d1d7d69'',
+    ''format'' : ''iframe'',
+    ''height'' : 90,
+    ''width'' : 728,
+    ''params'' : {}
+};
+</script>
+<script type="text/javascript" src="//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js"></script>',
+'{
     "version": "v2",
     "lastUpdated": "2024-01-01",
     "environment": "production"
@@ -475,6 +473,7 @@ atOptions = {
 ON CONFLICT (id) DO UPDATE SET
   adsterra_direct_link = EXCLUDED.adsterra_direct_link,
   adsterra_popunder_code = EXCLUDED.adsterra_popunder_code,
+  adsterra_social_bar_code = EXCLUDED.adsterra_social_bar_code,
   settings = EXCLUDED.settings,
   updated_at = NOW();
 
@@ -535,13 +534,20 @@ VALUES
     "adsterraDirectLinkEnabled": true,
     "adsterraPopunderEnabled": true,
     "adsterraSocialBarEnabled": true,
+    "adsterraBannerEnabled": true,
+    "adsterraNativeBannerEnabled": false,
     "maxDirectLinkAdsPerDay": 6,
     "maxDirectLinkAdsPerSession": 3,
+    "showAdsAfterMessageCount": 8,
+    "adDisplayDurationMs": 5000,
+    "popunderCooldownHours": 24,
+    "adsterraPopunderCode": "<script type=\"text/javascript\">atOptions = {\"key\" : \"2dc1e58e3be02dd1e015a64b5d1d7d69\",\"format\" : \"iframe\",\"height\" : 50,\"width\" : 320,\"params\" : {}};document.write(\"<scr\"+\"ipt type=text/javascript src=//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js></scr\"+\"ipt>\");</script>",
+    "adsterraSocialBarCode": "<script type=\"text/javascript\">atOptions = {\"key\" : \"2dc1e58e3be02dd1e015a64b5d1d7d69\",\"format\" : \"iframe\",\"height\" : 90,\"width\" : 728,\"params\" : {}};document.write(\"<scr\"+\"ipt type=text/javascript src=//www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js></scr\"+\"ipt>\");</script>",
     "version": "v1"
 }'),
-('ai_profile_kruthika_chat_v1', 'ai', '{
+('ai_profile', 'ai', '{
     "name": "Kruthika",
-    "status": "🌸 Living my best life! Lets chat! 🌸",
+    "status": "🌸 Living my best life! Let''s chat! 🌸",
     "avatarUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
     "statusStoryText": "Ask me anything! 💬",
     "statusStoryImageUrl": "https://i.postimg.cc/52S3BZrM/images-10.jpg",
@@ -607,6 +613,8 @@ SELECT 'Maya Chat Database Setup Completed Successfully!
 ✅ Default data inserted with global settings
 ✅ Analytics and reporting functions created
 ✅ RLS policies configured for development
+✅ Adsterra ads properly configured
+✅ AI profile syncing enabled
 
 🚀 Your admin panel can now make global updates that affect all users!
 
@@ -614,11 +622,13 @@ Key Features Enabled:
 - Global AI profile updates via app_configurations table
 - Real-time synchronization across all user sessions
 - Comprehensive analytics and monitoring
-- Global ad settings management
+- Global ad settings management with Adsterra integration
 - Multi-user session tracking
+- Proper avatar URL syncing between main page and chat
 
 Next steps:
 1. Test admin panel global updates
 2. Verify real-time functionality
 3. Check AI profile saving (should work now)
-4. Review analytics dashboard' as setup_result;
+4. Verify Adsterra ads display
+5. Review analytics dashboard' as setup_result;

@@ -50,7 +50,7 @@ class GlobalEventSystem {
 
 
 export default function GlobalAdScripts() {
-  const { adSettings, isLoading: isLoadingAdSettings, refreshAdSettings } = useAdSettings();
+  const { adSettings, isLoadingAdSettings } = useAdSettings();
 
   // Listen for admin updates
   useEffect(() => {
@@ -74,42 +74,103 @@ export default function GlobalAdScripts() {
 
 
   useEffect(() => {
-    // Return early if still loading or if adSettings is null
     if (isLoadingAdSettings || !adSettings) {
-      console.log('GlobalAdScripts: Ads disabled or still loading', { 
-        isLoadingAdSettings: isLoadingAdSettings, 
-        adSettingsNull: !adSettings 
-      });
+      console.log("GlobalAdScripts: Ads disabled or still loading", { isLoadingAdSettings, adSettingsNull: !adSettings });
       return;
     }
 
-    console.log('GlobalAdScripts: Checking ad settings', adSettings);
+    console.log("GlobalAdScripts: Checking ad settings", {
+      adsterraPopunderEnabled: adSettings.adsterraPopunderEnabled,
+      adsterraSocialBarEnabled: adSettings.adsterraSocialBarEnabled,
+      adsterraDirectLinkEnabled: adSettings.adsterraDirectLinkEnabled,
+      adsterraBannerEnabled: adSettings.adsterraBannerEnabled,
+      adsterraDirectLink: adSettings.adsterraDirectLink,
+      version: adSettings.version || 'unknown',
+      adsEnabledGlobally: adSettings.adsEnabledGlobally,
+      maxDirectLinkAdsPerDay: adSettings.maxDirectLinkAdsPerDay,
+      maxDirectLinkAdsPerSession: adSettings.maxDirectLinkAdsPerSession,
+    });
 
-    // Only inject scripts if ads are enabled and not already present
-    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && !document.querySelector('script[src*="suv4c1"]');
-    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && !document.querySelector('script[src*="thubanoa"]');
-
-    if (shouldInjectAdsterra) {
-      const adsterraScript = document.createElement('script');
-      adsterraScript.setAttribute('data-cfasync', 'false');
-      adsterraScript.src = '//suv4c1.com/c84a8af7a8a64a5eaf8c3f4c5b46b49b/invoke.js';
-      adsterraScript.async = true;
-      document.head.appendChild(adsterraScript);
-
-      console.log('Adsterra pop-under script injected.');
+    if (!adSettings.adsEnabledGlobally) {
+      console.log("GlobalAdScripts: Ads globally disabled");
+      return;
     }
 
-    if (shouldInjectMonetag) {
-      const monetagScript = document.createElement('script');
-      monetagScript.setAttribute('data-cfasync', 'false');
-      monetagScript.src = '//thubanoa.com/1?z=7865873';
-      monetagScript.async = true;
-      document.head.appendChild(monetagScript);
-
-      console.log('Monetag script injected.');
+    // Inject Adsterra Banner if enabled
+    if (adSettings.adsterraBannerEnabled && adSettings.adsterraBannerCode) {
+      console.log("GlobalAdScripts: Injecting Adsterra Banner");
+      const bannerScript = document.createElement('script');
+      bannerScript.type = 'text/javascript';
+      bannerScript.innerHTML = `
+        (function() {
+          var atOptions = {
+            'key': '2dc1e58e3be02dd1e015a64b5d1d7d69',
+            'format': 'iframe',
+            'height': 90,
+            'width': 728,
+            'params': {}
+          };
+          var script = document.createElement('script');
+          script.type = 'text/javascript';
+          script.src = 'https://www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js';
+          document.head.appendChild(script);
+        })();
+      `;
+      document.head.appendChild(bannerScript);
     }
 
-  }, [adSettings, isLoadingAdSettings]); // Dependency array includes isLoadingAdSettings
+    // Inject Adsterra Popunder if enabled
+    if (adSettings.adsterraPopunderEnabled && adSettings.adsterraPopunderCode) {
+      console.log("GlobalAdScripts: Injecting Adsterra Popunder");
+      const popunderScript = document.createElement('script');
+      popunderScript.type = 'text/javascript';
+      popunderScript.innerHTML = `
+        (function() {
+          var atOptions = {
+            'key': '2dc1e58e3be02dd1e015a64b5d1d7d69',
+            'format': 'iframe',
+            'height': 50,
+            'width': 320,
+            'params': {}
+          };
+          var script = document.createElement('script');
+          script.type = 'text/javascript';
+          script.src = 'https://www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d7d69/invoke.js';
+          document.head.appendChild(script);
+        })();
+      `;
+      document.head.appendChild(popunderScript);
+    }
+
+    // Inject Adsterra Social Bar if enabled
+    if (adSettings.adsterraSocialBarEnabled && adSettings.adsterraSocialBarCode) {
+      console.log("GlobalAdScripts: Injecting Adsterra Social Bar");
+      const socialBarScript = document.createElement('script');
+      socialBarScript.type = 'text/javascript';
+      socialBarScript.innerHTML = `
+        (function() {
+          var atOptions = {
+            'key': '2dc1e58e3be02dd1e015a64b5d7d69',
+            'format': 'iframe',
+            'height': 250,
+            'width': 300,
+            'params': {}
+          };
+          var script = document.createElement('script');
+          script.type = 'text/javascript';
+          script.src = 'https://www.highrevenuegate.com/2dc1e58e3be02dd1e015a64b5d1d7d69/invoke.js';
+          document.head.appendChild(script);
+        })();
+      `;
+      document.head.appendChild(socialBarScript);
+    }
+
+    // Direct link ads handling
+    if (adSettings.adsterraDirectLinkEnabled && adSettings.adsterraDirectLink) {
+      console.log("GlobalAdScripts: Direct link ads enabled", adSettings.adsterraDirectLink);
+    }
+
+  }, [adSettings, isLoadingAdSettings]);
 
   return null;
 }
