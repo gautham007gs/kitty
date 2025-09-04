@@ -514,11 +514,28 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
 
   } catch (error) {
     console.error('❌ AI generation failed:', error);
+    
+    // Log specific error details for debugging
+    if (error.code) {
+      console.error('Error code:', error.code);
+    }
+    if (error.details) {
+      console.error('Error details:', error.details);
+    }
+    
     if (error.message.startsWith('AI_BUSY_UNTIL_')) {
       const busyUntil = parseInt(error.message.split('_')[3]);
       return { messages: [], typingDelays: [], shouldShowAsDelivered: false, shouldShowAsRead: true, busyUntil };
     }
-    return { messages: ["...", "sry, my net is slow"], typingDelays: [2000, 3000], shouldShowAsDelivered: true, shouldShowAsRead: true };
+    
+    // More specific fallback messages based on error type
+    if (error.message.includes('authentication') || error.message.includes('credentials')) {
+      await logMessageToSupabase(userId, "Authentication error occurred", 'ai');
+      return { messages: ["hmm, something's wrong with my settings", "give me a sec..."], typingDelays: [2000, 3000], shouldShowAsDelivered: true, shouldShowAsRead: true };
+    }
+    
+    await logMessageToSupabase(userId, "Network/system error occurred", 'ai');
+    return { messages: ["ugh my phone is acting up", "try again?"], typingDelays: [1500, 2500], shouldShowAsDelivered: true, shouldShowAsRead: true };
   }
 };
 

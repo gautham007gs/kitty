@@ -1,39 +1,38 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:', {
-    url: !!supabaseUrl,
-    key: !!supabaseAnonKey
-  });
-  throw new Error('Supabase URL and Anon Key are required. Please check your environment variables.');
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL is required but not set');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  db: {
-    schema: 'public',
-  },
-  global: {
-    headers: {
-      'x-my-custom-header': 'my-app-name',
-    },
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-});
+if (!supabaseKey) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required but not set');
+}
 
-// Add error handling for connection issues
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-    // Handle auth state changes
-  }
-});
+export const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
+  : null;
+
+// Test connection on initialization
+if (supabase) {
+  supabase.from('messages_log').select('count', { count: 'exact' }).limit(1)
+    .then(({ error }) => {
+      if (error) {
+        console.error('Supabase connection test failed:', error);
+      } else {
+        console.log('✅ Supabase connected successfully');
+      }
+    });
+}

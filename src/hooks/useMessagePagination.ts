@@ -40,12 +40,11 @@ export const useMessagePagination = ({
         return;
       }
 
-      // Optimized query with proper indexing
+      // Query messages_log table with correct column names
       let query = supabase
         .from('messages_log')
-        .select('id, message_content, message_type, timestamp, chat_id')
-        .eq('chat_id', chatId)
-        .order('timestamp', { ascending: false })
+        .select('id, message_text, sender, created_at, user_id')
+        .order('created_at', { ascending: false })
         .range(currentOffset, currentOffset + pageSize - 1);
 
       if (userId) {
@@ -63,9 +62,9 @@ export const useMessagePagination = ({
       // Transform to Message format
       const formattedMessages: Message[] = (data || []).map(msg => ({
         id: msg.id.toString(),
-        text: msg.message_content,
-        sender: msg.message_type === 'user' ? 'user' : 'ai',
-        timestamp: new Date(msg.timestamp),
+        text: msg.message_text || '',
+        sender: msg.sender === 'user' ? 'user' : 'ai',
+        timestamp: new Date(msg.created_at),
         status: 'read' as const
       })).reverse(); // Reverse to show oldest first
 

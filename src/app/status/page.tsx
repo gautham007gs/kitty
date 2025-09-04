@@ -73,6 +73,12 @@ const StatusPage: React.FC = () => {
         storyViewTimerRef.current = setTimeout(() => {
           storyViewedLongEnoughRef.current = true;
         }, STATUS_VIEW_AD_DELAY_MS);
+      } else {
+        toast({
+          title: "No Status Available",
+          description: "This contact doesn't have a status to view",
+          duration: 2000,
+        });
       }
     };
 
@@ -175,10 +181,11 @@ const StatusPage: React.FC = () => {
                   fill={true}
                   style={{ objectFit: 'contain' }}
                   data-ai-hint="status image content large"
-                  quality={100}
-                  unoptimized={true}
+                  quality={85}
+                  priority={true}
                   sizes="100vw"
                   onError={handleStoryImageError}
+                  onLoad={() => console.log('Status image loaded successfully')}
                 />
               </div>
 
