@@ -36,10 +36,14 @@ const AdminLoginPage: React.FC = () => {
       console.warn("Could not clear existing session:", error);
     }
 
-    if (!supabase) {
-      setError('Supabase client is not available. Please check configuration.');
+    try {
+      if (!supabase) {
+        throw new Error('Supabase client is not available. Please check environment configuration.');
+      }
+    } catch (configError: any) {
+      setError(`Configuration Error: ${configError.message}`);
       setIsLoading(false);
-      toast({ title: 'Login Error', description: 'Authentication service not available.', variant: 'destructive' });
+      toast({ title: 'Configuration Error', description: 'Please check your environment variables.', variant: 'destructive' });
       return;
     }
 

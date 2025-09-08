@@ -5,15 +5,17 @@ declare global {
   var __supabase: SupabaseClient | undefined;
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
-  console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_URL is not set.');
+  console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_URL is not set in environment variables.');
+  throw new Error('Supabase URL is required');
 }
 
 if (!supabaseKey) {
-  console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set.');
+  console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set in environment variables.');
+  throw new Error('Supabase anon key is required');
 }
 
 const createSupabaseClient = () => {

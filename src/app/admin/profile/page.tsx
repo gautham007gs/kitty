@@ -325,7 +325,7 @@ const AdminProfilePage: React.FC = () => {
           { onConflict: 'id' }
         );
       if (error) throw error;
-      
+
       // Also save to app_configurations for backward compatibility
       await supabase
         .from('app_configurations')
@@ -333,7 +333,7 @@ const AdminProfilePage: React.FC = () => {
           { id: ADMIN_OWN_STATUS_CONFIG_KEY, settings: statusToSave, updated_at: new Date().toISOString() },
           { onConflict: 'id' }
         );
-      
+
       await fetchGlobalStatuses();
 
       // Emit global event to notify all users
@@ -406,7 +406,7 @@ const AdminProfilePage: React.FC = () => {
           );
         if (error) throw error;
       }
-      
+
       // Also save to app_configurations for backward compatibility
       await supabase
         .from('app_configurations')
@@ -414,7 +414,7 @@ const AdminProfilePage: React.FC = () => {
           { id: MANAGED_DEMO_CONTACTS_CONFIG_KEY, settings: managedContactStatuses, updated_at: new Date().toISOString() },
           { onConflict: 'id' }
         );
-      
+
       await fetchGlobalStatuses();
 
       // Emit global event to notify all users
