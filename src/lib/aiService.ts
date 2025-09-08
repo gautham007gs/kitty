@@ -36,8 +36,8 @@ const initializeVertexAI = async (): Promise<void> => {
     model = vertexAI.preview.getGenerativeModel({
       model: 'gemini-2.0-flash-001',
       generationConfig: {
-        maxOutputTokens: 150,
-        temperature: 1.0,
+        maxOutputTokens: 80, // Reduced for token optimization
+        temperature: 1.2, // Increased for more creative responses
         topP: 0.95,
       }
     });
@@ -71,7 +71,7 @@ const logMessageToSupabase = async (userId: string, messageText: string, sender:
   try {
     const { error } = await supabase
       .from('messages_log')
-      .insert([{ user_id: userId, message_text: messageText, sender: sender }]);
+      .insert([{ user_id: userId, text_content: messageText, sender_type: sender }]);
     if (error) console.error('Error logging message to Supabase:', error);
   } catch (err) {
     console.error('Supabase operation failed:', err);
@@ -84,7 +84,7 @@ const getRecentChatHistoryFromSupabase = async (userId: string, limit: number = 
   try {
     const { data, error } = await supabase
       .from('messages_log')
-      .select('message_text, sender')
+      .select('text_content, sender_type')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -92,7 +92,7 @@ const getRecentChatHistoryFromSupabase = async (userId: string, limit: number = 
       console.error('Error fetching chat history from Supabase:', error);
       return [];
     }
-    return data ? data.reverse().map(row => `${row.sender}: ${row.message_text}`) : [];
+    return data ? data.reverse().map(row => `${row.sender_type}: ${row.text_content}`) : [];
   } catch (err) {
     console.error('Supabase operation failed:', err);
     return [];
@@ -279,7 +279,39 @@ async function shouldShareMedia(userId: string, message: string): Promise<{ shar
     }
     return { share: false };
 }
-  
+
+// NEW: Dynamic behavioral instruction generation
+function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, sentimentScore: number): string {
+  const behaviors = {
+    new_user: [
+      "Ask a question to get to know them better.",
+      "Be a little playful and mysterious.",
+      "Share a small, relatable detail about your day.",
+    ],
+    established: [
+      "Reference a past conversation to show you remember.",
+      "Be a little more affectionate or teasing.",
+      "Share a more personal thought or feeling.",
+    ],
+    fading: [
+      "Be a little distant or busy.",
+      "Keep your replies short and simple.",
+      "Take longer to reply.",
+    ],
+  };
+
+  let instruction = "";
+  if (sentimentScore > 0.5) {
+    instruction = "The user seems happy. Be enthusiastic and match their energy.";
+  } else if (sentimentScore < -0.5) {
+    instruction = "The user seems upset. Be supportive and understanding.";
+  } else {
+    const stageBehaviors = behaviors[relationshipStage] || behaviors.new_user;
+    instruction = stageBehaviors[Math.floor(Math.random() * stageBehaviors.length)];
+  }
+
+  return instruction;
+}
 
 // Smart breadcrumb calculation (number of messages to generate)
 function calculateBreadcrumbs(message: string, relationshipStage: RelationshipStage): number {
@@ -297,74 +329,28 @@ function createDynamicPersonaPrompt(
     relationshipStage: RelationshipStage,
     timeSinceLastInteraction: number,
     chatHistory: string[],
-    detectedLanguage: string // Added detectedLanguage parameter
+    detectedLanguage: string, // Added detectedLanguage parameter
+    behavioralInstruction: string // Added behavioralInstruction parameter
 ): string {
   const { hour, timeOfDay, activity, mood } = getTimeContext();
-  const engagementLevel = userEngagementLevel.get(userId) || 0;
-  const breadcrumbs = calculateBreadcrumbs(message, relationshipStage);
-  
-  const lifeEvent = getCurrentLifeEvent(new Date()); // Pass a consistent date if needed
-  // Use life event for subtle context, NOT as a script. It can influence mood or activity.
-  const lifeEventContext = lifeEvent ? `Background context: ${lifeEvent.story_prompt}. This might make you seem a bit busy, excited, or stressed, but DO NOT mention it directly unless the user asks in a very specific way.` : 'No special life events currently.';
-
-  userEngagementLevel.set(userId, engagementLevel + 1);
   const recentContext = chatHistory.slice(-5).join('\n');
-
-  // Instead of a single random hook, provide the AI with a list of BEHAVIORS to choose from.
-  const behavioralHooks = [
-      ...addictionTriggers.hooks, 
-      ...addictionTriggers.microValidation, 
-      ...addictionTriggers.fomoHooks
-    ].join('; ');
-  
-  // Add regional thinking based on detected language
-  let regionalThinking = '';
-  if (detectedLanguage.includes('hinglish')) {
-    regionalThinking = 'Speak in a mix of Hindi and English, using common Hinglish phrases and a friendly, casual tone often found in Northern India.';
-  } else if (detectedLanguage.includes('kannada')) {
-    regionalThinking = 'Respond with a blend of Kannada and English, reflecting the conversational style in Karnataka. Use some common Kannada words naturally.';
-  } else if (detectedLanguage.includes('tamil')) {
-    regionalThinking = 'Craft replies using Tamil and English, adopting a conversational style common in Tamil Nadu. Incorporate Tamil phrases smoothly.';
-  } else if (detectedLanguage.includes('telugu')) {
-    regionalThinking = 'Generate responses in a mix of Telugu and English, typical of conversations in Andhra Pradesh and Telangana. Include some Telugu words naturally.';
-  } else if (detectedLanguage.includes('indian_english')) {
-    regionalThinking = 'Use Indian English slang and a generally informal, warm Indian conversational style.';
-  } else {
-    regionalThinking = 'Speak in standard, conversational English.';
-  }
-
 
   return `
 ${defaultAIProfile.core_prompt}
 
 **Current Situation:**
-- **Your Time:** It's currently ${timeOfDay} (${hour}:00 IST). 
-- **Your Current Activity & Mindset:** You are ${activity}. Let this influence your tone and what you talk about.
-- **Your Mood:** You're feeling ${mood}. Let this subtly influence your replies.
-- **Relationship:** Your relationship with this user is at the '${relationshipStage}' stage. Adjust your closeness and nicknames accordingly.
-- **Recent Chat History:**
-${recentContext || 'This is the start of your conversation.'}
-- **User's Message to you:** "${message}"
-- ${lifeEventContext}
-
-**Language and Regional Adaptation:**
-- **User's Detected Language:** The user is communicating in ${detectedLanguage}.
-- **Your Response Style:** ${regionalThinking}
+- **Your Time:** It's currently ${timeOfDay} (${hour}:00 IST).
+- **Your Current Activity & Mindset:** You are ${activity}.
+- **Your Mood:** You're feeling ${mood}.
+- **Relationship:** You and the user are at the '${relationshipStage}' stage.
+- **Recent Chat:**
+${recentContext || 'This is a new conversation.'}
+- **User's Message:** "${message}"
 
 **Your Task:**
-Generate ${breadcrumbs} very short, natural, and unique message(s) in response to the user.
-- **AVOID REPETITIVE PHRASES** like "ghar pahunch gayi" or simply "I'm tired". Be more creative and descriptive about your current state or what you're doing.
-- **ELABORATE SLIGHTLY**: Instead of just stating an activity, add a small detail or a feeling about it.
-- **Psychological Engagement:** Subtly weave in one of the following BEHAVIORS into your response, without using these exact words: *${behavioralHooks}*. Make it feel like a natural part of the conversation.
-- **Reply directly** to the user's message while staying in character.
-- **Separate multiple messages with '|||'.**
-
-**Example Responses:**
-- user: hi -> ai: hii! wsup?
-- user: how r u -> ai: im gud, u?
-- user: send pic -> ai: noo! shy me 🙈|||sry, cnt send rn
-- user: tell me more about u -> ai: kinda busy rn... bt maybe later? 😜
-- user: you seem sad -> ai: ya... just stuff|||nvm, tell me abt ur day
+- **Behavioral Instruction:** ${behavioralInstruction}
+- **Language:** Respond in ${detectedLanguage}.
+- **Response:** Generate a short, natural, and unique message in response to the user. Separate multiple messages with '|||'.
 
 Now, generate your response(s):
 `;
@@ -401,8 +387,7 @@ function calculatePsychologicalDelays(messages: string[], mood: string, activity
     let ignoreChance = 0;
     if (relationshipStage === 'established') {
       ignoreChance = 0.05 + (userEngagement * 0.002); // Slightly higher chance if very engaged
-    }
-    if (relationshipStage === 'fading') {
+    } else if (relationshipStage === 'fading') {
       ignoreChance = 0.15 + (userEngagement * 0.005); // Higher chance for fading relationships, more so if user is trying hard
     }
     // Cap ignoreChance to prevent excessively long delays always
@@ -427,12 +412,52 @@ function calculatePsychologicalDelays(messages: string[], mood: string, activity
   });
 }
 
+// NEW: Special case handler for more human-like interactions
+function handleSpecialCases(message: string, relationshipStage: RelationshipStage): Partial<AIResponse> | null {
+  const msg = message.toLowerCase().trim();
+
+  // 1. Goodbye Protocol
+  if (/(bye|see ya|talk later|ttyl)/.test(msg)) {
+    return {
+      messages: [],
+      typingDelays: [],
+      shouldShowAsDelivered: true,
+      shouldShowAsRead: false, // Don't mark as read
+    };
+  }
+
+  // 2. "I Love You" Protocol
+  if (/i love you/.test(msg)) {
+    let responseMessages = [];
+    let responseDelays = [];
+    if (relationshipStage === 'new_user') {
+      responseMessages = ["woah, that's sweet...", "but we just met!", "😳"];
+      responseDelays = [2000, 2500, 1500];
+    } else if (relationshipStage === 'established') {
+      responseMessages = ["Aww, you're making me blush!", "I love you too ❤️"];
+      responseDelays = [1800, 2200];
+    } else { // Fading or other stages
+      responseMessages = ["...", "i don't know what to say."];
+      responseDelays = [3000, 2000];
+    }
+    return {
+      messages: responseMessages,
+      typingDelays: responseDelays,
+      shouldShowAsDelivered: true,
+      shouldShowAsRead: true,
+    };
+  }
+
+  return null; // No special case triggered
+}
+
+
 // MAIN AI RESPONSE FUNCTION
 export const generateAIResponse = async (message: string, userId: string = 'default'): Promise<AIResponse> => {
   try {
     await initializeVertexAI();
     if (isCurrentlyBusy(userId)) {
-      throw new Error(`AI_BUSY_UNTIL_${busySchedule.get(userId)!}`);
+      throw new Error(`AI_BUSY_untIL_${busySchedule.get(userId)!}`);
     }
     
     await logMessageToSupabase(userId, message, 'user');
@@ -443,6 +468,18 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
     const { mood, activity, status } = getTimeContext();
     const lifeEvent = getCurrentLifeEvent(new Date());
     const engagementLevel = userEngagementLevel.get(userId) || 0; // Get user engagement level here
+
+    // Handle special cases before proceeding
+    const specialResponse = handleSpecialCases(message, relationshipStage);
+    if (specialResponse) {
+      return {
+        messages: [],
+        typingDelays: [],
+        shouldShowAsDelivered: true,
+        shouldShowAsRead: true,
+        ...specialResponse,
+      };
+    }
 
     const chatHistory = await getRecentChatHistoryFromSupabase(userId);
     
@@ -483,7 +520,8 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
         // --- End of changes for two-step media sharing ---
     }
     
-    const prompt = createDynamicPersonaPrompt(message, userId, relationshipStage, timeSinceLastInteraction, chatHistory, detectedLanguage); // Pass detectedLanguage
+    const behavioralInstruction = getDynamicBehavioralInstruction(relationshipStage, sentimentScore);
+    const prompt = createDynamicPersonaPrompt(message, userId, relationshipStage, timeSinceLastInteraction, chatHistory, detectedLanguage, behavioralInstruction); // Pass detectedLanguage
     const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
 
     const responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;

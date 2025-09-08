@@ -26,6 +26,40 @@ export interface EngagementStrategy {
 
 const chatState = new Map<string, { messageCount: number; mediaJustDropped: boolean }>();
 
+// --- NEW DYNAMIC FUNCTIONS ---
+
+/**
+ * Calculates a more natural, psychologically-driven delay.
+ */
+function calculateDynamicDelay(relationshipLevel: RelationshipLevel, mood: string, messageLength: number): number {
+  let baseDelay = 1500;
+  if (mood === 'energetic') baseDelay -= 500;
+  if (mood === 'sleepy_cute') baseDelay += 1000;
+  if (relationshipLevel === 'new_user') baseDelay += 500;
+
+  const typingSpeed = (messageLength / 20) * 1000; // Simulate typing
+  const randomFactor = Math.random() * 1000;
+
+  return baseDelay + typingSpeed + randomFactor;
+}
+
+/**
+ * Determines if media should be dropped based on engagement milestones.
+ */
+function shouldStrategicallyDropMedia(relationshipLevel: RelationshipLevel, chatStreak: number, wantsMedia: boolean): { shouldDrop: boolean; teaseText: string | null } {
+  if (wantsMedia && Math.random() < 0.6) {
+    return { shouldDrop: false, teaseText: "lol always asking 😏 maybe later" };
+  }
+
+  const isMilestone = chatStreak === 3 || chatStreak === 7 || chatStreak === 15;
+  if (isMilestone && relationshipLevel !== 'new_user') {
+    return { shouldDrop: true, teaseText: null };
+  }
+
+  return { shouldDrop: false, teaseText: null };
+}
+
+
 // --- CORE FUNCTIONS ---
 
 /**
@@ -70,38 +104,12 @@ async function getUpdatedProfile(userId: string): Promise<UserProfile> {
 /**
  * The main function that generates the complete psychological strategy for the AI's turn.
  */
-export async function getEngagementStrategy(userId: string, userMessage: string, messageCountSinceLoad: number): Promise<EngagementStrategy> {
+export async function getEngagementStrategy(userId: string, userMessage: string, mood: string): Promise<EngagementStrategy> {
   const profile = await getUpdatedProfile(userId);
   const { relationshipLevel, chatStreak, nickname } = profile;
 
-  if (!chatState.has(userId)) {
-    chatState.set(userId, { messageCount: 0, mediaJustDropped: false });
-  }
-  const state = chatState.get(userId)!;
-  state.messageCount++;
-
-  // --- Timing Psychology (from intelligentResponseSystem) ---
-  let calculatedDelayMs = 15000;
-  if (messageCountSinceLoad <= 1) calculatedDelayMs = (Math.random() * 5 + 3) * 1000;
-  else if (state.mediaJustDropped) {
-      calculatedDelayMs = (Math.random() * 5 + 3) * 60 * 1000;
-      state.mediaJustDropped = false;
-  }
-  else calculatedDelayMs = (Math.random() * 20 + 10) * 1000;
-
-  // --- Media Drop Psychology (from intelligentResponseSystem) ---
-  let shouldDropMedia = false;
-  let mediaTeaseText = null;
   const wantsMedia = /pic|photo|show/i.test(userMessage);
-  if (state.messageCount % 10 === 0) shouldDropMedia = true;
-  else if (wantsMedia) {
-      if (Math.random() < 0.6) mediaTeaseText = "lol always asking 😏 maybe later";
-      else shouldDropMedia = true;
-  }
-  if (shouldDropMedia) {
-    state.mediaJustDropped = true;
-    state.messageCount = 0;
-  }
+  const { shouldDrop, teaseText } = shouldStrategicallyDropMedia(relationshipLevel, chatStreak, wantsMedia);
 
   // --- Conversational Strategy (from userEngagementSystem) ---
   let greeting = "";
@@ -134,8 +142,8 @@ export async function getEngagementStrategy(userId: string, userMessage: string,
     conversationGoal,
     psychologicalHook,
     shouldGiveNickname,
-    calculatedDelayMs,
-    shouldDropMedia,
-    mediaTeaseText,
+    calculatedDelayMs: calculateDynamicDelay(relationshipLevel, mood, userMessage.length),
+    shouldDropMedia: shouldDrop,
+    mediaTeaseText: teaseText,
   };
 }

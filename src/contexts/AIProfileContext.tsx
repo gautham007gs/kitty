@@ -1,223 +1,184 @@
-"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { AIProfile } from '@/types';
-import { AI_PROFILE_CONFIG_KEY } from '@/types';
-import { defaultAIProfile } from '@/config/ai';
+'use client';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
+import { AIProfile, AdminStatusDisplay, ManagedContactStatus, AIMediaAssetsConfig } from '@/types';
+import { defaultAIProfile, defaultAdminStatusDisplay, defaultManagedContactStatuses, defaultAIMediaAssetsConfig } from '@/config/ai';
 
 interface AIProfileContextType {
-  aiProfile: AIProfile | null;
-  isLoadingAIProfile: boolean;
-  fetchAIProfile: () => Promise<void>;
-  updateAIProfile: (newProfileData: Partial<AIProfile>) => Promise<void>;
+  profile: AIProfile;
+  loading: boolean;
+  error: any;
+  updateProfile: (newProfile: Partial<AIProfile>) => Promise<void>;
+  adminOwnStatus: AdminStatusDisplay;
+  managedDemoContacts: ManagedContactStatus[];
+  mediaAssetsConfig: AIMediaAssetsConfig;
+  fetchGlobalStatuses: () => Promise<void>;
+  fetchMediaAssets: () => Promise<void>;
+  setExternalIsLoadingAIProfile: (isLoading: boolean) => void;
 }
-
-// This global variable approach for a setter is not standard React practice and can lead to issues.
-// It's better for AdminProfilePage to manage its own loading state if it needs to combine context loading with its own.
-// For now, I'll keep the mechanism but comment it out if it's causing confusion or isn't strictly necessary.
-let setIsLoadingContextAIProfileExternal: React.Dispatch<React.SetStateAction<boolean>> | null = null;
-
 
 const AIProfileContext = createContext<AIProfileContextType | undefined>(undefined);
 
-export const AIProfileProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [aiProfile, setAIProfile] = useState<AIProfile | null>(null);
-  const [isLoadingAIProfile, setIsLoadingAIProfile] = useState(true);
-  const { toast } = useToast();
+let setExternalIsLoadingAIProfile = (isLoading: boolean) => {};
 
-  useEffect(() => {
-    // This was for AdminProfilePage to control this context's loading state.
-    // It might be simpler for AdminProfilePage to have its own combined loading state.
-    // setIsLoadingContextAIProfileExternal = setIsLoadingAIProfile;
-    // return () => {
-    //   setIsLoadingContextAIProfileExternal = null;
-    // };
-  }, []);
+export const AIProfileProvider = ({ children }: { children: ReactNode }) => {
+  const [profile, setProfile] = useState<AIProfile>(defaultAIProfile);
+  const [adminOwnStatus, setAdminOwnStatus] = useState<AdminStatusDisplay>(defaultAdminStatusDisplay);
+  const [managedDemoContacts, setManagedDemoContacts] = useState<ManagedContactStatus[]>(defaultManagedContactStatuses);
+  const [mediaAssetsConfig, setMediaAssetsConfig] = useState<AIMediaAssetsConfig>(defaultAIMediaAssetsConfig);
+  const [loading, setLoading] = useState(true);
+  const [externalIsLoading, setExternalIsLoading] = useState(false);
+  const [error, setError] = useState<any>(null);
 
+  setExternalIsLoadingAIProfile = setExternalIsLoading;
 
-  const fetchAIProfile = useCallback(async () => {
-    setIsLoadingAIProfile(true);
-    console.log("[AIProfileContext] fetchAIProfile: Starting to fetch AI profile...");
-    if (!supabase) {
-      console.warn("[AIProfileContext] fetchAIProfile: Supabase client not available. Using defaults for AI profile.");
-      setAIProfile(defaultAIProfile);
-      console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (Supabase unavailable):", JSON.stringify(defaultAIProfile, null, 2));
-      setIsLoadingAIProfile(false);
-      return;
-    }
-
+  const fetchAIProfile = async () => {
     try {
-      // First try the new dedicated table
       const { data, error } = await supabase
         .from('ai_profile_settings')
         .select('*')
-        .eq('id', 'default')
         .single();
 
-      console.log("[AIProfileContext] fetchAIProfile: Fetched from ai_profile_settings - raw data:", JSON.stringify(data, null, 2), "error:", error);
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('[AIProfileContext] fetchAIProfile: Error fetching AI profile from ai_profile_settings:', error);
-        toast({ title: "Error Loading AI Profile", description: `Could not load AI profile from dedicated table. Trying app_configurations. ${error.message}`, variant: "destructive" });
-
-        // Fallback to the old table if the new one fails
-        const { data: oldData, error: oldError } = await supabase
-          .from('app_configurations')
-          .select('settings')
-          .eq('id', AI_PROFILE_CONFIG_KEY)
-          .single();
-
-        console.log("[AIProfileContext] fetchAIProfile: Fetched from app_configurations (fallback) - raw data:", JSON.stringify(oldData, null, 2), "error:", oldError);
-
-        if (oldError && oldError.code !== 'PGRST116') {
-          console.error('[AIProfileContext] fetchAIProfile: Error fetching AI profile from app_configurations:', oldError);
-          toast({ title: "Error Loading AI Profile", description: `Could not load AI profile from either table. Using defaults. ${oldError.message}`, variant: "destructive" });
-          setAIProfile(defaultAIProfile);
-          console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (fallback Supabase error):", JSON.stringify(defaultAIProfile, null, 2));
-        } else if (oldData && oldData.settings) {
-          let fetchedProfile = oldData.settings as Partial<AIProfile>;
-          console.log("[AIProfileContext] fetchAIProfile: Raw profile settings from app_configurations (fallback):", JSON.stringify(fetchedProfile, null, 2));
-          
-          if (!fetchedProfile.avatarUrl || typeof fetchedProfile.avatarUrl !== 'string' || fetchedProfile.avatarUrl.trim() === '' || (!fetchedProfile.avatarUrl.startsWith('http') && !fetchedProfile.avatarUrl.startsWith('data:'))) {
-              console.warn(`[AIProfileContext] fetchAIProfile: Fetched avatarUrl ('${fetchedProfile.avatarUrl}') is invalid or empty. Falling back to default AI avatarUrl: ${defaultAIProfile.avatarUrl}`);
-              fetchedProfile.avatarUrl = defaultAIProfile.avatarUrl;
-          }
-
-          const mergedProfile: AIProfile = {
-            ...defaultAIProfile,
-            ...fetchedProfile
-          };
-
-          setAIProfile(mergedProfile);
-          console.log("[AIProfileContext] fetchAIProfile: Set AI profile from app_configurations (fallback, merged with defaults):", JSON.stringify(mergedProfile, null, 2));
-        } else {
-          console.log("[AIProfileContext] fetchAIProfile: No AI profile found in app_configurations (fallback). Using default values.");
-          setAIProfile(defaultAIProfile);
-          console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (no data in fallback Supabase):", JSON.stringify(defaultAIProfile, null, 2));
-        }
-      } else if (data) { // Data from ai_profile_settings
-        let fetchedProfile = data as Partial<AIProfile>; // Assuming the structure matches AIProfile
-        console.log("[AIProfileContext] fetchAIProfile: Raw profile settings from ai_profile_settings:", JSON.stringify(fetchedProfile, null, 2));
-
-        // Ensure avatarUrl is valid, fallback to default if necessary
-        if (!fetchedProfile.avatarUrl || typeof fetchedProfile.avatarUrl !== 'string' || fetchedProfile.avatarUrl.trim() === '' || (!fetchedProfile.avatarUrl.startsWith('http') && !fetchedProfile.avatarUrl.startsWith('data:'))) {
-            console.warn(`[AIProfileContext] fetchAIProfile: Fetched avatarUrl ('${fetchedProfile.avatarUrl}') from ai_profile_settings is invalid or empty. Falling back to default AI avatarUrl: ${defaultAIProfile.avatarUrl}`);
-            fetchedProfile.avatarUrl = defaultAIProfile.avatarUrl;
-        }
-
-        const mergedProfile: AIProfile = {
-          ...defaultAIProfile,
-          ...fetchedProfile
-        };
-
-        setAIProfile(mergedProfile);
-        console.log("[AIProfileContext] fetchAIProfile: Set AI profile from ai_profile_settings (merged with defaults):", JSON.stringify(mergedProfile, null, 2));
-      } else {
-        console.log("[AIProfileContext] fetchAIProfile: No AI profile found in ai_profile_settings (error code PGRST116 or no data). Using default values.");
-        setAIProfile(defaultAIProfile);
-        console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (no data in ai_profile_settings):", JSON.stringify(defaultAIProfile, null, 2));
-      }
-    } catch (e: any) {
-      console.error('[AIProfileContext] fetchAIProfile: Unexpected error fetching AI profile:', e);
-      toast({ title: "Error Loading AI Profile", description: `Unexpected error. Using defaults. ${e.message}`, variant: "destructive" });
-      setAIProfile(defaultAIProfile);
-      console.log("[AIProfileContext] fetchAIProfile: Set AI profile to default (catch block error):", JSON.stringify(defaultAIProfile, null, 2));
-    } finally {
-      setIsLoadingAIProfile(false);
-      console.log("[AIProfileContext] fetchAIProfile: Finished fetching AI profile. Loading state:", false);
+      if (error) throw error;
+      setProfile(data);
+    } catch (err: any) {
+      setError(err.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to load AI Profile",
+        description: err.message,
+      });
     }
-  }, [toast]);
+  };
 
-  const updateAIProfile = useCallback(async (newProfileData: Partial<AIProfile>) => {
-    if (!supabase) {
-      toast({ title: "Supabase Error", description: "Supabase client not available. Cannot save AI profile.", variant: "destructive" });
-      return;
-    }
-
-    console.log("[AIProfileContext] updateAIProfile: Received newProfileData:", JSON.stringify(newProfileData, null, 2));
-
-    const currentProfileForUpdate = aiProfile || defaultAIProfile;
-
-    // Prepare avatarUrl: if explicitly cleared (empty string) make it undefined,
-    // otherwise use the new value or keep the current one.
-    let processedAvatarUrl = newProfileData.hasOwnProperty('avatarUrl')
-        ? (newProfileData.avatarUrl?.trim() === '' ? undefined : newProfileData.avatarUrl)
-        : currentProfileForUpdate.avatarUrl;
-
-    // Validate and fallback to default if the processed URL is still invalid or undefined
-    if (!processedAvatarUrl || typeof processedAvatarUrl !== 'string' || (!processedAvatarUrl.startsWith('http') && !processedAvatarUrl.startsWith('data:'))) {
-        console.warn(`[AIProfileContext updateAIProfile] Processed avatarUrl ('${processedAvatarUrl}') is invalid. Falling back to default: ${defaultAIProfile.avatarUrl}`);
-        processedAvatarUrl = defaultAIProfile.avatarUrl;
-    }
-    console.log("[AIProfileContext] updateAIProfile: Processed avatarUrl for optimistic update:", processedAvatarUrl);
-
-    const optimisticProfile: AIProfile = {
-      ...currentProfileForUpdate,
-      ...newProfileData,
-      avatarUrl: processedAvatarUrl,
-    };
-
-    console.log("[AIProfileContext] updateAIProfile: Optimistic profile for UI update:", JSON.stringify(optimisticProfile, null, 2));
-    setAIProfile(optimisticProfile); // Optimistic UI update
-
+  const fetchGlobalStatuses = async () => {
     try {
-      // Upsert to the new dedicated table
-      const { error: upsertError } = await supabase
-        .from('ai_profile_settings')
-        .upsert(
-          { id: 'default', ...optimisticProfile, updated_at: new Date().toISOString() },
-          { onConflict: 'id' }
-        );
+      const { data: adminStatusData, error: adminStatusError } = await supabase
+        .from('admin_status_display')
+        .select('*')
+        .single();
 
-      if (upsertError) {
-        console.error("[AIProfileContext] updateAIProfile: Failed to save AI profile to ai_profile_settings:", upsertError);
-        toast({ title: "Error Saving AI Profile", description: `Could not save AI profile to Supabase. ${upsertError.message || ''}. Reverting optimistic update.`, variant: "destructive" });
-        setAIProfile(currentProfileForUpdate); // Revert optimistic update on error
-        await fetchAIProfile(); // Re-fetch from DB to ensure consistency
-        return;
-      }
+      if (adminStatusError) throw adminStatusError;
+      setAdminOwnStatus(adminStatusData);
 
-      console.log("[AIProfileContext] updateAIProfile: AI Profile successfully saved to ai_profile_settings.");
-      toast({ title: "AI Profile Saved!", description: "Kruthika's profile has been saved globally to Supabase." });
+      const { data: managedContactsData, error: managedContactsError } = await supabase
+        .from('managed_demo_contacts')
+        .select('*');
 
-      // Re-fetch after successful save to ensure UI reflects DB state, though optimistic update helps.
-      await fetchAIProfile();
-
-    } catch (error: any) {
-      console.error("[AIProfileContext] updateAIProfile: Unexpected error during Supabase save:", error);
-      toast({ title: "Error Saving AI Profile", description: `Unexpected error. ${error.message || ''}. Reverting optimistic update.`, variant: "destructive" });
-      setAIProfile(currentProfileForUpdate); // Revert optimistic update
-      await fetchAIProfile(); // Re-fetch from DB
+      if (managedContactsError) throw managedContactsError;
+      setManagedDemoContacts(managedContactsData);
+    } catch (err: any) {
+      setError(err.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to load global statuses",
+        description: err.message,
+      });
     }
-  }, [toast, aiProfile, fetchAIProfile]);
+  };
+
+  const fetchMediaAssets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_configurations')
+        .select('settings')
+        .eq('id', 'ai_media_assets_config')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
+        setMediaAssetsConfig(data.settings);
+      }
+    } catch (err: any) {
+      setError(err.message);
+      toast({
+        variant: "destructive",
+        title: "Failed to load AI media assets",
+        description: err.message,
+      });
+    }
+  };
+
 
   useEffect(() => {
-    fetchAIProfile();
-
-    // Listen for real-time updates
-    const handleGlobalUpdate = (event: CustomEvent) => {
-      if (event.detail.type === 'AI_PROFILE_UPDATED') {
-        fetchAIProfile();
-      }
+    const fetchAllData = async () => {
+      setLoading(true);
+      await Promise.all([fetchAIProfile(), fetchGlobalStatuses(), fetchMediaAssets()]);
+      setLoading(false);
     };
 
-    window.addEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+    fetchAllData();
 
+    const channel = supabase
+      .channel('ai_profile_settings-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_profile_settings' },
+        (payload) => {
+          setProfile(payload.new as AIProfile);
+        }
+      )
+      .subscribe((status, err) => {
+        if (err) {
+            console.error("Subscription error:", err);
+            setError(err.message);
+        }
+      });
+      
     return () => {
-      window.removeEventListener('globalSettingsUpdate', handleGlobalUpdate as EventListener);
+      supabase.removeChannel(channel);
     };
-  }, [fetchAIProfile]);
+  }, []);
+
+  const updateProfile = async (newProfile: Partial<AIProfile>) => {
+    try {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('ai_profile_settings')
+            .update(newProfile)
+            .eq('id', profile.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        setProfile(data);
+        toast({ title: "Success", description: "AI Profile updated successfully." });
+    } catch (err:any) {
+        setError(err.message);
+        toast({
+            variant: "destructive",
+            title: "Failed to update profile",
+            description: err.message,
+        });
+    } finally {
+        setLoading(false);
+    }
+  };
+
+
+  const value = {
+      profile,
+      loading: loading || externalIsLoading,
+      error,
+      updateProfile,
+      adminOwnStatus,
+      managedDemoContacts,
+      mediaAssetsConfig,
+      fetchGlobalStatuses,
+      fetchMediaAssets,
+      setExternalIsLoadingAIProfile,
+  };
 
   return (
-    <AIProfileContext.Provider value={{ aiProfile, isLoadingAIProfile, fetchAIProfile, updateAIProfile }}>
+    <AIProfileContext.Provider value={value}>
       {children}
     </AIProfileContext.Provider>
   );
 };
 
-export const useAIProfile = (): AIProfileContextType => {
+export const useAIProfile = () => {
   const context = useContext(AIProfileContext);
   if (context === undefined) {
     throw new Error('useAIProfile must be used within an AIProfileProvider');
@@ -225,13 +186,4 @@ export const useAIProfile = (): AIProfileContextType => {
   return context;
 };
 
-// This function is intended for AdminProfilePage to manually set this context's loading state.
-// This might be an anti-pattern; consider if AdminProfilePage can manage a combined loading state itself.
-export const setExternalIsLoadingAIProfile = (isLoading: boolean) => {
-  // This external setter mechanism is tricky. If AIProfileContext is still loading itself,
-  // AdminProfilePage setting this to false prematurely could be problematic.
-  // This function should ideally not be needed if contexts manage their own loading states well.
-  // if (setIsLoadingContextAIProfileExternal) {
-  //   setIsLoadingContextAIProfileExternal(isLoading);
-  // }
-};
+export { setExternalIsLoadingAIProfile };
