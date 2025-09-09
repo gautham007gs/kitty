@@ -11,6 +11,7 @@ import { defaultAIProfile } from '@/config/ai';
 import BannerAdDisplay from '@/components/chat/BannerAdDisplay';
 import SocialBarAdDisplay from '@/components/SocialBarAdDisplay';
 import GlobalAdScripts from '@/components/GlobalAdScripts';
+import { ClientOnlyTimestamp } from '@/components/ClientOnlyTimestamp';
 
 export default function HomePage() {
   const router = useRouter();
@@ -111,9 +112,10 @@ export default function HomePage() {
             <div className="ml-4 flex-grow">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 text-lg">{effectiveProfile.name}</h2>
-                <span className="text-xs text-gray-500">
-                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+                <ClientOnlyTimestamp 
+                  timestamp={currentTime}
+                  className="text-xs text-gray-500"
+                />
               </div>
               <p className="text-gray-600 text-sm mt-1 line-clamp-2">
                 {effectiveProfile.status}

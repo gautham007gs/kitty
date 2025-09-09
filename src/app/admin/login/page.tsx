@@ -7,16 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert } from '@/components/ui/alert'; // Added import
+import { Alert } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound, ShieldAlert } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient'; // Import Supabase client
-import AdminLayout from '@/components/admin/AdminLayout';
+import { supabase } from '@/lib/supabaseClient';
 
 const ADMIN_AUTH_KEY = 'isAdminLoggedIn_KruthikaChat';
 
 const AdminLoginPage: React.FC = () => {
-  const [email, setEmail] = useState(''); // Changed from username to email
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +77,6 @@ const AdminLoginPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout>
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-secondary/30 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
@@ -100,10 +98,10 @@ const AdminLoginPage: React.FC = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                type="email" // Changed type to email
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com" // Changed placeholder
+                placeholder="admin@example.com"
                 required
                 className="text-base"
                 disabled={isLoading}
@@ -130,7 +128,6 @@ const AdminLoginPage: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-    </AdminLayout>
   );
 };
 
