@@ -1,7 +1,7 @@
 '''
 'use client';
 
-import { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useReducer, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
 
@@ -63,66 +63,166 @@ const SupabaseContext = createContext<{ state: AppState; dispatch: React.Dispatc
 // The provider component that will wrap our application
 export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const channelsRef = useRef<any[]>([]);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
+    // Prevent duplicate initialization
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+
     // Function to fetch all initial data
     const fetchInitialData = async () => {
       try {
-        const [profileRes, adsRes, assetsRes, statusRes] = await Promise.all([
+        console.log('[SupabaseContext] Fetching initial data...');
+        
+        // Fetch data with proper error handling
+        const results = await Promise.allSettled([
           supabase.from('ai_profile_settings').select('*').single(),
           supabase.from('ad_settings').select('*').single(),
           supabase.from('ai_media_assets').select('*'),
           supabase.from('admin_status_display').select('*').single(),
         ]);
 
-        if (profileRes.error) throw profileRes.error;
-        if (adsRes.error) throw adsRes.error;
-        if (assetsRes.error) throw assetsRes.error;
-        if (statusRes.error) throw statusRes.error;
+        const [profileRes, adsRes, assetsRes, statusRes] = results;
 
-        dispatch({ 
-          type: 'SET_ALL_DATA', 
-          payload: {
-            aiProfile: profileRes.data,
-            adSettings: adsRes.data,
-            aiMediaAssets: assetsRes.data,
-            globalStatus: statusRes.data
-          }
-        });
+        const payload: Partial<AppState> = {};
+
+        if (profileRes.status === 'fulfilled' && !profileRes.value.error) {
+          payload.aiProfile = profileRes.value.data;
+        }
+        if (adsRes.status === 'fulfilled' && !adsRes.value.error) {
+          payload.adSettings = adsRes.value.data;
+        }
+        if (assetsRes.status === 'fulfilled' && !assetsRes.value.error) {
+          payload.aiMediaAssets = assetsRes.value.data || [];
+        }
+        if (statusRes.status === 'fulfilled' && !statusRes.value.error) {
+          payload.globalStatus = statusRes.value.data;
+        }
+
+        dispatch({ type: 'SET_ALL_DATA', payload });
+        console.log('[SupabaseContext] Initial data loaded successfully');
 
       } catch (error: any) {
-        console.error("Error fetching initial data:", error);
+        console.error("[SupabaseContext] Error fetching initial data:", error);
         dispatch({ type: 'SET_ERROR', payload: error.message });
-        toast({ variant: "destructive", title: "Failed to load data", description: error.message });
       }
     };
 
+    // Setup realtime subscriptions with unique channel names
+    const setupSubscriptions = () => {
+      try {
+        // Clear existing channels first
+        channelsRef.current.forEach(channel => {
+          try {
+            supabase.removeChannel(channel);
+          } catch (e) {
+            console.warn('[SupabaseContext] Error removing channel:', e);
+          }
+        });
+        channelsRef.current = [];
+
+        // Create new subscriptions with unique names
+        const profileChannel = supabase
+          .channel(`main_ai_profile_${Date.now()}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'ai_profile_settings' 
+          }, (payload) => {
+            console.log('[SupabaseContext] AI Profile updated:', payload);
+            if (payload.new) {
+              dispatch({ type: 'SET_AI_PROFILE', payload: payload.new });
+            }
+          })
+          .subscribe((status, err) => {
+            if (err) console.error('[SupabaseContext] Profile subscription error:', err);
+            else console.log('[SupabaseContext] Profile subscription status:', status);
+          });
+
+        const adChannel = supabase
+          .channel(`main_ad_settings_${Date.now()}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'ad_settings' 
+          }, (payload) => {
+            console.log('[SupabaseContext] Ad Settings updated:', payload);
+            if (payload.new) {
+              dispatch({ type: 'SET_AD_SETTINGS', payload: payload.new });
+            }
+          })
+          .subscribe((status, err) => {
+            if (err) console.error('[SupabaseContext] Ad settings subscription error:', err);
+            else console.log('[SupabaseContext] Ad settings subscription status:', status);
+          });
+
+        const mediaChannel = supabase
+          .channel(`main_media_assets_${Date.now()}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'ai_media_assets' 
+          }, async () => {
+            console.log('[SupabaseContext] Media assets updated, refetching...');
+            try {
+              const { data, error } = await supabase.from('ai_media_assets').select('*');
+              if (error) {
+                console.error("[SupabaseContext] Error refetching media assets:", error);
+              } else {
+                dispatch({ type: 'SET_AI_MEDIA_ASSETS', payload: data || [] });
+              }
+            } catch (e) {
+              console.error('[SupabaseContext] Media refetch error:', e);
+            }
+          })
+          .subscribe((status, err) => {
+            if (err) console.error('[SupabaseContext] Media subscription error:', err);
+            else console.log('[SupabaseContext] Media subscription status:', status);
+          });
+
+        const statusChannel = supabase
+          .channel(`main_status_display_${Date.now()}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'admin_status_display' 
+          }, (payload) => {
+            console.log('[SupabaseContext] Status updated:', payload);
+            if (payload.new) {
+              dispatch({ type: 'SET_GLOBAL_STATUS', payload: payload.new });
+            }
+          })
+          .subscribe((status, err) => {
+            if (err) console.error('[SupabaseContext] Status subscription error:', err);
+            else console.log('[SupabaseContext] Status subscription status:', status);
+          });
+
+        channelsRef.current = [profileChannel, adChannel, mediaChannel, statusChannel];
+        console.log('[SupabaseContext] Realtime subscriptions established');
+
+      } catch (error) {
+        console.error('[SupabaseContext] Subscription setup error:', error);
+      }
+    };
+
+    // Initialize data and subscriptions
     fetchInitialData();
+    setupSubscriptions();
 
-    // Set up real-time subscriptions
-    const channels = [
-      supabase.channel('ai_profile_settings').on('postgres_changes', { event: '*', schema: 'public', table: 'ai_profile_settings' }, payload => {
-        dispatch({ type: 'SET_AI_PROFILE', payload: payload.new });
-      }).subscribe(),
-
-      supabase.channel('ad_settings').on('postgres_changes', { event: '*', schema: 'public', table: 'ad_settings' }, payload => {
-        dispatch({ type: 'SET_AD_SETTINGS', payload: payload.new });
-      }).subscribe(),
-
-      supabase.channel('ai_media_assets').on('postgres_changes', { event: '*', schema: 'public', table: 'ai_media_assets' }, async () => {
-        const { data, error } = await supabase.from('ai_media_assets').select('*');
-        if (error) console.error("Error refetching media assets:", error);
-        else dispatch({ type: 'SET_AI_MEDIA_ASSETS', payload: data || [] });
-      }).subscribe(),
-
-      supabase.channel('admin_status_display').on('postgres_changes', { event: '*', schema: 'public', table: 'admin_status_display' }, payload => {
-        dispatch({ type: 'SET_GLOBAL_STATUS', payload: payload.new });
-      }).subscribe()
-    ];
-
-    // Cleanup function to remove subscriptions on unmount
+    // Cleanup function
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      console.log('[SupabaseContext] Cleaning up subscriptions...');
+      channelsRef.current.forEach(channel => {
+        try {
+          supabase.removeChannel(channel);
+        } catch (e) {
+          console.warn('[SupabaseContext] Error removing channel during cleanup:', e);
+        }
+      });
+      channelsRef.current = [];
+      isInitializedRef.current = false;
     };
 
   }, []); // Empty dependency array ensures this runs only once

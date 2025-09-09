@@ -1,111 +1,119 @@
 'use client';
-import { useEffect, useState, ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { supabase } from '@/lib/supabaseClient';
-import { AIProfileProvider } from '@/contexts/AIProfileContext';
-import { AdSettingsProvider } from '@/contexts/AdSettingsContext';
-import { AIMediaAssetsProvider } from '@/contexts/AIMediaAssetsContext';
-import { GlobalStatusProvider } from '@/contexts/GlobalStatusContext';
-import AdminHeader from '@/components/admin/AdminHeader';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import { Loader2 } from 'lucide-react';
+import { Metadata } from 'next';
 
-// This component contains the core providers for the application.
-// By separating it, we ensure these providers do not get re-rendered on route changes.
-const AppProviders = ({ children }: { children: ReactNode }) => (
-  <AIProfileProvider>
-    <AdSettingsProvider>
-      <AIMediaAssetsProvider>
-        <GlobalStatusProvider>{children}</GlobalStatusProvider>
-      </AIMediaAssetsProvider>
-    </AdSettingsProvider>
-  </AIProfileProvider>
-);
+export const metadata: Metadata = {
+  title: 'Admin Panel - Kruthika Chat',
+  description: 'Administrative dashboard for managing AI chatbot settings',
+};
 
-// This component handles the authentication guard for the admin section.
-// It ensures that only authenticated users can access the admin pages.
-const AuthGuard = ({ children }: { children: ReactNode }) => {
+export default function Layout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // EFFECT 1: Manages authentication state. Runs only ONCE.
   useEffect(() => {
-    // First, check the current session to set the initial state.
-    const checkInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-      setIsLoading(false);
+    const checkAuth = async () => {
+      try {
+        // Skip auth check for login page
+        if (pathname === '/admin/login') {
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Check session storage first (for immediate feedback)
+        const sessionAuth = sessionStorage.getItem('isAdminLoggedIn_KruthikaChat');
+
+        if (!sessionAuth) {
+          console.log('No session found, redirecting to login');
+          router.push('/admin/login');
+          return;
+        }
+
+        // Verify with Supabase
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Auth verification error:', error);
+          sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
+          sessionStorage.removeItem('admin_user_id');
+          router.push('/admin/login');
+          return;
+        }
+
+        if (!session?.user) {
+          console.log('No valid session, redirecting to login');
+          sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
+          sessionStorage.removeItem('admin_user_id');
+          router.push('/admin/login');
+          return;
+        }
+
+        console.log('Admin authenticated successfully');
+        setIsAuthenticated(true);
+
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        router.push('/admin/login');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    checkInitialSession();
+    checkAuth();
 
-    // Then, set up a listener for real-time auth changes (login/logout).
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-      setIsLoading(false); // Update loading state on auth change as well.
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event);
+
+      if (event === 'SIGNED_OUT' && pathname !== '/admin/login') {
+        sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
+        sessionStorage.removeItem('admin_user_id');
+        router.push('/admin/login');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setIsAuthenticated(true);
+      }
     });
 
-    // Cleanup the listener when the component unmounts.
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-  }, []); // The empty dependency array is crucial. This effect runs only once.
+  }, [router, pathname]);
 
-  // EFFECT 2: Manages routing based on authentication state. Runs on state/path changes.
-  useEffect(() => {
-    // Don't do anything while the initial auth check is running.
-    if (isLoading) {
-      return;
-    }
-
-    // If the user is NOT authenticated and is not on the login page, redirect them.
-    if (!isAuthenticated && pathname !== '/admin/login') {
-      router.replace('/admin/login');
-    }
-
-    // If the user IS authenticated and they land on the login page, redirect to admin home.
-    if (isAuthenticated && pathname === '/admin/login') {
-      router.replace('/admin');
-    }
-  }, [isAuthenticated, isLoading, pathname, router]);
-
-  // Render a loading screen while we check for an active session.
+  // Loading state
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-gray-100">Loading...</div>;
-  }
-
-  // If the user is authenticated and on a protected page, render the admin UI.
-  if (isAuthenticated && pathname !== '/admin/login') {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <AdminHeader />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
-            <div className="container mx-auto px-6 py-8">
-              {children}
-            </div>
-          </main>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Verifying authentication...</p>
         </div>
       </div>
     );
   }
 
-  // If the user is not authenticated and on the login page, render the login form.
-  if (!isAuthenticated && pathname === '/admin/login') {
-    return <>{children}</>;
+  // Not authenticated (will redirect, but show loading in the meantime)
+  if (isAuthenticated === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
-  // In all other cases (like during a redirect), render nothing to prevent content flashing.
-  return null;
-};
-
-// The final AdminLayout composes the providers and the auth guard.
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AppProviders>
-      <AuthGuard>{children}</AuthGuard>
-    </AppProviders>
-  );
+  return <AdminLayout>{children}</AdminLayout>;
 }
