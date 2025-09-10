@@ -45,3 +45,8 @@ firebase-debug.log*
 
 # Turbopack
 .turbo
+
+# Google Cloud Service Account Credentials
+*.json
+maya-chatbot-*.json
+*service-account*.json
