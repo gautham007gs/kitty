@@ -6,6 +6,33 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Allow all hosts for Replit proxy environment
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+    ]
+  },
+  
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons']
   },
@@ -63,27 +90,6 @@ const nextConfig: NextConfig = {
     return config
   },
 
-  headers: async () => {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          }
-        ],
-      },
-    ]
-  },
 
   redirects: async () => {
     return [
