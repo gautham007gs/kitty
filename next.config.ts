@@ -100,9 +100,7 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  allowedDevOrigins: [
-    "c50078c7-02b2-4e36-95b4-8aa0a786cd56-00-1uvioudqptf9j.kirk.replit.dev"
-  ],
+  allowedDevOrigins: ['*'],
 }
 
 export default nextConfig
