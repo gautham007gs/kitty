@@ -10,12 +10,28 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
   console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_URL is not set in environment variables.');
+  console.error('Current URL value:', supabaseUrl);
   throw new Error('Supabase URL is required');
 }
 
 if (!supabaseKey) {
   console.error('Fatal Error: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set in environment variables.');
+  console.error('Current key value:', supabaseKey);
   throw new Error('Supabase anon key is required');
+}
+
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  console.error('Invalid Supabase URL format:', supabaseUrl);
+  throw new Error('Supabase URL must be a valid URL');
+}
+
+// Validate key format (should be a JWT)
+if (!supabaseKey.includes('.') || supabaseKey.startsWith('http')) {
+  console.error('Invalid Supabase key format. Key appears to be:', supabaseKey.substring(0, 50) + '...');
+  throw new Error('Supabase anon key must be a JWT token, not a URL');
 }
 
 const createSupabaseClient = () => {

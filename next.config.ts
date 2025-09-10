@@ -1,11 +1,10 @@
-
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   compress: true,
   poweredByHeader: false,
-  
+
   // Allow all hosts for Replit proxy environment
   async headers() {
     return [
@@ -32,7 +31,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  
+
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons']
   },
@@ -99,7 +98,11 @@ const nextConfig: NextConfig = {
         permanent: true,
       }
     ]
-  }
+  },
+
+  allowedDevOrigins: [
+    "c50078c7-02b2-4e36-95b4-8aa0a786cd56-00-1uvioudqptf9j.kirk.replit.dev"
+  ],
 }
 
 export default nextConfig
