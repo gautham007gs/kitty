@@ -134,7 +134,6 @@ export default function MediaAssetsPage() {
                             <Switch 
                               checked={asset.enabled} 
                               onCheckedChange={() => toggleAsset(asset.id)}
-                              size="sm"
                             />
                             <Button
                               variant="ghost"
