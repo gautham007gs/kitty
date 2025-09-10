@@ -24,7 +24,7 @@ localPort = 46463
 externalPort = 3002
 
 [workflows]
-runButton = "Project"
+runButton = "Maya Chat Dev Server"
 
 [[workflows.workflow]]
 name = "Run"
@@ -145,6 +145,15 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "Maya Chat Dev Server"
+author = 47440732
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev -- --port 5000 --hostname 0.0.0.0"
 
 [agent]
 expertMode = true
