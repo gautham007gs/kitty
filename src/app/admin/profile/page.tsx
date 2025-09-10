@@ -70,7 +70,10 @@ const AdminProfilePage: React.FC = () => {
     avatarUrl: '',
     isOnline: true,
     responseTime: 2000,
-    systemPrompt: ''
+    systemPrompt: '',
+    statusStoryText: '',
+    statusStoryImageUrl: '',
+    statusStoryHasUpdate: false
   });
 
   // Ad settings states
@@ -146,7 +149,10 @@ const AdminProfilePage: React.FC = () => {
         avatarUrl: currentProfile.avatarUrl,
         isOnline: currentProfile.isOnline ?? true,
         responseTime: currentProfile.responseTime || 2000,
-        systemPrompt: currentProfile.systemPrompt || ''
+        systemPrompt: currentProfile.systemPrompt || '',
+        statusStoryText: currentProfile.statusStoryText || '',
+        statusStoryImageUrl: currentProfile.statusStoryImageUrl || '',
+        statusStoryHasUpdate: currentProfile.statusStoryHasUpdate || false
       });
     }
 
@@ -345,6 +351,10 @@ const AdminProfilePage: React.FC = () => {
               <TabsTrigger value="monitoring" className="flex items-center gap-2">
                 <Monitor className="h-4 w-4" />
                 <span className="hidden sm:inline">Monitor</span>
+              </TabsTrigger>
+              <TabsTrigger value="status" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Status</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -626,6 +636,225 @@ const AdminProfilePage: React.FC = () => {
                       }))}
                       placeholder="Enter Adsterra direct link URL"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Banner Ads</Label>
+                      <Switch
+                        checked={localAdSettings.adsterraBannerEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, adsterraBannerEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Native Banner</Label>
+                      <Switch
+                        checked={localAdSettings.adsterraNativeBannerEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, adsterraNativeBannerEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Social Bar</Label>
+                      <Switch
+                        checked={localAdSettings.adsterraSocialBarEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, adsterraSocialBarEnabled: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Banner Ad Code</Label>
+                      <Textarea
+                        value={localAdSettings.adsterraBannerCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          adsterraBannerCode: e.target.value 
+                        }))}
+                        placeholder="Paste Adsterra banner ad code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Native Banner Code</Label>
+                      <Textarea
+                        value={localAdSettings.adsterraNativeBannerCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          adsterraNativeBannerCode: e.target.value 
+                        }))}
+                        placeholder="Paste Adsterra native banner code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Social Bar Code</Label>
+                      <Textarea
+                        value={localAdSettings.adsterraSocialBarCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          adsterraSocialBarCode: e.target.value 
+                        }))}
+                        placeholder="Paste Adsterra social bar code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Popunder Code</Label>
+                      <Textarea
+                        value={localAdSettings.adsterraPopunderCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          adsterraPopunderCode: e.target.value 
+                        }))}
+                        placeholder="Paste Adsterra popunder code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Monetag Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Monetag Configuration</h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Direct Links</Label>
+                      <Switch
+                        checked={localAdSettings.monetagDirectLinkEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, monetagDirectLinkEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Popunder Ads</Label>
+                      <Switch
+                        checked={localAdSettings.monetagPopunderEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, monetagPopunderEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Banner Ads</Label>
+                      <Switch
+                        checked={localAdSettings.monetagBannerEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, monetagBannerEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Native Banner</Label>
+                      <Switch
+                        checked={localAdSettings.monetagNativeBannerEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, monetagNativeBannerEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Social Bar</Label>
+                      <Switch
+                        checked={localAdSettings.monetagSocialBarEnabled}
+                        onCheckedChange={(checked) => 
+                          setLocalAdSettings(prev => ({ ...prev, monetagSocialBarEnabled: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Monetag Direct Link URL</Label>
+                    <Input
+                      value={localAdSettings.monetagDirectLink}
+                      onChange={(e) => setLocalAdSettings(prev => ({ 
+                        ...prev, 
+                        monetagDirectLink: e.target.value 
+                      }))}
+                      placeholder="Enter Monetag direct link URL"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Banner Ad Code</Label>
+                      <Textarea
+                        value={localAdSettings.monetagBannerCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          monetagBannerCode: e.target.value 
+                        }))}
+                        placeholder="Paste Monetag banner ad code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Native Banner Code</Label>
+                      <Textarea
+                        value={localAdSettings.monetagNativeBannerCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          monetagNativeBannerCode: e.target.value 
+                        }))}
+                        placeholder="Paste Monetag native banner code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Social Bar Code</Label>
+                      <Textarea
+                        value={localAdSettings.monetagSocialBarCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          monetagSocialBarCode: e.target.value 
+                        }))}
+                        placeholder="Paste Monetag social bar code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Popunder Code</Label>
+                      <Textarea
+                        value={localAdSettings.monetagPopunderCode}
+                        onChange={(e) => setLocalAdSettings(prev => ({ 
+                          ...prev, 
+                          monetagPopunderCode: e.target.value 
+                        }))}
+                        placeholder="Paste Monetag popunder code here..."
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
