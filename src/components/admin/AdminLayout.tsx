@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import AdminSidebar from './AdminSidebar';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -47,7 +48,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="admin-panel-wrapper min-h-screen w-full" data-admin-panel="true">
+    <div className="admin-panel-wrapper min-h-screen w-full bg-gray-50" data-admin-panel="true">
       <style jsx global>{`
         .admin-panel-wrapper [data-ad],
         .admin-panel-wrapper .ad-banner,
@@ -64,7 +65,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           font-size: 16px !important;
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .admin-panel-wrapper {
             overflow-x: hidden;
           }
@@ -82,8 +83,40 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           
           /* Better spacing on mobile */
           .admin-panel-wrapper .container {
-            padding-left: 16px;
-            padding-right: 16px;
+            padding-left: 12px;
+            padding-right: 12px;
+          }
+          
+          /* Mobile responsive cards */
+          .admin-panel-wrapper .grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          
+          /* Mobile friendly inputs */
+          .admin-panel-wrapper input,
+          .admin-panel-wrapper textarea,
+          .admin-panel-wrapper select {
+            padding: 12px;
+            border-radius: 8px;
+          }
+        }
+        
+        @media (max-width: 640px) {
+          .admin-panel-wrapper .text-3xl {
+            font-size: 1.5rem;
+          }
+          
+          .admin-panel-wrapper .text-2xl {
+            font-size: 1.25rem;
+          }
+          
+          .admin-panel-wrapper .p-8 {
+            padding: 16px;
+          }
+          
+          .admin-panel-wrapper .p-6 {
+            padding: 12px;
           }
         }
         
@@ -100,7 +133,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           outline-offset: 2px;
         }
       `}</style>
-      {children}
+      
+      <div className="flex min-h-screen">
+        <AdminSidebar />
+        <main className="flex-1 overflow-auto lg:ml-0">
+          <div className="lg:hidden h-16"></div> {/* Space for mobile menu button */}
+          <div className="p-4 sm:p-6 lg:p-8 max-w-full">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

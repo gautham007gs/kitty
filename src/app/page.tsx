@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, ArrowLeft, Camera, Search, MoreVertical, Users } from 'lucide-react';
+import { MessageCircle, Camera, Search, MoreVertical, Users, Heart, Coffee, Sun, Moon, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAIProfile } from '@/contexts/AIProfileContext';
@@ -13,20 +13,80 @@ import SocialBarAdDisplay from '@/components/SocialBarAdDisplay';
 import GlobalAdScripts from '@/components/GlobalAdScripts';
 import { ClientOnlyTimestamp } from '@/components/ClientOnlyTimestamp';
 
+// Dynamic psychological status generator
+const getTimeBasedMood = () => {
+  const hour = new Date().getHours();
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+  
+  if (hour >= 6 && hour < 12) {
+    return {
+      mood: "energetic morning vibes",
+      emoji: "🌅",
+      status: isWeekend ? "Weekend morning coffee ritual ☕ Anyone else up early?" : "Early bird catches the worm! 🐦 Ready to conquer this Monday!",
+      personality: "optimistic and ready for the day",
+      indianTouch: "सुप्रभात! (Good morning!)"
+    };
+  } else if (hour >= 12 && hour < 17) {
+    return {
+      mood: "productive afternoon energy", 
+      emoji: "☀️",
+      status: isWeekend ? "Lazy Sunday afternoon... perfect for chai and conversations 🫖" : "Afternoon productivity mode! 💪 What's keeping you busy?",
+      personality: "focused yet friendly",
+      indianTouch: "चलो बात करते हैं! (Let's chat!)"
+    };
+  } else if (hour >= 17 && hour < 22) {
+    return {
+      mood: "relaxed evening mood",
+      emoji: "🌆", 
+      status: isWeekend ? "Weekend evenings hit different... wine or chai? 🍷" : "Winding down after a busy day. How was yours? ✨",
+      personality: "contemplative and warm",
+      indianTouch: "शुभ संध्या! (Good evening!)"
+    };
+  } else {
+    return {
+      mood: "cozy night owl",
+      emoji: "🌙",
+      status: isWeekend ? "Late night weekend thoughts... can't sleep? Let's chat 💫" : "Night owl mode... working late or just can't sleep? 🦉",
+      personality: "mysterious and introspective", 
+      indianTouch: "रात का समय है... (It's nighttime...)"
+    };
+  }
+};
+
 export default function HomePage() {
   const router = useRouter();
   const { aiProfile, isLoadingAIProfile } = useAIProfile();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [timeData, setTimeData] = useState(getTimeBasedMood());
+  const [dynamicStatus, setDynamicStatus] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Update psychological content every 15 minutes
+    const updateMood = () => {
+      const newTimeData = getTimeBasedMood();
+      setTimeData(newTimeData);
+      setDynamicStatus(newTimeData.status);
+    };
+
+    updateMood(); // Initial update
+    const moodTimer = setInterval(updateMood, 15 * 60 * 1000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(moodTimer);
+    };
   }, []);
 
-  const effectiveProfile = aiProfile || defaultAIProfile;
+  const effectiveProfile = {
+    ...defaultAIProfile,
+    ...aiProfile,
+    status: dynamicStatus || aiProfile?.status || defaultAIProfile.status
+  };
 
   const handleChatClick = () => {
     router.push('/maya-chat');

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useGlobalStatus } from '@/contexts/GlobalStatusContext';
 import { ManagedContactStatus } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,65 @@ import { Trash2 } from 'lucide-react';
 
 export function StatusManager() {
   const { managedDemoContacts, fetchGlobalStatuses } = useGlobalStatus();
-  const [statuses, setStatuses] = useState<ManagedContactStatus[]>(managedDemoContacts || []);
+  const [statuses, setStatuses] = useState<ManagedContactStatus[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [newContact, setNewContact] = useState<Partial<ManagedContactStatus>>({ name: '', avatarUrl: '', statusText: '', enabled: true, hasUpdate: true });
+
+  // Load statuses on component mount
+  React.useEffect(() => {
+    const loadStatuses = async () => {
+      setIsLoading(true);
+      try {
+        await fetchGlobalStatuses();
+        if (managedDemoContacts) {
+          setStatuses(managedDemoContacts);
+        }
+      } catch (error) {
+        console.error('Failed to load statuses:', error);
+        // Set some default statuses if loading fails
+        setStatuses([
+          {
+            id: 'default_1',
+            name: 'Priya',
+            avatarUrl: '/api/placeholder/40/40',
+            statusText: 'Just finished yoga class! 🧘‍♀️',
+            hasUpdate: true,
+            statusImageUrl: '/api/placeholder/200/200',
+            enabled: true,
+            dataAiHint: 'fitness'
+          },
+          {
+            id: 'default_2',
+            name: 'Anjali',
+            avatarUrl: '/api/placeholder/40/40',
+            statusText: 'Exploring new cafes in Bangalore ☕',
+            hasUpdate: false,
+            statusImageUrl: '/api/placeholder/200/200',
+            enabled: true,
+            dataAiHint: 'social'
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStatuses();
+  }, [managedDemoContacts, fetchGlobalStatuses]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-300 rounded w-1/4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-300 rounded"></div>
+            <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddContact = () => {
     if (newContact.name && newContact.avatarUrl) {
