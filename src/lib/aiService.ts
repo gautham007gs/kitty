@@ -15,7 +15,7 @@ const initializeVertexAI = async (): Promise<void> => {
   if (vertexAI && model) return;
 
   try {
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const projectId = process.env.VERTEX_AI_PROJECT_ID;
     const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
     const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 

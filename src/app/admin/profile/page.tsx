@@ -140,12 +140,12 @@ const AdminProfilePage: React.FC = () => {
       const currentProfile = aiProfile || defaultAIProfile;
       setProfile({
         name: currentProfile.name,
-        age: currentProfile.age.toString(),
-        personality: currentProfile.personality,
+        age: (currentProfile.age || 23).toString(),
+        personality: currentProfile.personality || 'Friendly and helpful',
         status: currentProfile.status,
         avatarUrl: currentProfile.avatarUrl,
-        isOnline: currentProfile.isOnline,
-        responseTime: currentProfile.responseTime,
+        isOnline: currentProfile.isOnline ?? true,
+        responseTime: currentProfile.responseTime || 2000,
         systemPrompt: currentProfile.systemPrompt || ''
       });
     }
