@@ -5,12 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2 } from 'lucide-react';
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Admin Panel - Kruthika Chat',
-  description: 'Administrative dashboard for managing AI chatbot settings',
-};
 
 export default function Layout({
   children,

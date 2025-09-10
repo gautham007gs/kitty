@@ -8,9 +8,12 @@ import { defaultAIProfile, defaultAdminStatusDisplay, defaultManagedContactStatu
 
 interface AIProfileContextType {
   profile: AIProfile;
+  aiProfile: AIProfile;  // Alias for compatibility
   loading: boolean;
+  isLoadingAIProfile: boolean;  // Alias for compatibility
   error: any;
   updateProfile: (newProfile: Partial<AIProfile>) => Promise<void>;
+  updateAIProfile: (newProfile: Partial<AIProfile>) => Promise<void>;  // Alias for compatibility
   adminOwnStatus: AdminStatusDisplay;
   managedDemoContacts: ManagedContactStatus[];
   mediaAssetsConfig: AIMediaAssetsConfig;
@@ -160,9 +163,12 @@ export const AIProfileProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
       profile,
+      aiProfile: profile,  // Alias for compatibility
       loading: loading || externalIsLoading,
+      isLoadingAIProfile: loading || externalIsLoading,  // Alias for compatibility
       error,
       updateProfile,
+      updateAIProfile: updateProfile,  // Alias for compatibility
       adminOwnStatus,
       managedDemoContacts,
       mediaAssetsConfig,

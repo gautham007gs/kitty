@@ -11,10 +11,10 @@ import { defaultAIProfile } from '@/config/ai'; // Assuming defaultAIProfile is 
 interface GlobalStatusContextType {
   adminOwnStatus: AdminStatusDisplay | null;
   managedDemoContacts: ManagedContactStatus[] | null;
+  globalStatuses: any;  // Alias for compatibility
   isLoadingGlobalStatuses: boolean;
   fetchGlobalStatuses: () => Promise<void>;
-  // updateAdminOwnStatus: (newStatus: AdminStatusDisplay) => Promise<void>; // May not be needed here if admin panel handles saves
-  // updateManagedDemoContacts: (newContacts: ManagedContactStatus[]) => Promise<void>; // May not beneeded here
+  updateGlobalStatus: (statusId: string, updates: any) => Promise<void>;  // Add missing method
 }
 
 const GlobalStatusContext = createContext<GlobalStatusContextType | undefined>(undefined);
@@ -149,6 +149,51 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   }, [toast]);
 
+  const updateGlobalStatus = useCallback(async (statusId: string, updates: any) => {
+    if (!supabase) {
+      console.warn('[GlobalStatusContext] Supabase not available for updating status.');
+      return;
+    }
+
+    try {
+      if (statusId === 'admin_own_status') {
+        const { error } = await supabase
+          .from('admin_status_display')
+          .update({
+            name: updates.name,
+            avatar_url: updates.avatarUrl,
+            status_text: updates.statusText,
+            status_image_url: updates.statusImageUrl,
+            has_update: updates.hasUpdate
+          })
+          .eq('id', 'default');
+        
+        if (error) throw error;
+      } else {
+        // Handle managed demo contacts updates
+        const { error } = await supabase
+          .from('managed_demo_contacts')
+          .update(updates)
+          .eq('id', statusId);
+          
+        if (error) throw error;
+      }
+      
+      await fetchGlobalStatuses(); // Refresh after update
+      toast({
+        title: "Success",
+        description: "Status updated successfully.",
+      });
+    } catch (err: any) {
+      console.error('[GlobalStatusContext] Error updating status:', err);
+      toast({
+        title: "Error",
+        description: `Failed to update status: ${err.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [fetchGlobalStatuses, toast]);
+
   useEffect(() => {
     fetchGlobalStatuses();
 
@@ -178,7 +223,14 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, [fetchGlobalStatuses]);
 
   return (
-    <GlobalStatusContext.Provider value={{ adminOwnStatus, managedDemoContacts, isLoadingGlobalStatuses, fetchGlobalStatuses }}>
+    <GlobalStatusContext.Provider value={{ 
+      adminOwnStatus, 
+      managedDemoContacts, 
+      globalStatuses: { adminOwnStatus, managedDemoContacts },  // Alias for compatibility
+      isLoadingGlobalStatuses, 
+      fetchGlobalStatuses,
+      updateGlobalStatus
+    }}>
       {children}
     </GlobalStatusContext.Provider>
   );

@@ -9,7 +9,9 @@ import { toast } from "@/hooks/use-toast";
 interface AdSettingsContextType {
   adSettings: AdSettings | null;
   isLoading: boolean;
+  isLoadingAdSettings: boolean;  // Alias for compatibility
   refreshAdSettings: () => Promise<void>;
+  updateAdSettings: (settings: AdSettings) => Promise<void>;  // Add missing method
 }
 
 const AdSettingsContext = createContext<AdSettingsContextType | undefined>(undefined);
@@ -116,8 +118,71 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
     await fetchAdSettings();
   }, [fetchAdSettings]);
 
+  const updateAdSettings = useCallback(async (newSettings: AdSettings) => {
+    if (!supabase) {
+      console.warn('[AdSettingsContext] Supabase not available for updating settings.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const mappedData = {
+        ads_enabled_globally: newSettings.adsEnabledGlobally,
+        max_direct_link_ads_per_day: newSettings.maxDirectLinkAdsPerDay,
+        max_direct_link_ads_per_session: newSettings.maxDirectLinkAdsPerSession,
+        adsterra_direct_link: newSettings.adsterraDirectLink,
+        adsterra_direct_link_enabled: newSettings.adsterraDirectLinkEnabled,
+        adsterra_banner_code: newSettings.adsterraBannerCode,
+        adsterra_banner_enabled: newSettings.adsterraBannerEnabled,
+        adsterra_native_banner_code: newSettings.adsterraNativeBannerCode,
+        adsterra_native_banner_enabled: newSettings.adsterraNativeBannerEnabled,
+        adsterra_social_bar_code: newSettings.adsterraSocialBarCode,
+        adsterra_social_bar_enabled: newSettings.adsterraSocialBarEnabled,
+        adsterra_popunder_code: newSettings.adsterraPopunderCode,
+        adsterra_popunder_enabled: newSettings.adsterraPopunderEnabled,
+        monetag_direct_link: newSettings.monetagDirectLink,
+        monetag_direct_link_enabled: newSettings.monetagDirectLinkEnabled,
+        monetag_banner_code: newSettings.monetagBannerCode,
+        monetag_banner_enabled: newSettings.monetagBannerEnabled,
+        monetag_native_banner_code: newSettings.monetagNativeBannerCode,
+        monetag_native_banner_enabled: newSettings.monetagNativeBannerEnabled,
+        monetag_social_bar_code: newSettings.monetagSocialBarCode,
+        monetag_social_bar_enabled: newSettings.monetagSocialBarEnabled,
+        monetag_popunder_code: newSettings.monetagPopunderCode,
+        monetag_popunder_enabled: newSettings.monetagPopunderEnabled,
+      };
+
+      const { error } = await supabase
+        .from('ad_settings')
+        .update(mappedData)
+        .eq('id', 'default');
+
+      if (error) throw error;
+      await fetchAdSettings(); // Refresh after update
+      toast({
+        title: "Success",
+        description: "Ad settings updated successfully.",
+      });
+    } catch (err: any) {
+      console.error('[AdSettingsContext] Error updating ad settings:', err);
+      toast({
+        title: "Error",
+        description: `Failed to update ad settings: ${err.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchAdSettings]);
+
   return (
-    <AdSettingsContext.Provider value={{ adSettings, isLoading, refreshAdSettings }}>
+    <AdSettingsContext.Provider value={{ 
+      adSettings, 
+      isLoading, 
+      isLoadingAdSettings: isLoading,  // Alias for compatibility
+      refreshAdSettings,
+      updateAdSettings
+    }}>
       {children}
     </AdSettingsContext.Provider>
   );
