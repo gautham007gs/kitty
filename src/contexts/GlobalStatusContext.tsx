@@ -31,7 +31,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
       console.warn("Supabase client not available for fetching global statuses. Using defaults.");
       setAdminOwnStatus({
           name: defaultAIProfile.name,
-          status: defaultAIProfile.status,
+          statusText: defaultAIProfile.status,
           avatarUrl: defaultAIProfile.avatarUrl,
           statusStoryText: defaultAIProfile.statusStoryText,
           statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,
@@ -137,7 +137,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
       toast({ title: "Error Loading Global Statuses", description: `Unexpected error. Using defaults. ${e.message}`, variant: "destructive" });
       setAdminOwnStatus({
           name: defaultAIProfile.name,
-          status: defaultAIProfile.status,
+          statusText: defaultAIProfile.status,
           avatarUrl: defaultAIProfile.avatarUrl,
           statusStoryText: defaultAIProfile.statusStoryText,
           statusStoryImageUrl: defaultAIProfile.statusStoryImageUrl,

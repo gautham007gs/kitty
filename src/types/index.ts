@@ -12,12 +12,22 @@ export interface Message {
 }
 
 export interface AIProfile {
+  id?: string;
   name: string;
+  age?: number;
   avatarUrl: string;
   status: string; // Main status line for ChatHeader
   statusStoryText?: string; // Text for the Status Page story
   statusStoryImageUrl?: string; // Image URL for the Status Page story
   statusStoryHasUpdate?: boolean; // Ring indicator for new story on Status Page
+  personality?: string;
+  language_preference?: string;
+  response_style?: string;
+  emotion_enabled?: boolean;
+  isOnline?: boolean;
+  responseTime?: number;
+  systemPrompt?: string;
+  settings?: any;
 }
 
 export interface AvatarOption {
