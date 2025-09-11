@@ -1,5 +1,6 @@
 
 import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getCurrentLifeEvent } from './aiLifeEvents';
 import { getVariableReward } from './variableRewards';
 import { updateRelationshipState, getRelationshipSpecificHooks, RelationshipStage, getRelationshipState } from './relationshipManager';
@@ -7,11 +8,13 @@ import { supabase } from './supabaseClient';
 import { defaultAIProfile, addictionTriggers } from '@/config/ai';
 import { getAILifeStatus } from './aiLifeSimulator';
 
-// PURE VERTEX AI WITH ADVANCED PSYCHOLOGICAL MANIPULATION
+// AI CLIENT WITH VERTEX AI AND GOOGLE GENERATIVE AI FALLBACK
 let vertexAI: VertexAI | null = null;
+let googleAI: GoogleGenerativeAI | null = null;
 let model: any = null;
+let usingFallback = false;
 
-// Initialize Vertex AI client
+// Initialize Vertex AI client with fallback to Google Generative AI
 const initializeVertexAI = async (): Promise<void> => {
   if (vertexAI && model) return;
 
@@ -19,10 +22,30 @@ const initializeVertexAI = async (): Promise<void> => {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
     const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    const googleApiKey = process.env.GOOGLE_API_KEY;
 
     console.log('🔧 Initializing AI Chatbot System...');
+    
+    // If Vertex AI credentials missing, use Google Generative AI as fallback
     if (!projectId || !credentialsJson) {
-      throw new Error('Missing required Vertex AI configuration');
+      if (!googleApiKey) {
+        throw new Error('Missing required AI configuration - need either Vertex AI credentials or Google API key');
+      }
+      console.log('⚠️ Vertex AI credentials not found, using Google Generative AI as fallback');
+      
+      // Initialize Google Generative AI as fallback
+      googleAI = new GoogleGenerativeAI(googleApiKey);
+      model = googleAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-001',
+        generationConfig: {
+          maxOutputTokens: 80,
+          temperature: 1.2,
+          topP: 0.95,
+        }
+      });
+      usingFallback = true;
+      console.log('✅ Google Generative AI fallback initialized successfully!');
+      return;
     }
 
     const credentials = JSON.parse(credentialsJson);

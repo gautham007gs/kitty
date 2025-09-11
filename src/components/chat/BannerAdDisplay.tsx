@@ -45,7 +45,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     let selectedNetworkEnabled = false;
 
     // Logic to select ad code based on adType and currentAdProvider
-    if (adType === "banner") {
+    if (adType === "standard") {
       if (currentAdProvider === 'adsterra') {
         selectedAdCode = adSettings.adsterraBannerCode || '';
         selectedNetworkEnabled = adSettings.adsterraBannerEnabled;
@@ -170,16 +170,14 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     <div
       ref={adContainerRef}
       className={cn(
-        "kruthika-chat-banner-ad-container my-2 flex justify-center items-center bg-secondary/10 min-h-[50px] w-full overflow-hidden",
+        "kruthika-chat-banner-ad-container my-2 flex justify-center items-center min-h-[90px] w-full overflow-hidden",
+        "bg-white border border-gray-200 rounded-md shadow-sm",
         className,
-        contextual && "kruthika-chat-contextual-ad" // Apply contextual class if true
+        contextual && "kruthika-chat-contextual-ad"
       )}
-      key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject.substring(0, 30)}`}
+      key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject?.substring(0, 30)}`}
     >
-      {/* Fallback content while ad loads */}
-      <div className="flex items-center justify-center h-[90px] text-gray-400 text-sm">
-        Loading advertisement...
-      </div>
+      {/* Container for actual ad content - no fallback that blocks the ad */}
     </div>
   );
 };

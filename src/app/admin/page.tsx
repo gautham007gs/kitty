@@ -42,20 +42,20 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        // Fetch messages count
+        // Fetch messages count (using correct v6 table name)
         const { count: messagesCount } = await supabase
-          .from('chat_messages')
+          .from('messages_log')
           .select('*', { count: 'exact', head: true });
 
-        // Fetch users count
+        // Fetch users count (using daily activity log for unique users)
         const { count: usersCount } = await supabase
-          .from('user_contexts')
-          .select('*', { count: 'exact', head: true });
+          .from('daily_activity_log')
+          .select('user_pseudo_id', { count: 'exact', head: true });
 
         // Fetch active sessions (messages in last hour)
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count: activeSessions } = await supabase
-          .from('chat_messages')
+          .from('messages_log')
           .select('*', { count: 'exact', head: true })
           .gte('created_at', oneHourAgo);
 
