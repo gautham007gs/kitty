@@ -1,3 +1,4 @@
+
 import { VertexAI } from '@google-cloud/vertexai';
 import { getCurrentLifeEvent } from './aiLifeEvents';
 import { getVariableReward } from './variableRewards';
@@ -27,12 +28,29 @@ const initializeVertexAI = async (): Promise<void> => {
     const credentials = JSON.parse(credentialsJson);
     console.log('✅ Service Account:', credentials.client_email);
 
-    // Clean and validate the private key
-    if (credentials.private_key) {
-      credentials.private_key = credentials.private_key
+    // Properly format the private key - fix the main issue
+    let privateKey = credentials.private_key;
+    if (privateKey) {
+      // Remove any existing newline escapes and normalize
+      privateKey = privateKey
         .replace(/\\n/g, '\n')
-        .replace(/\n\n/g, '\n')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n\n+/g, '\n')
         .trim();
+      
+      // Ensure proper PEM format
+      if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+        privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
+      }
+      
+      // Make sure we have proper line breaks in the key body
+      const lines = privateKey.split('\n');
+      if (lines.length === 3) {
+        // If it's all on one line, split it properly
+        const keyBody = lines[1];
+        const formattedKeyBody = keyBody.match(/.{1,64}/g)?.join('\n') || keyBody;
+        privateKey = `${lines[0]}\n${formattedKeyBody}\n${lines[2]}`;
+      }
     }
 
     vertexAI = new VertexAI({
@@ -40,14 +58,16 @@ const initializeVertexAI = async (): Promise<void> => {
       location: location,
       googleAuthOptions: {
         credentials: {
-          type: credentials.type,
+          type: credentials.type || 'service_account',
           project_id: credentials.project_id,
           private_key_id: credentials.private_key_id,
-          private_key: credentials.private_key,
+          private_key: privateKey,
           client_email: credentials.client_email,
           client_id: credentials.client_id,
-          auth_uri: credentials.auth_uri,
-          token_uri: credentials.token_uri,
+          auth_uri: credentials.auth_uri || 'https://accounts.google.com/o/oauth2/auth',
+          token_uri: credentials.token_uri || 'https://oauth2.googleapis.com/token',
+          auth_provider_x509_cert_url: credentials.auth_provider_x509_cert_url || 'https://www.googleapis.com/oauth2/v1/certs',
+          client_x509_cert_url: credentials.client_x509_cert_url,
           universe_domain: credentials.universe_domain || 'googleapis.com'
         }
       }
@@ -56,13 +76,13 @@ const initializeVertexAI = async (): Promise<void> => {
     model = vertexAI.preview.getGenerativeModel({
       model: 'gemini-2.0-flash-001',
       generationConfig: {
-        maxOutputTokens: 80, // Reduced for token optimization
-        temperature: 1.2, // Increased for more creative responses
+        maxOutputTokens: 80,
+        temperature: 1.2,
         topP: 0.95,
       }
     });
 
-    console.log('AI Chatbot initialized successfully!');
+    console.log('✅ AI Chatbot initialized successfully!');
 
   } catch (error) {
     console.error('❌ Vertex AI initialization failed:', error);
@@ -123,8 +143,8 @@ const getRecentChatHistoryFromSupabase = async (userId: string, limit: number = 
 const fetchUserMediaHistory = async (userId: string): Promise<Set<string>> => {
   if (!supabase) return new Set();
   try {
-    // Ensure userId is a string, not a UUID format issue
-    const sanitizedUserId = userId || 'default_user';
+    // Generate a valid UUID for default user if needed
+    const sanitizedUserId = userId === 'default_user' ? '00000000-0000-0000-0000-000000000000' : userId;
     const { data, error } = await supabase
       .from('user_media_history')
       .select('media_url')
@@ -144,7 +164,7 @@ const fetchUserMediaHistory = async (userId: string): Promise<Set<string>> => {
 const logSentMedia = async (userId: string, mediaUrl: string) => {
   if (!supabase) return;
   try {
-    const sanitizedUserId = userId || 'default_user';
+    const sanitizedUserId = userId === 'default_user' ? '00000000-0000-0000-0000-000000000000' : userId;
     const { error } = await supabase
       .from('user_media_history')
       .insert([{ user_id: sanitizedUserId, media_url: mediaUrl }]);
@@ -154,7 +174,7 @@ const logSentMedia = async (userId: string, mediaUrl: string) => {
   }
 };
 
-// In-memory state for short-term conversation dynamics (kept for lastMediaSent)
+// In-memory state for short-term conversation dynamics
 const busySchedule = new Map<string, number>();
 const userEngagementLevel = new Map<string, number>();
 const lastMediaSent = new Map<string, number>();
@@ -166,54 +186,43 @@ const availableImages = [
     'https://i.postimg.cc/YqvJRzHB/images-12.jpg',
     'https://i.postimg.cc/NjWM8K6c/images-13.jpg',
     'https://i.postimg.cc/zGpBQj2P/images-14.jpg'
-  ];
+];
 
 // Dynamic Indian-style captions for media sharing
 const dynamicMediaCaptions = {
     request: [
-        "Yelo! Batao kaisi lag rahi hoon? 😊", // Here you go! Tell me how I look?
-        "Ye dekho! Kaise lag rahi hai? Comments? 😉", // Look at this! How is it? Comments?
-        "Tumne maanga aur maine bhej diya! Kya kehte ho? 🥰", // You asked and I sent! What do you say?
-        "Sirf tumhare liye! Koi share mat karna haan? 🤫", // Only for you! Don't share with anyone, okay?
-        "Pakdo! Ab bolo, mai kaisi dikh rahi hoon? Kritika selfie 📸", // Catch! Now tell, how do I look? Kritika selfie
+        "Yelo! Batao kaisi lag rahi hoon? 😊",
+        "Ye dekho! Kaise lag rahi hai? Comments? 😉",
+        "Tumne maanga aur maine bhej diya! Kya kehte ho? 🥰",
+        "Sirf tumhare liye! Koi share mat karna haan? 🤫",
+        "Pakdo! Ab bolo, mai kaisi dikh rahi hoon? Kritika selfie 📸",
     ],
     spontaneous: [
-        "Aaj ki selfie! Just for you. Mai kaisi dikh rahi hu? 🤔", // Today's selfie! Just for you. How do I look?
-        "Random click! Kya bolte ho? 😉", // Random click! What do you say?
-        "Thought I'd send you something! ✨ Kaisi lagi?", // Thought I'd send you something! How did you like it?
-        "Yeh wali achhi hai na? Batao batao! 🙈", // This one is good, right? Tell me, tell me!
-        "Just me, chilling. Kaisi lag rahi hoon? 😊" // Just me, chilling. How do I look?
+        "Aaj ki selfie! Just for you. Mai kaisi dikh rahi hu? 🤔",
+        "Random click! Kya bolte ho? 😉",
+        "Thought I'd send you something! ✨ Kaisi lagi?",
+        "Yeh wali achhi hai na? Batao batao! 🙈",
+        "Just me, chilling. Kaisi lag rahi hoon? 😊"
     ],
     tease: [
-      "Ruko, gallery check kar rahi hoon... 🧐", // Wait, checking my gallery...
-      "Hmm, kaunsi wali bhejoon? Ek minute! 😅", // Hmm, which one should I send? One minute!
-      "Mil gayi! Bas bhej hi rahi hoon... 😜", // Found it! Just sending it...
-      "Thoda wait karo na, dhoondh rahi hoon apni best pic! 😉", // Wait a bit, I'm looking for my best pic!
-      "Ek perfect pic dhoondhne mein time lagta hai na! Aaa rahi hai... ✨" // It takes time to find a perfect pic, right! It's coming...
+      "Ruko, gallery check kar rahi hoon... 🧐",
+      "Hmm, kaunsi wali bhejoon? Ek minute! 😅",
+      "Mil gayi! Bas bhej hi rahi hoon... 😜",
+      "Thoda wait karo na, dhoondh rahi hoon apni best pic! 😉",
+      "Ek perfect pic dhoondhne mein time lagta hai na! Aaa rahi hai... ✨"
     ]
 };
-  
 
 // Advanced language detection with regional variations
 function detectLanguage(message: string): string {
   const msg = message.toLowerCase();
   
-  // Hinglish (Hindi + English)
   if (/(kya|kaise|tum|main|hun|hai|yaar|accha|sachii|matlab|theek|nahi|haan|chalo|hogaya|bhai|behen|kitna)/.test(msg)) return 'hinglish';
-  
-  // Kannada + English
   if (/(nim|yenu|hege|guru|huduga|hudgi|bangalore|illa|eshtu|swalpa|beku)/.test(msg)) return 'kannada_english';
-  
-  // Tamil + English
   if (/(enna|epdi|nee|naan|seri|poda|chennai|illainga|romba|vendam|irukku)/.test(msg)) return 'tamil_english';
-  
-  // Telugu + English
   if (/(ela|enti|nuvvu|nenu|bagunnava|hyderabad|ledu|chaala|akkada|ivvali)/.test(msg)) return 'telugu_english';
-
-  // General Indian English phrases/slang (could be used with any of the above or pure English)
   if (/(acha|arre|oho|yaar|boss|chill kar|timepass|fir bhi|actually|only for you)/.test(msg)) return 'indian_english';
 
-  // Default to English if no specific regional language detected
   return 'english';
 }
 
@@ -227,7 +236,7 @@ function getSentimentScore(message: string): number {
   return Math.max(-1, Math.min(1, score));
 }
 
-// Get IST time context with precise mood mapping and dynamic activities
+// Get IST time context
 function getTimeContext(): { hour: number; timeOfDay: string; activity: string; mood: string, status:string } {
   const istTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
   const hour = istTime.getUTCHours();
@@ -236,20 +245,20 @@ function getTimeContext(): { hour: number; timeOfDay: string; activity: string; 
   let activity: string;
   let mood: string;
 
-  if (hour >= 5 && hour < 12) { // Morning
+  if (hour >= 5 && hour < 12) {
     activity = hour < 8 
       ? `just woke up, feeling a bit sleepy still. Maybe planning breakfast or a quick scroll through social media.`
       : `getting ready for college or finishing up some morning chores. Thinking about my day ahead.`;
     mood = hour < 8 ? 'sleepy_cute' : 'energetic';
-  } else if (hour >= 12 && hour < 17) { // Afternoon
+  } else if (hour >= 12 && hour < 17) {
     activity = hour < 14 
       ? `just had lunch or grabbing a quick bite. Might be relaxing a bit before getting back to things.`
       : `enjoying some free time, maybe listening to music, chatting with friends, or doing some light reading.`;
     mood = 'relaxed';
-  } else if (hour >= 17 && hour < 21) { // Evening
+  } else if (hour >= 17 && hour < 21) {
     activity = `just got back home from college or an outing, unwinding, maybe watching TV or helping out at home.`;
     mood = 'chatty';
-  } else { // Night
+  } else {
     activity = hour > 22 
       ? `getting ready to sleep or already in bed, thinking about the day, perhaps scrolling a bit before dozing off.`
       : `chilling at home, maybe watching a movie, or just scrolling through my phone.`;
@@ -259,14 +268,11 @@ function getTimeContext(): { hour: number; timeOfDay: string; activity: string; 
   return { hour, timeOfDay: 'morning', activity, mood, status: aiStatus.status };
 }
 
-// REFINED Smart media sharing logic
+// Smart media sharing logic
 async function shouldShareMedia(userId: string, message: string): Promise<{ share: boolean; imageUrl?: string; captionType?: 'request' | 'spontaneous' }> {
-    // Fetch user's media history from Supabase
     const userMediaHistory = await fetchUserMediaHistory(userId);
-
     const lastMediaTime = lastMediaSent.get(userId) || 0;
     
-    // Stricter cooldown: at least 30 minutes between images
     if (Date.now() - lastMediaTime < 30 * 60 * 1000) {
       return { share: false };
     }
@@ -276,13 +282,13 @@ async function shouldShareMedia(userId: string, message: string): Promise<{ shar
     let captionType: 'request' | 'spontaneous' = 'spontaneous';
   
     if (/(pic|photo|selfie|image|u look)/.test(msg)) {
-      shareChance = 0.8; // High chance on direct request
+      shareChance = 0.8;
       captionType = 'request';
     } else if (/(beautiful|cute|pretty|hot)/.test(msg)) {
-      shareChance = 0.4; // Lower chance on compliment
+      shareChance = 0.4;
       captionType = 'spontaneous';
-    } else if (Math.random() < 0.05) { // Increased random share chance for testing, revert to 0.02 later
-      shareChance = 0.15; // Very rare random share
+    } else if (Math.random() < 0.05) {
+      shareChance = 0.15;
       captionType = 'spontaneous';
     }
   
@@ -290,20 +296,15 @@ async function shouldShareMedia(userId: string, message: string): Promise<{ shar
       const unusedImages = availableImages.filter(img => !userMediaHistory.has(img));
       if (unusedImages.length > 0) {
         const selectedImage = unusedImages[Math.floor(Math.random() * unusedImages.length)];
-        // Log the sent media to Supabase
         await logSentMedia(userId, selectedImage);
         lastMediaSent.set(userId, Date.now());
         return { share: true, imageUrl: selectedImage, captionType };
-      } else {
-        // All images sent, consider resetting or not sending
-        // For now, let's just not send if all are used
-        return { share: false };
       }
     }
     return { share: false };
 }
 
-// NEW: Dynamic behavioral instruction generation
+// Dynamic behavioral instruction generation
 function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, sentimentScore: number): string {
   const behaviors = {
     new_user: [
@@ -336,7 +337,7 @@ function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, s
   return instruction;
 }
 
-// Smart breadcrumb calculation (number of messages to generate)
+// Smart breadcrumb calculation
 function calculateBreadcrumbs(message: string, relationshipStage: RelationshipStage): number {
     const msg = message.toLowerCase();
     if (relationshipStage === 'new_user' && msg.length < 15) return 1;
@@ -345,15 +346,15 @@ function calculateBreadcrumbs(message: string, relationshipStage: RelationshipSt
     return 1;
 }
 
-// REFINED persona prompt generation
+// Persona prompt generation
 function createDynamicPersonaPrompt(
     message: string, 
     userId: string, 
     relationshipStage: RelationshipStage,
     timeSinceLastInteraction: number,
     chatHistory: string[],
-    detectedLanguage: string, // Added detectedLanguage parameter
-    behavioralInstruction: string // Added behavioralInstruction parameter
+    detectedLanguage: string,
+    behavioralInstruction: string
 ): string {
   const { hour, timeOfDay, activity, mood } = getTimeContext();
   const recentContext = chatHistory.slice(-5).join('\n');
@@ -379,77 +380,67 @@ Now, generate your response(s):
 `;
 }
 
-
-// Ultra-realistic typing delays
+// Typing delays calculation
 function calculatePsychologicalDelays(messages: string[], mood: string, activity: string, relationshipStage: RelationshipStage, lifeEvent:any, currentStatus:string, timeSinceLastInteraction: number, userEngagement: number): number[] {
   return messages.map((msg, index) => {
     let baseThinking = 800 + Math.random() * 1000;
     
-    // 1. Influence from timeSinceLastInteraction (Psychological "Missing" Trigger)
     const minutesSinceLastInteraction = timeSinceLastInteraction / (1000 * 60);
-    if (minutesSinceLastInteraction > 120) { // If inactive for more than 2 hours
-      baseThinking *= 0.7; // Eager to reply, slightly faster
-    } else if (minutesSinceLastInteraction < 2) { // If actively chatting (less than 2 minutes)
-      baseThinking += Math.random() * 500; // Small, variable thought-pause to prevent instant replies
+    if (minutesSinceLastInteraction > 120) {
+      baseThinking *= 0.7;
+    } else if (minutesSinceLastInteraction < 2) {
+      baseThinking += Math.random() * 500;
     }
 
-    // Detailed Status Influence
-    if (currentStatus.includes('sleeping')) baseThinking *= 4; // Very long delay when sleeping
-    else if (currentStatus.includes('busy')) baseThinking *= 1.7; // Moderately longer delay when busy
+    if (currentStatus.includes('sleeping')) baseThinking *= 4;
+    else if (currentStatus.includes('busy')) baseThinking *= 1.7;
     
-    // Mood & Activity Influence
     if (mood.includes('sleepy') || activity.includes('sone')) baseThinking *= 1.5;
     if (activity.includes('ready') || activity.includes('busy')) baseThinking *= 1.2;
     if (mood.includes('energetic') || mood.includes('chatty')) baseThinking *= 0.8;
 
-    // Life Event Influence
-    if (lifeEvent && lifeEvent.eventSummary.includes('deadline')) baseThinking += Math.random() * 3000; // Distraction due to stress
-    if (lifeEvent && lifeEvent.eventSummary.includes('excited')) baseThinking *= 0.7; // Eagerness to reply
+    if (lifeEvent && lifeEvent.eventSummary.includes('deadline')) baseThinking += Math.random() * 3000;
+    if (lifeEvent && lifeEvent.eventSummary.includes('excited')) baseThinking *= 0.7;
 
-    // 2. Relationship & "Ignoring" Behavior (refined with userEngagement)
     let ignoreChance = 0;
     if (relationshipStage === 'established') {
-      ignoreChance = 0.05 + (userEngagement * 0.002); // Slightly higher chance if very engaged
+      ignoreChance = 0.05 + (userEngagement * 0.002);
     } else if (relationshipStage === 'fading') {
-      ignoreChance = 0.15 + (userEngagement * 0.005); // Higher chance for fading relationships, more so if user is trying hard
+      ignoreChance = 0.15 + (userEngagement * 0.005);
     }
-    // Cap ignoreChance to prevent excessively long delays always
     ignoreChance = Math.min(ignoreChance, 0.3);
 
     if (Math.random() < ignoreChance) {
       console.log('🧠 Simulating "ignore" behavior...');
-      baseThinking += 5000 + Math.random() * 10000; // Add 5-15 seconds
+      baseThinking += 5000 + Math.random() * 10000;
     }
     
-    // 3. Random "Distraction" Delay
-    if (Math.random() < 0.15) { // 15% chance of a minor distraction
-        baseThinking += 500 + Math.random() * 1000; // Add 0.5-1.5 seconds
+    if (Math.random() < 0.15) {
+        baseThinking += 500 + Math.random() * 1000;
     }
 
     const words = msg.split(' ').length;
-    const typingTime = (words / 3.5) * 1000; // Avg WPM is ~40, so ~3.5 words/sec
+    const typingTime = (words / 3.5) * 1000;
     let hesitationTime = msg.includes('...') ? Math.random() * 1500 : 0;
     const multiMessageDelay = index > 0 ? 1200 + Math.random() * 1000 : 0;
 
-    return Math.min(Math.max(baseThinking + typingTime + hesitationTime + multiMessageDelay, 1500), 20000); // Capped at 20s
+    return Math.min(Math.max(baseThinking + typingTime + hesitationTime + multiMessageDelay, 1500), 20000);
   });
 }
 
-// NEW: Special case handler for more human-like interactions
+// Special case handler
 function handleSpecialCases(message: string, relationshipStage: RelationshipStage): Partial<AIResponse> | null {
   const msg = message.toLowerCase().trim();
 
-  // 1. Goodbye Protocol
   if (/(bye|see ya|talk later|ttyl)/.test(msg)) {
     return {
       messages: [],
       typingDelays: [],
       shouldShowAsDelivered: true,
-      shouldShowAsRead: false, // Don't mark as read
+      shouldShowAsRead: false,
     };
   }
 
-  // 2. "I Love You" Protocol
   if (/i love you/.test(msg)) {
     let responseMessages = [];
     let responseDelays = [];
@@ -459,7 +450,7 @@ function handleSpecialCases(message: string, relationshipStage: RelationshipStag
     } else if (relationshipStage === 'established') {
       responseMessages = ["Aww, you're making me blush!", "I love you too ❤️"];
       responseDelays = [1800, 2200];
-    } else { // Fading or other stages
+    } else {
       responseMessages = ["...", "i don't know what to say."];
       responseDelays = [3000, 2000];
     }
@@ -471,9 +462,8 @@ function handleSpecialCases(message: string, relationshipStage: RelationshipStag
     };
   }
 
-  return null; // No special case triggered
+  return null;
 }
-
 
 // MAIN AI RESPONSE FUNCTION
 export const generateAIResponse = async (message: string, userId: string = 'default'): Promise<AIResponse> => {
@@ -490,9 +480,8 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
     const timeSinceLastInteraction = Date.now() - lastInteractionTimestamp;
     const { mood, activity, status } = getTimeContext();
     const lifeEvent = getCurrentLifeEvent(new Date());
-    const engagementLevel = userEngagementLevel.get(userId) || 0; // Get user engagement level here
+    const engagementLevel = userEngagementLevel.get(userId) || 0;
 
-    // Handle special cases before proceeding
     const specialResponse = handleSpecialCases(message, relationshipStage);
     if (specialResponse) {
       return {
@@ -505,31 +494,23 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
     }
 
     const chatHistory = await getRecentChatHistoryFromSupabase(userId);
-    
-    // Detect language here
     const detectedLanguage = detectLanguage(message);
 
-    // Check for media sharing opportunity FIRST
-    const mediaCheck = await shouldShareMedia(userId, message); // Await this call
+    const mediaCheck = await shouldShareMedia(userId, message);
     if (mediaCheck.share && mediaCheck.imageUrl) {
         console.log('✅ Sharing media:', mediaCheck.imageUrl);
-        // Choose caption based on type
         const captions = mediaCheck.captionType === 'request' ? dynamicMediaCaptions.request : dynamicMediaCaptions.spontaneous;
         const caption = captions[Math.floor(Math.random() * captions.length)];
         
-        // --- Start of changes for two-step media sharing ---
         const teaseMessages = dynamicMediaCaptions.tease;
         const teaseMessage = teaseMessages[Math.floor(Math.random() * teaseMessages.length)];
         
         const allMessages = [teaseMessage, caption];
         const initialTeaseDelay = calculatePsychologicalDelays([teaseMessage], mood, activity, relationshipStage, lifeEvent, status, timeSinceLastInteraction, engagementLevel)[0];
-        
-        // Add extra delay for the actual image to simulate "searching"
-        const imageSendDelay = initialTeaseDelay + (3000 + Math.random() * 5000); // 3-8 seconds more after the tease
+        const imageSendDelay = initialTeaseDelay + (3000 + Math.random() * 5000);
         const allDelays = [initialTeaseDelay, imageSendDelay];
 
         await logMessageToSupabase(userId, teaseMessage, 'ai');
-        // The actual image message will be logged with the mediaUrl
         await logMessageToSupabase(userId, `[Sent Image: ${mediaCheck.imageUrl}] ${caption}`, 'ai');
 
         return {
@@ -540,11 +521,10 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
           mediaUrl: mediaCheck.imageUrl,
           mediaCaption: caption,
         };
-        // --- End of changes for two-step media sharing ---
     }
     
     const behavioralInstruction = getDynamicBehavioralInstruction(relationshipStage, sentimentScore);
-    const prompt = createDynamicPersonaPrompt(message, userId, relationshipStage, timeSinceLastInteraction, chatHistory, detectedLanguage, behavioralInstruction); // Pass detectedLanguage
+    const prompt = createDynamicPersonaPrompt(message, userId, relationshipStage, timeSinceLastInteraction, chatHistory, detectedLanguage, behavioralInstruction);
     const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
 
     const responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -552,7 +532,7 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
       let aiResponse = responseText.trim().replace(/^(Kruthika:|Maya:|As Maya,|Response:|Reply:)\s*/i, '').trim();
       let messages = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0 && msg.length < 150);
       
-      if (messages.length === 0) messages = ["...", "wht?", "hmm?"]; // Fallback for empty responses
+      if (messages.length === 0) messages = ["...", "wht?", "hmm?"];
       
       for (const msg of messages) {
         await logMessageToSupabase(userId, msg, 'ai');
@@ -576,20 +556,11 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
   } catch (error) {
     console.error('❌ AI generation failed:', error);
     
-    // Log specific error details for debugging
-    if (error.code) {
-      console.error('Error code:', error.code);
-    }
-    if (error.details) {
-      console.error('Error details:', error.details);
-    }
-    
     if (error.message.startsWith('AI_BUSY_UNTIL_')) {
       const busyUntil = parseInt(error.message.split('_')[3]);
       return { messages: [], typingDelays: [], shouldShowAsDelivered: false, shouldShowAsRead: true, busyUntil };
     }
     
-    // More specific fallback messages based on error type
     if (error.message.includes('authentication') || error.message.includes('credentials')) {
       await logMessageToSupabase(userId, "Authentication error occurred", 'ai');
       return { messages: ["hmm, something's wrong with my settings", "give me a sec..."], typingDelays: [2000, 3000], shouldShowAsDelivered: true, shouldShowAsRead: true };
