@@ -27,10 +27,30 @@ const initializeVertexAI = async (): Promise<void> => {
     const credentials = JSON.parse(credentialsJson);
     console.log('✅ Service Account:', credentials.client_email);
 
+    // Clean and validate the private key
+    if (credentials.private_key) {
+      credentials.private_key = credentials.private_key
+        .replace(/\\n/g, '\n')
+        .replace(/\n\n/g, '\n')
+        .trim();
+    }
+
     vertexAI = new VertexAI({
       project: credentials.project_id,
       location: location,
-      googleAuthOptions: { credentials }
+      googleAuthOptions: {
+        credentials: {
+          type: credentials.type,
+          project_id: credentials.project_id,
+          private_key_id: credentials.private_key_id,
+          private_key: credentials.private_key,
+          client_email: credentials.client_email,
+          client_id: credentials.client_id,
+          auth_uri: credentials.auth_uri,
+          token_uri: credentials.token_uri,
+          universe_domain: credentials.universe_domain || 'googleapis.com'
+        }
+      }
     });
 
     model = vertexAI.preview.getGenerativeModel({
@@ -103,10 +123,12 @@ const getRecentChatHistoryFromSupabase = async (userId: string, limit: number = 
 const fetchUserMediaHistory = async (userId: string): Promise<Set<string>> => {
   if (!supabase) return new Set();
   try {
+    // Ensure userId is a string, not a UUID format issue
+    const sanitizedUserId = userId || 'default_user';
     const { data, error } = await supabase
-      .from('user_media_history') // Assuming a new table for this: user_media_history(user_id TEXT, media_url TEXT, sent_at TIMESTAMPTZ DEFAULT NOW())
+      .from('user_media_history')
       .select('media_url')
-      .eq('user_id', userId);
+      .eq('user_id', sanitizedUserId);
     if (error) {
       console.error('Error fetching user media history from Supabase:', error);
       return new Set();
@@ -122,9 +144,10 @@ const fetchUserMediaHistory = async (userId: string): Promise<Set<string>> => {
 const logSentMedia = async (userId: string, mediaUrl: string) => {
   if (!supabase) return;
   try {
+    const sanitizedUserId = userId || 'default_user';
     const { error } = await supabase
-      .from('user_media_history') // Assuming a new table for this
-      .insert([{ user_id: userId, media_url: mediaUrl }]);
+      .from('user_media_history')
+      .insert([{ user_id: sanitizedUserId, media_url: mediaUrl }]);
     if (error) console.error('Error logging sent media to Supabase:', error);
   } catch (err) {
     console.error('Supabase operation failed during media log:', err);
