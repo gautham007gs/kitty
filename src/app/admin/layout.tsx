@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -26,11 +27,10 @@ export default function Layout({
           return;
         }
 
-        // Check session storage first (for immediate feedback)
+        // Check session storage first
         const sessionAuth = sessionStorage.getItem('isAdminLoggedIn_KruthikaChat');
 
         if (!sessionAuth) {
-          console.log('No session found, redirecting to login');
           router.push('/admin/login');
           return;
         }
@@ -38,23 +38,13 @@ export default function Layout({
         // Verify with Supabase
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Auth verification error:', error);
+        if (error || !session?.user) {
           sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
           sessionStorage.removeItem('admin_user_id');
           router.push('/admin/login');
           return;
         }
 
-        if (!session?.user) {
-          console.log('No valid session, redirecting to login');
-          sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
-          sessionStorage.removeItem('admin_user_id');
-          router.push('/admin/login');
-          return;
-        }
-
-        console.log('Admin authenticated successfully');
         setIsAuthenticated(true);
 
       } catch (error) {
@@ -69,8 +59,6 @@ export default function Layout({
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event);
-
       if (event === 'SIGNED_OUT' && pathname !== '/admin/login') {
         sessionStorage.removeItem('isAdminLoggedIn_KruthikaChat');
         sessionStorage.removeItem('admin_user_id');
@@ -88,25 +76,30 @@ export default function Layout({
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Verifying authentication...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <p className="text-sm text-gray-600">Verifying authentication...</p>
         </div>
       </div>
     );
   }
 
-  // Not authenticated (will redirect, but show loading in the meantime)
+  // Not authenticated
   if (isAuthenticated === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Redirecting to login...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <p className="text-sm text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     );
+  }
+
+  // For login page, don't wrap in AdminLayout
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
   }
 
   return <AdminLayout>{children}</AdminLayout>;
