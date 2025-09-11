@@ -31,14 +31,16 @@ const AdminSidebar = () => {
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, description: 'Overview & Analytics' },
     { name: 'Maya Profile', href: '/admin/profile', icon: User, description: 'AI Settings & Bio' },
+    { name: 'Status Management', href: '/admin/status', icon: Activity, description: 'Online Status & Presence' },
     { name: 'Ad Management', href: '/admin/ads', icon: Megaphone, description: 'Revenue & Monetization' },
     { name: 'Media Assets', href: '/admin/media', icon: FileImage, description: 'Images & Files' },
+    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Performance Metrics' },
+    { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'System Configuration' },
   ];
 
   const quickActions = [
     { name: 'View Chat App', href: '/maya-chat', icon: MessageSquare, external: true },
-    { name: 'View Status', href: '/status', icon: Activity, external: true },
-    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+    { name: 'View Public Status', href: '/status', icon: Activity, external: true },
   ];
 
   const handleSignOut = async () => {
