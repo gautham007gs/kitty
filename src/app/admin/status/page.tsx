@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { Activity, Save, RefreshCw, Eye, MessageCircle, Clock } from 'lucide-react';
+import { Activity, Save, RefreshCw, Eye, MessageCircle, Clock, Users, Plus, Trash2, User } from 'lucide-react';
 
 interface StatusData {
   status: string;
@@ -21,6 +21,17 @@ interface StatusData {
   statusText: string;
   hasUpdate: boolean;
   statusImageUrl?: string;
+}
+
+interface ManagedContact {
+  id: string;
+  name: string;
+  avatar_url: string;
+  status_text: string;
+  status_image_url?: string;
+  has_update: boolean;
+  enabled: boolean;
+  data_ai_hint: string;
 }
 
 const StatusManagementPage = () => {
@@ -38,6 +49,8 @@ const StatusManagementPage = () => {
     statusImageUrl: ''
   });
 
+  const [managedContacts, setManagedContacts] = useState<ManagedContact[]>([]);
+
   const statusOptions = [
     { value: 'active', label: 'Active', color: 'bg-green-500', description: 'Available for chat' },
     { value: 'away', label: 'Away', color: 'bg-yellow-500', description: 'Temporarily unavailable' },
@@ -47,6 +60,7 @@ const StatusManagementPage = () => {
 
   useEffect(() => {
     loadStatusData();
+    loadManagedContacts();
   }, []);
 
   const loadStatusData = async () => {
@@ -74,6 +88,26 @@ const StatusManagementPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadManagedContacts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('managed_demo_contacts')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+
+      setManagedContacts(data || []);
+    } catch (error) {
+      console.error('Error loading managed contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load demo contacts",
+        variant: "destructive",
+      });
     }
   };
 
@@ -106,6 +140,86 @@ const StatusManagementPage = () => {
     }
   };
 
+  const saveContact = async (contact: ManagedContact) => {
+    try {
+      const { error } = await supabase
+        .from('managed_demo_contacts')
+        .upsert({
+          id: contact.id,
+          name: contact.name,
+          avatar_url: contact.avatar_url,
+          status_text: contact.status_text,
+          status_image_url: contact.status_image_url || null,
+          has_update: contact.has_update,
+          enabled: contact.enabled,
+          data_ai_hint: contact.data_ai_hint,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${contact.name}'s contact updated successfully`,
+      });
+    } catch (error) {
+      console.error('Error saving contact:', error);
+      toast({
+        title: "Error",
+        description: `Failed to save ${contact.name}'s contact`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteContact = async (contactId: string, contactName: string) => {
+    try {
+      const { error } = await supabase
+        .from('managed_demo_contacts')
+        .delete()
+        .eq('id', contactId);
+
+      if (error) throw error;
+
+      setManagedContacts(prev => prev.filter(c => c.id !== contactId));
+      toast({
+        title: "Success",
+        description: `${contactName} deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete ${contactName}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addNewContact = () => {
+    const newContact: ManagedContact = {
+      id: `contact_${Date.now()}`,
+      name: 'New Contact',
+      avatar_url: '/images/default-avatar.png',
+      status_text: 'New status update',
+      status_image_url: '',
+      has_update: true,
+      enabled: true,
+      data_ai_hint: 'profile person'
+    };
+    setManagedContacts(prev => [...prev, newContact]);
+  };
+
+  const updateContact = (contactId: string, field: keyof ManagedContact, value: any) => {
+    setManagedContacts(prev => 
+      prev.map(contact => 
+        contact.id === contactId 
+          ? { ...contact, [field]: value }
+          : contact
+      )
+    );
+  };
+
   const updateStatusField = (field: keyof StatusData, value: any) => {
     setStatusData(prev => ({ ...prev, [field]: value }));
   };
@@ -127,21 +241,21 @@ const StatusManagementPage = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Status Management
           </h1>
-          <p className="text-gray-600 mt-2">Configure Maya's online status and presence settings</p>
+          <p className="text-gray-600 mt-2">Configure Maya's status and manage demo contacts</p>
         </div>
         <Button onClick={saveStatusData} disabled={saving} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
           {saving ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : 'Save Maya Status'}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Configuration */}
+        {/* Maya Status Configuration */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Activity className="h-5 w-5 mr-2 text-purple-500" />
-              Status Configuration
+              Maya's Status Configuration
             </CardTitle>
             <CardDescription>Set Maya's current online status and availability</CardDescription>
           </CardHeader>
@@ -202,12 +316,12 @@ const StatusManagementPage = () => {
           </CardContent>
         </Card>
 
-        {/* Profile Information */}
+        {/* Maya Profile Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <MessageCircle className="h-5 w-5 mr-2 text-pink-500" />
-              Profile Information
+              Maya's Profile Information
             </CardTitle>
             <CardDescription>Manage Maya's display name and avatar</CardDescription>
           </CardHeader>
@@ -271,7 +385,127 @@ const StatusManagementPage = () => {
         </Card>
       </div>
 
-      {/* Preview Card */}
+      {/* Demo Contacts Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-500" />
+              Demo Contacts Management
+            </div>
+            <Button onClick={addNewContact} size="sm" className="bg-blue-500 hover:bg-blue-600">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Contact
+            </Button>
+          </CardTitle>
+          <CardDescription>Manage the demo contacts that appear on the status page</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {managedContacts.map((contact) => (
+              <div key={contact.id} className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-gray-500" />
+                    <h3 className="font-medium text-lg">{contact.name}</h3>
+                  </div>
+                  <Button
+                    onClick={() => deleteContact(contact.id, contact.name)}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Name</Label>
+                    <Input
+                      value={contact.name}
+                      onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
+                      placeholder="Contact name..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Avatar URL</Label>
+                    <Input
+                      value={contact.avatar_url}
+                      onChange={(e) => updateContact(contact.id, 'avatar_url', e.target.value)}
+                      placeholder="Avatar image URL..."
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-sm font-medium">Status Text</Label>
+                    <Textarea
+                      value={contact.status_text}
+                      onChange={(e) => updateContact(contact.id, 'status_text', e.target.value)}
+                      placeholder="Status message..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Status Image URL (Optional)</Label>
+                    <Input
+                      value={contact.status_image_url || ''}
+                      onChange={(e) => updateContact(contact.id, 'status_image_url', e.target.value)}
+                      placeholder="Status image URL..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">AI Hint</Label>
+                    <Input
+                      value={contact.data_ai_hint}
+                      onChange={(e) => updateContact(contact.id, 'data_ai_hint', e.target.value)}
+                      placeholder="AI hint for image generation..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={contact.enabled}
+                        onCheckedChange={(checked) => updateContact(contact.id, 'enabled', checked)}
+                      />
+                      <Label className="text-sm">Enabled</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={contact.has_update}
+                        onCheckedChange={(checked) => updateContact(contact.id, 'has_update', checked)}
+                      />
+                      <Label className="text-sm">Has Update</Label>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => saveContact(contact)}
+                    size="sm"
+                    className="bg-green-500 hover:bg-green-600"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            {managedContacts.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No demo contacts found. Add some to get started!</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Status Preview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
