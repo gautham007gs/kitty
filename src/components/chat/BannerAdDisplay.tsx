@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 interface BannerAdDisplayProps {
   adType: 'standard' | 'native'; // Specify banner type
-  placementKey: string; 
+  placementKey: string;
   className?: string;
   contextual?: boolean; // For conversation-aware placement
   delayMs?: number; // Optional delay before showing
@@ -44,27 +44,32 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     let selectedAdCode = "";
     let selectedNetworkEnabled = false;
 
-    if (adType === 'standard') {
-      // Prioritize Adsterra for standard banners if both enabled
-      if (adSettings.adsterraBannerEnabled && adSettings.adsterraBannerCode && !adSettings.adsterraBannerCode.toLowerCase().includes("placeholder")) {
-        selectedAdCode = adSettings.adsterraBannerCode;
-        selectedNetworkEnabled = true;
-      } else if (adSettings.monetagBannerEnabled && adSettings.monetagBannerCode && !adSettings.monetagBannerCode.toLowerCase().includes("placeholder")) {
-        selectedAdCode = adSettings.monetagBannerCode;
-        selectedNetworkEnabled = true;
+    // Logic to select ad code based on adType and currentAdProvider
+    if (adType === "banner") {
+      if (currentAdProvider === 'adsterra') {
+        selectedAdCode = adSettings.adsterraBannerCode || '';
+        selectedNetworkEnabled = adSettings.adsterraBannerEnabled;
+      } else {
+        selectedAdCode = adSettings.monetagBannerCode || '';
+        selectedNetworkEnabled = adSettings.monetagBannerEnabled;
       }
-    } else if (adType === 'native') {
-      // Prioritize Adsterra for native banners if both enabled
-      if (adSettings.adsterraNativeBannerEnabled && adSettings.adsterraNativeBannerCode && !adSettings.adsterraNativeBannerCode.toLowerCase().includes("placeholder")) {
-        selectedAdCode = adSettings.adsterraNativeBannerCode;
-        selectedNetworkEnabled = true;
-      } else if (adSettings.monetagNativeBannerEnabled && adSettings.monetagNativeBannerCode && !adSettings.monetagNativeBannerCode.toLowerCase().includes("placeholder")) {
-        selectedAdCode = adSettings.monetagNativeBannerCode;
-        selectedNetworkEnabled = true;
+    } else if (adType === "native") {
+      if (currentAdProvider === 'adsterra') {
+        selectedAdCode = adSettings.adsterraNativeBannerCode || '';
+        selectedNetworkEnabled = adSettings.adsterraNativeBannerEnabled;
+      } else {
+        selectedAdCode = adSettings.monetagNativeBannerCode || '';
+        selectedNetworkEnabled = adSettings.monetagNativeBannerEnabled;
       }
     }
 
-    if (selectedNetworkEnabled && selectedAdCode.trim()) {
+    // Validate that we have actual ad code, not just placeholder text
+    const isValidAdCode = selectedAdCode.trim() !== '' &&
+                         !selectedAdCode.toLowerCase().includes('placeholder') &&
+                         selectedAdCode.includes('<script');
+
+
+    if (selectedNetworkEnabled && isValidAdCode) {
       setAdCodeToInject(selectedAdCode);
       if (delayMs !== undefined && delayMs > 0) {
         // Set visibility after a delay if specified
@@ -86,7 +91,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
         clearTimeout(timerRef.current);
       }
     };
-  }, [adSettings, isLoadingAdSettings, adType, delayMs]); // Include delayMs in dependency array
+  }, [adSettings, isLoadingAdSettings, adType, delayMs, currentAdProvider]); // Include currentAdProvider in dependency array
 
   useEffect(() => {
     // Inject script only when adCodeToInject is set and container is available
@@ -121,13 +126,13 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     const availableAds = [];
 
     // Prioritize Adsterra (typically higher CPM)
-    if (adSettings.adsterraBannerEnabled && adSettings.adsterraBannerCode && 
+    if (adSettings.adsterraBannerEnabled && adSettings.adsterraBannerCode &&
         !adSettings.adsterraBannerCode.includes("Placeholder")) {
-      availableAds.push('adsterra', 'adsterra'); // Double weight for higher revenue
+      availableAds.push('adsterra');
     }
 
     // Add Monetag for diversity and fallback
-    if (adSettings.monetagBannerEnabled && adSettings.monetagBannerCode && 
+    if (adSettings.monetagBannerEnabled && adSettings.monetagBannerCode &&
         !adSettings.monetagBannerCode.includes("Placeholder")) {
       availableAds.push('monetag');
     }
@@ -137,24 +142,30 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
       return;
     }
 
+    // Set the initial ad provider based on the current index
     setCurrentAdProvider(availableAds[currentAdIndex % availableAds.length]);
 
     // Faster rotation for more impressions = more revenue
     const interval = setInterval(() => {
-      setCurrentAdIndex(prev => (prev + 1) % availableAds.length);
+      setCurrentAdIndex(prev => prev + 1);
     }, AD_ROTATION_INTERVAL * 0.75); // 25% faster rotation
 
     return () => clearInterval(interval);
   }, [adSettings, currentAdIndex, isLoadingAdSettings]);
 
 
-  if (isLoadingAdSettings || !isVisible || !adCodeToInject || !currentAdProvider) {
-    return null; 
+  if (isLoadingAdSettings) {
+    return (
+      <div className={cn("w-full animate-pulse", className)}>
+        <div className="bg-gray-200 rounded h-[90px]"></div>
+      </div>
+    );
   }
 
-  // Key includes adCodeToInject to attempt re-render if the code itself changes.
-  // However, direct script injection might need more nuanced handling if the *same*
-  // container is reused for *different* ad codes frequently.
+  if (!isVisible || !adCodeToInject) {
+    return null;
+  }
+
   return (
     <div
       ref={adContainerRef}
@@ -163,8 +174,13 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
         className,
         contextual && "kruthika-chat-contextual-ad" // Apply contextual class if true
       )}
-      key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject.substring(0, 30)}`} 
-    />
+      key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject.substring(0, 30)}`}
+    >
+      {/* Fallback content while ad loads */}
+      <div className="flex items-center justify-center h-[90px] text-gray-400 text-sm">
+        Loading advertisement...
+      </div>
+    </div>
   );
 };
 
