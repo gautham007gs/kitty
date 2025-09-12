@@ -249,7 +249,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     }
 
     // Set the initial ad provider based on the current index
-    setCurrentAdProvider(availableAds[currentAdIndex % availableAds.length]);
+    setCurrentAdProvider(availableAds[currentAdIndex % availableAds.length] as 'adsterra' | 'monetag');
 
     // Faster rotation for more impressions = more revenue
     const interval = setInterval(() => {

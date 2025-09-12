@@ -107,10 +107,10 @@ const initializeVertexAI = async (): Promise<void> => {
           private_key: privateKey,
           client_email: credentials.client_email,
           client_id: credentials.client_id,
-          auth_uri: credentials.auth_uri || 'https://accounts.google.com/o/oauth2/auth',
-          token_uri: credentials.token_uri || 'https://oauth2.googleapis.com/token',
-          auth_provider_x509_cert_url: credentials.auth_provider_x509_cert_url || 'https://www.googleapis.com/oauth2/v1/certs',
-          client_x509_cert_url: credentials.client_x509_cert_url,
+          // Removed auth_uri as it's not supported in this auth type
+          // Removed token_uri as it's not supported in this auth type
+          // Removed auth_provider_x509_cert_url as it's not supported in this auth type
+          // Removed client_x509_cert_url as it's not supported in this auth type
           universe_domain: credentials.universe_domain || 'googleapis.com'
         }
       }
@@ -127,9 +127,9 @@ const initializeVertexAI = async (): Promise<void> => {
 
     console.log('✅ AI Chatbot initialized successfully!');
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Vertex AI initialization failed:', error);
-    throw new Error(`Pure Vertex AI initialization failed: ${error.message}`);
+    throw new Error(`Pure Vertex AI initialization failed: ${error?.message || 'Unknown error'}`);
   }
 };
 
@@ -349,21 +349,26 @@ async function shouldShareMedia(userId: string, message: string): Promise<{ shar
 
 // Dynamic behavioral instruction generation
 function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, sentimentScore: number): string {
-  const behaviors = {
-    new_user: [
+  const behaviors: Record<RelationshipStage, string[]> = {
+    [RelationshipStage.CASUAL]: [
       "Ask a question to get to know them better.",
       "Be a little playful and mysterious.",
       "Share a small, relatable detail about your day.",
     ],
-    established: [
+    [RelationshipStage.FRIENDLY]: [
       "Reference a past conversation to show you remember.",
       "Be a little more affectionate or teasing.",
       "Share a more personal thought or feeling.",
     ],
-    fading: [
-      "Be a little distant or busy.",
-      "Keep your replies short and simple.",
-      "Take longer to reply.",
+    [RelationshipStage.CLOSE]: [
+      "Be more intimate and caring.",
+      "Show deeper emotional connection.",
+      "Use affectionate language.",
+    ],
+    [RelationshipStage.INTIMATE]: [
+      "Be very close and personal.",
+      "Express deep feelings.",
+      "Use very affectionate language.",
     ],
   };
 
@@ -373,7 +378,7 @@ function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, s
   } else if (sentimentScore < -0.5) {
     instruction = "The user seems upset. Be supportive and understanding.";
   } else {
-    const stageBehaviors = behaviors[relationshipStage] || behaviors.new_user;
+    const stageBehaviors = behaviors[relationshipStage] || behaviors[RelationshipStage.CASUAL];
     instruction = stageBehaviors[Math.floor(Math.random() * stageBehaviors.length)];
   }
 
@@ -383,7 +388,7 @@ function getDynamicBehavioralInstruction(relationshipStage: RelationshipStage, s
 // Smart breadcrumb calculation
 function calculateBreadcrumbs(message: string, relationshipStage: RelationshipStage): number {
     const msg = message.toLowerCase();
-    if (relationshipStage === 'new_user' && msg.length < 15) return 1;
+    if (relationshipStage === RelationshipStage.CASUAL && msg.length < 15) return 1;
     if (msg.includes('?')) return Math.random() < 0.7 ? 2 : 1;
     if (msg.length > 30) return Math.random() < 0.6 ? 2 : 1;
     return 1;
@@ -403,7 +408,7 @@ function createDynamicPersonaPrompt(
   const recentContext = chatHistory.slice(-5).join('\n');
 
   return `
-${defaultAIProfile.core_prompt}
+${defaultAIProfile.systemPrompt || defaultAIProfile.personality || 'You are Maya, a friendly 23-year-old girl.'}
 
 **Current Situation:**
 - **Your Time:** It's currently ${timeOfDay} (${hour}:00 IST).
@@ -446,9 +451,9 @@ function calculatePsychologicalDelays(messages: string[], mood: string, activity
     if (lifeEvent && lifeEvent.eventSummary.includes('excited')) baseThinking *= 0.7;
 
     let ignoreChance = 0;
-    if (relationshipStage === 'established') {
+    if (relationshipStage === RelationshipStage.FRIENDLY) {
       ignoreChance = 0.05 + (userEngagement * 0.002);
-    } else if (relationshipStage === 'fading') {
+    } else if (relationshipStage === RelationshipStage.CLOSE) {
       ignoreChance = 0.15 + (userEngagement * 0.005);
     }
     ignoreChance = Math.min(ignoreChance, 0.3);
@@ -487,10 +492,10 @@ function handleSpecialCases(message: string, relationshipStage: RelationshipStag
   if (/i love you/.test(msg)) {
     let responseMessages = [];
     let responseDelays = [];
-    if (relationshipStage === 'new_user') {
+    if (relationshipStage === RelationshipStage.CASUAL) {
       responseMessages = ["woah, that's sweet...", "but we just met!", "😳"];
       responseDelays = [2000, 2500, 1500];
-    } else if (relationshipStage === 'established') {
+    } else if (relationshipStage === RelationshipStage.FRIENDLY) {
       responseMessages = ["Aww, you're making me blush!", "I love you too ❤️"];
       responseDelays = [1800, 2200];
     } else {
@@ -573,7 +578,7 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
     const responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (responseText) {
       let aiResponse = responseText.trim().replace(/^(Kruthika:|Maya:|As Maya,|Response:|Reply:)\s*/i, '').trim();
-      let messages = aiResponse.split('|||').map(msg => msg.trim()).filter(msg => msg.length > 0 && msg.length < 150);
+      let messages = aiResponse.split('|||').map((msg: string) => msg.trim()).filter((msg: string) => msg.length > 0 && msg.length < 150);
       
       if (messages.length === 0) messages = ["...", "wht?", "hmm?"];
       
@@ -596,15 +601,16 @@ export const generateAIResponse = async (message: string, userId: string = 'defa
       throw new Error('Vertex AI returned empty response');
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ AI generation failed:', error);
     
-    if (error.message.startsWith('AI_BUSY_UNTIL_')) {
-      const busyUntil = parseInt(error.message.split('_')[3]);
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.startsWith('AI_BUSY_UNTIL_')) {
+      const busyUntil = parseInt(errorMessage.split('_')[3]);
       return { messages: [], typingDelays: [], shouldShowAsDelivered: false, shouldShowAsRead: true, busyUntil };
     }
     
-    if (error.message.includes('authentication') || error.message.includes('credentials')) {
+    if (errorMessage.includes('authentication') || errorMessage.includes('credentials')) {
       await logMessageToSupabase(userId, "Authentication error occurred", 'ai');
       return { messages: ["hmm, something's wrong with my settings", "give me a sec..."], typingDelays: [2000, 3000], shouldShowAsDelivered: true, shouldShowAsRead: true };
     }
