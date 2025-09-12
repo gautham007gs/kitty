@@ -38,12 +38,20 @@ function LoadingFallback() {
 }
 
 export default function MayaChatPage() {
+  // Provide default props for ChatView to avoid TypeScript errors
+  const defaultProps = {
+    messages: [],
+    aiAvatarUrl: '/maya-avatar.png',
+    aiName: 'Maya',
+    isAiTyping: false,
+    onTriggerAd: () => {}
+  };
+
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <Suspense fallback={<LoadingFallback />}>
-        <ChatView />
+        <ChatView {...defaultProps} />
       </Suspense>
     </ErrorBoundary>
   );
 }
-```

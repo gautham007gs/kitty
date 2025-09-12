@@ -41,8 +41,11 @@ const PerformanceMonitor: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 10000); // Update every 10 seconds
-    return () => clearInterval(interval);
+    // Only enable polling in development and when specifically needed
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_PERFORMANCE_POLLING === 'true') {
+      const interval = setInterval(fetchStats, 30000); // Reduced to 30 seconds if enabled
+      return () => clearInterval(interval);
+    }
   }, []);
 
   return (

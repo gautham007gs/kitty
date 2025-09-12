@@ -18,10 +18,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 32925
-externalPort = 3003
-
-[[ports]]
 localPort = 35921
 externalPort = 3001
 
@@ -30,7 +26,7 @@ localPort = 36329
 externalPort = 3002
 
 [workflows]
-runButton = "Maya Chat Dev Server"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Run"
@@ -144,13 +140,13 @@ args = "Next.js App"
 name = "Next.js App"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "Maya Chat Dev Server"

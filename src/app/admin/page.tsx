@@ -45,18 +45,18 @@ export default function AdminDashboard() {
         // Fetch messages count (using correct v6 table name)
         const { count: messagesCount } = await supabase
           .from('messages_log')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact' });
 
         // Fetch users count (using daily activity log for unique users)
         const { count: usersCount } = await supabase
           .from('daily_activity_log')
-          .select('user_pseudo_id', { count: 'exact', head: true });
+          .select('user_pseudo_id', { count: 'exact' });
 
         // Fetch active sessions (messages in last hour)
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count: activeSessions } = await supabase
           .from('messages_log')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
           .gte('created_at', oneHourAgo);
 
         setAnalytics({
@@ -78,10 +78,11 @@ export default function AdminDashboard() {
 
     fetchAnalytics();
 
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchAnalytics, 30000);
-
-    return () => clearInterval(interval);
+    // Only enable auto-refresh in development with explicit flag
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_ADMIN_POLLING === 'true') {
+      const interval = setInterval(fetchAnalytics, 60000); // Reduced frequency: 60 seconds
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const stats = [
