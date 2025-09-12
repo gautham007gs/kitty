@@ -50,8 +50,14 @@ export function middleware(request: NextRequest) {
   // Get client IP for rate limiting
   const clientIP = getClientIP(request)
 
-  // Apply rate limiting to API routes and chat endpoints
+  // Skip rate limiting for HEAD requests to /api (health checks)
   if (request.nextUrl.pathname.startsWith('/api/')) {
+    // Allow HEAD requests to /api without rate limiting for health checks
+    if (request.method === 'HEAD' && request.nextUrl.pathname === '/api') {
+      return NextResponse.next();
+    }
+    
+    // Apply rate limiting to other API routes
     if (isRateLimited(clientIP)) {
       return new NextResponse(
         JSON.stringify({ 

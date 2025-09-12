@@ -28,7 +28,7 @@ const mapDataToSettings = (data: any): AdSettings => {
       ...data
     };
   }
-  
+
   // Fallback for old ad_settings table structure
   return {
     adsEnabledGlobally: data.ads_enabled_globally ?? defaultAdSettings.adsEnabledGlobally,
@@ -61,98 +61,185 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
   const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchAdSettings = useCallback(async () => {
-    if (!supabase) {
-      console.warn('[AdSettingsContext] Supabase not available, using defaults.');
-      setAdSettings(defaultAdSettings);
-      setIsLoading(false);
-      return;
-    }
+  useEffect(() => {
+    let isMounted = true;
 
-    setIsLoading(true);
+    const fetchAdSettings = async () => {
+      try {
+        if (!isMounted) return;
+        setIsLoading(true);
+
+        // First try to get from ad_settings table
+        const { data: adSettingsData, error: adSettingsError } = await supabase
+          .from('ad_settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (!isMounted) return;
+
+        if (adSettingsData && !adSettingsError) {
+          console.log('[AdSettingsContext] Ad settings loaded successfully from ad_settings table.');
+
+          const settings: AdSettings = {
+            adsEnabledGlobally: adSettingsData.ads_enabled_globally ?? true,
+            adsterraDirectLink: adSettingsData.adsterra_direct_link ?? '',
+            adsterraDirectLinkEnabled: adSettingsData.adsterra_direct_link_enabled ?? false,
+            adsterraBannerCode: adSettingsData.adsterra_banner_code ?? '',
+            adsterraBannerEnabled: adSettingsData.adsterra_banner_enabled ?? false,
+            adsterraNativeBannerCode: adSettingsData.adsterra_native_banner_code ?? '',
+            adsterraNativeBannerEnabled: adSettingsData.adsterra_native_banner_enabled ?? false,
+            adsterraSocialBarCode: adSettingsData.adsterra_social_bar_code ?? '',
+            adsterraSocialBarEnabled: adSettingsData.adsterra_social_bar_enabled ?? false,
+            adsterraPopunderCode: adSettingsData.adsterra_popunder_code ?? '',
+            adsterraPopunderEnabled: adSettingsData.adsterra_popunder_enabled ?? false,
+            monetagDirectLink: adSettingsData.monetag_direct_link ?? '',
+            monetagDirectLinkEnabled: adSettingsData.monetag_direct_link_enabled ?? false,
+            monetagBannerCode: adSettingsData.monetag_banner_code ?? '',
+            monetagBannerEnabled: adSettingsData.monetag_banner_enabled ?? false,
+            monetagNativeBannerCode: adSettingsData.monetag_native_banner_code ?? '',
+            monetagNativeBannerEnabled: adSettingsData.monetag_native_banner_enabled ?? false,
+            monetagSocialBarCode: adSettingsData.monetag_social_bar_code ?? '',
+            monetagSocialBarEnabled: adSettingsData.monetag_social_bar_enabled ?? false,
+            monetagPopunderCode: adSettingsData.monetag_popunder_code ?? '',
+            monetagPopunderEnabled: adSettingsData.monetag_popunder_enabled ?? false,
+            maxDirectLinkAdsPerDay: adSettingsData.max_direct_link_ads_per_day ?? 6,
+            maxDirectLinkAdsPerSession: adSettingsData.max_direct_link_ads_per_session ?? 3,
+            messagesPerAdTrigger: adSettingsData.messages_per_ad_trigger ?? 7,
+            inactivityAdTimeoutMs: adSettingsData.inactivity_ad_timeout_ms ?? 45000,
+            inactivityAdChance: adSettingsData.inactivity_ad_chance ?? 0.25,
+            userMediaInterstitialChance: adSettingsData.user_media_interstitial_chance ?? 0.15,
+          };
+
+          setAdSettings(settings);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fallback to app_configurations table
+        const { data: configData, error: configError } = await supabase
+          .from('app_configurations')
+          .select('settings')
+          .eq('id', 'ad_settings_kruthika_chat_v1')
+          .single();
+
+        if (!isMounted) return;
+
+        if (configData && !configError) {
+          console.log('[AdSettingsContext] Ad settings loaded from app_configurations fallback.');
+          const settings = configData.settings as AdSettings;
+          setAdSettings(settings);
+        } else {
+          console.log('[AdSettingsContext] Using default ad settings due to database error.');
+          setAdSettings(defaultAdSettings);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('[AdSettingsContext] Error loading ad settings:', error);
+        setAdSettings(defaultAdSettings);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchAdSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const refreshAdSettings = useCallback(async () => {
+    console.log('[AdSettingsContext] Force refreshing ad settings...');
+    // Re-fetch logic needs to be here. The original code had a good structure.
+    // Re-implementing fetchAdSettings logic within useCallback or calling it directly.
+    // For now, let's assume fetchAdSettings is accessible here.
+
+    // Direct call to fetchAdSettings defined within useEffect
+    // This requires fetchAdSettings to be defined outside or passed as a dependency.
+    // Given the structure, let's redefine fetchAdSettings here for clarity or ensure it's accessible.
+
+    // To avoid re-defining the entire fetchAdSettings, we can rely on the useEffect's closure
+    // or refactor fetchAdSettings to be outside useEffect.
+
+    // For simplicity and to follow the original code's intent, let's re-invoke the logic.
+    // A more robust solution would involve a separate useCallback for fetching.
+
+    // Re-fetching logic:
     try {
-      // First try the app_configurations table like the previous working system
-      const { data: configData, error: configError } = await supabase
-        .from('app_configurations')
-        .select('settings')
-        .eq('id', AD_SETTINGS_CONFIG_KEY)
+      let isMounted = true; // Need to re-establish mount status if this were a standalone function.
+      // As it's within the context, it should have access to the context's state.
+
+      setIsLoading(true);
+
+      // First try to get from ad_settings table
+      const { data: adSettingsData, error: adSettingsError } = await supabase
+        .from('ad_settings')
+        .select('*')
+        .limit(1)
         .single();
 
-      if (configData && configData.settings) {
-        const newSettings = mapDataToSettings(configData.settings);
-        setAdSettings(newSettings);
-        console.log('[AdSettingsContext] Ad settings loaded successfully from app_configurations.');
+      if (adSettingsData && !adSettingsError) {
+        console.log('[AdSettingsContext] Ad settings reloaded successfully from ad_settings table.');
+        const settings: AdSettings = {
+          adsEnabledGlobally: adSettingsData.ads_enabled_globally ?? true,
+          adsterraDirectLink: adSettingsData.adsterra_direct_link ?? '',
+          adsterraDirectLinkEnabled: adSettingsData.adsterra_direct_link_enabled ?? false,
+          adsterraBannerCode: adSettingsData.adsterra_banner_code ?? '',
+          adsterraBannerEnabled: adSettingsData.adsterra_banner_enabled ?? false,
+          adsterraNativeBannerCode: adSettingsData.adsterra_native_banner_code ?? '',
+          adsterraNativeBannerEnabled: adSettingsData.adsterra_native_banner_enabled ?? false,
+          adsterraSocialBarCode: adSettingsData.adsterra_social_bar_code ?? '',
+          adsterraSocialBarEnabled: adSettingsData.adsterra_social_bar_enabled ?? false,
+          adsterraPopunderCode: adSettingsData.adsterra_popunder_code ?? '',
+          adsterraPopunderEnabled: adSettingsData.adsterra_popunder_enabled ?? false,
+          monetagDirectLink: adSettingsData.monetag_direct_link ?? '',
+          monetagDirectLinkEnabled: adSettingsData.monetag_direct_link_enabled ?? false,
+          monetagBannerCode: adSettingsData.monetag_banner_code ?? '',
+          monetagBannerEnabled: adSettingsData.monetag_banner_enabled ?? false,
+          monetagNativeBannerCode: adSettingsData.monetag_native_banner_code ?? '',
+          monetagNativeBannerEnabled: adSettingsData.monetag_native_banner_enabled ?? false,
+          monetagSocialBarCode: adSettingsData.monetag_social_bar_code ?? '',
+          monetagSocialBarEnabled: adSettingsData.monetag_social_bar_enabled ?? false,
+          monetagPopunderCode: adSettingsData.monetag_popunder_code ?? '',
+          monetagPopunderEnabled: adSettingsData.monetag_popunder_enabled ?? false,
+          maxDirectLinkAdsPerDay: adSettingsData.max_direct_link_ads_per_day ?? 6,
+          maxDirectLinkAdsPerSession: adSettingsData.max_direct_link_ads_per_session ?? 3,
+          messagesPerAdTrigger: adSettingsData.messages_per_ad_trigger ?? 7,
+          inactivityAdTimeoutMs: adSettingsData.inactivity_ad_timeout_ms ?? 45000,
+          inactivityAdChance: adSettingsData.inactivity_ad_chance ?? 0.25,
+          userMediaInterstitialChance: adSettingsData.user_media_interstitial_chance ?? 0.15,
+        };
+        setAdSettings(settings);
         setIsLoading(false);
         return;
       }
 
-      // Fallback to ad_settings table if app_configurations doesn't have data
-      const { data, error } = await supabase
-        .from('ad_settings')
-        .select('*')
-        .eq('id', 'default')
+      // Fallback to app_configurations table
+      const { data: configData, error: configError } = await supabase
+        .from('app_configurations')
+        .select('settings')
+        .eq('id', 'ad_settings_kruthika_chat_v1')
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-        throw new Error(error.message);
-      }
-
-      if (data) {
-        const newSettings = mapDataToSettings(data);
-        setAdSettings(newSettings);
-        console.log('[AdSettingsContext] Ad settings loaded successfully from ad_settings table.');
+      if (configData && !configError) {
+        console.log('[AdSettingsContext] Ad settings reloaded from app_configurations fallback.');
+        const settings = configData.settings as AdSettings;
+        setAdSettings(settings);
       } else {
-        // If no data in either table, use defaults
-        console.warn('[AdSettingsContext] No ad settings found in either table, using default settings.');
+        console.log('[AdSettingsContext] Using default ad settings on refresh due to database error.');
         setAdSettings(defaultAdSettings);
       }
-    } catch (error: any) {
-      console.error('[AdSettingsContext] Error fetching ad settings:', error);
-      toast({ 
-        title: "Error Loading Ad Settings", 
-        description: "Could not load ad settings. Using default values.",
-        variant: "destructive" 
-      });
+    } catch (error) {
+      console.error('[AdSettingsContext] Error refreshing ad settings:', error);
       setAdSettings(defaultAdSettings);
     } finally {
       setIsLoading(false);
     }
-  }, []);
 
-  // Effect for initial fetch and real-time subscription
-  useEffect(() => {
-    fetchAdSettings();
-
-    const channel = supabase
-      .channel('ad-settings-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'app_configurations', filter: `id=eq.${AD_SETTINGS_CONFIG_KEY}` },
-        (payload) => {
-          console.log('[AdSettingsContext] Real-time change detected in app_configurations, refetching ad settings.', payload);
-          fetchAdSettings();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'ad_settings', filter: 'id=eq.default' },
-        (payload) => {
-          console.log('[AdSettingsContext] Real-time change detected in ad_settings, refetching ad settings.', payload);
-          fetchAdSettings();
-        }
-      )
-      .subscribe();
-
-    // Cleanup function to remove the subscription
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchAdSettings]);
-
-  const refreshAdSettings = useCallback(async () => {
-    console.log('[AdSettingsContext] Force refreshing ad settings...');
-    await fetchAdSettings();
-  }, [fetchAdSettings]);
+  }, []); // Removed dependencies as fetchAdSettings is self-contained here for refresh
 
   const updateAdSettings = useCallback(async (newSettings: AdSettings) => {
     if (!supabase) {
@@ -162,21 +249,21 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
     try {
       setIsLoading(true);
-      
+
       // Save to app_configurations table like the previous working system
       const { error } = await supabase
         .from('app_configurations')
         .upsert(
-          { 
-            id: AD_SETTINGS_CONFIG_KEY, 
-            settings: newSettings, 
-            updated_at: new Date().toISOString() 
+          {
+            id: AD_SETTINGS_CONFIG_KEY,
+            settings: newSettings,
+            updated_at: new Date().toISOString()
           },
           { onConflict: 'id' }
         );
 
       if (error) throw error;
-      await fetchAdSettings(); // Refresh after update
+      await refreshAdSettings(); // Refresh after update
       toast({
         title: "Success",
         description: "Ad settings updated successfully.",
@@ -191,12 +278,12 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [fetchAdSettings]);
+  }, [refreshAdSettings]); // Added refreshAdSettings as a dependency
 
   return (
-    <AdSettingsContext.Provider value={{ 
-      adSettings, 
-      isLoading, 
+    <AdSettingsContext.Provider value={{
+      adSettings,
+      isLoading,
       isLoadingAdSettings: isLoading,  // Alias for compatibility
       refreshAdSettings,
       updateAdSettings
