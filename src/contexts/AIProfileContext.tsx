@@ -14,6 +14,7 @@ interface AIProfileContextType {
   error: any;
   updateProfile: (newProfile: Partial<AIProfile>) => Promise<void>;
   updateAIProfile: (newProfile: Partial<AIProfile>) => Promise<void>;  // Alias for compatibility
+  fetchAIProfile: () => Promise<void>;  // Add missing method
   adminOwnStatus: AdminStatusDisplay;
   managedDemoContacts: ManagedContactStatus[];
   mediaAssetsConfig: AIMediaAssetsConfig;
@@ -169,6 +170,7 @@ export const AIProfileProvider = ({ children }: { children: ReactNode }) => {
       error,
       updateProfile,
       updateAIProfile: updateProfile,  // Alias for compatibility
+      fetchAIProfile,  // Add missing method to value object
       adminOwnStatus,
       managedDemoContacts,
       mediaAssetsConfig,

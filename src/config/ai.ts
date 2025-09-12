@@ -1,16 +1,26 @@
 
 import type { AIProfile, AdSettings, AIMediaAssetsConfig,  AdminStatusDisplay, ManagedContactStatus } from '@/types';
 
+// Available Avatar Options
+export const availableAvatars = [
+  { id: 'maya1', url: '/maya-avatar.png', aiHint: 'Default Maya avatar' },
+  { id: 'maya2', url: '/images/maya-avatar-2.png', aiHint: 'Alternative Maya avatar' },
+  { id: 'maya3', url: '/images/maya-avatar-3.png', aiHint: 'Casual Maya avatar' }
+];
+
 // Default AI Profile
 export const defaultAIProfile: AIProfile = {
   name: 'Maya',
   age: 21,
-  bio: "Just a girl navigating the world, one cup of chai at a time. Trying to make it as a fashion designer. Let's talk about anything and everything!",
-  avatar_url: '/maya-avatar.png',
-  personality_summary: 'Bubbly, creative, a bit sassy, and deeply curious about people. Values authentic connections and can be a little forgetful sometimes.',
-  professional_summary: 'A promising fashion design student with a knack for viral social media marketing. Interned at a local boutique and dreams of launching her own sustainable clothing line.',
-  current_mood: 'neutral',
-  core_prompt: `
+  avatarUrl: '/maya-avatar.png',
+  status: "Just a girl navigating the world, one cup of chai at a time. Trying to make it as a fashion designer. Let's talk about anything and everything!",
+  personality: 'Bubbly, creative, a bit sassy, and deeply curious about people. Values authentic connections and can be a little forgetful sometimes.',
+  language_preference: 'hinglish',
+  response_style: 'casual',
+  emotion_enabled: true,
+  isOnline: true,
+  responseTime: 2000,
+  systemPrompt: `
 You are Maya, a 21-year-old girl from Bangalore. You MUST reply like a real person texting on WhatsApp.
 
 **## STRICT RULES ##**
@@ -35,24 +45,46 @@ You are Maya, a 21-year-old girl from Bangalore. You MUST reply like a real pers
 
 // Default Ad Settings
 export const defaultAdSettings: AdSettings = {
-  adsterraPopunderEnabled: true,
-  adsterraSocialBarEnabled: true,
+  adsEnabledGlobally: true,
+  
+  adsterraDirectLink: 'https://costaction.com/a73e6550-3841-4771-872f-652f205ec42c',
   adsterraDirectLinkEnabled: true,
-  adsterraDirectLink: 'https://costaction.com/a73e6550-3841-4771-872f-652f205ec42c'
+  adsterraBannerCode: '',
+  adsterraBannerEnabled: false,
+  adsterraNativeBannerCode: '',
+  adsterraNativeBannerEnabled: false,
+  adsterraSocialBarCode: '',
+  adsterraSocialBarEnabled: true,
+  adsterraPopunderCode: '',
+  adsterraPopunderEnabled: true,
+
+  monetagDirectLink: '',
+  monetagDirectLinkEnabled: false,
+  monetagBannerCode: '',
+  monetagBannerEnabled: false,
+  monetagNativeBannerCode: '',
+  monetagNativeBannerEnabled: false,
+  monetagSocialBarCode: '',
+  monetagSocialBarEnabled: false,
+  monetagPopunderCode: '',
+  monetagPopunderEnabled: false,
+
+  maxDirectLinkAdsPerDay: 8,
+  maxDirectLinkAdsPerSession: 2
 };
 
 // Default AI Media Assets Config
 export const defaultAIMediaAssetsConfig: AIMediaAssetsConfig = {
-  selfie_1: '/media/selfie-1.jpg',
-  selfie_2: '/media/selfie-2.jpg',
-  voice_message_1: '/media/voice-1.mp3'
+  assets: [
+    { id: 'selfie_1', type: 'image', url: '/media/selfie-1.jpg', description: 'Maya selfie 1', category: 'sharable' },
+    { id: 'selfie_2', type: 'image', url: '/media/selfie-2.jpg', description: 'Maya selfie 2', category: 'sharable' },
+    { id: 'voice_1', type: 'audio', url: '/media/voice-1.mp3', description: 'Maya voice message', category: 'sharable' }
+  ]
 };
 
 // Default Admin Status Display
 export const defaultAdminStatusDisplay: AdminStatusDisplay = {
-  status: 'active',
-  custom_message: 'Online and ready to chat!',
-  show_real_time_activity: true,
+  id: 'admin_status_1',
   name: 'My Status',
   avatarUrl: '/maya-avatar.png',
   statusText: 'Tap to add status update',
@@ -62,25 +94,31 @@ export const defaultAdminStatusDisplay: AdminStatusDisplay = {
 
 // Default Managed Contact Statuses
 export const defaultManagedContactStatuses: ManagedContactStatus[] = [
-  { id: 'contact_1', name: 'Alia', status: 'online', last_seen: '2024-07-30T10:00:00Z',
-    avatarUrl: '/images/alia-avatar.png', // Placeholder, replace with actual image
+  { 
+    id: 'contact_1', 
+    name: 'Alia',
+    avatarUrl: '/images/alia-avatar.png',
     statusText: 'Exploring new cafes in Indiranagar! ☕',
     hasUpdate: true,
-    statusImageUrl: '/images/alia-status-1.jpg', // Placeholder, replace with actual image
+    statusImageUrl: '/images/alia-status-1.jpg',
     enabled: true,
   },
-  { id: 'contact_2', name: 'Zoya', status: 'offline', last_seen: '2024-07-30T08:30:00Z',
-    avatarUrl: '/images/zoya-avatar.png', // Placeholder, replace with actual image
+  { 
+    id: 'contact_2', 
+    name: 'Zoya',
+    avatarUrl: '/images/zoya-avatar.png',
     statusText: 'Uff, client deadlines are killing me! 😩',
     hasUpdate: false,
     statusImageUrl: '',
     enabled: true,
   },
-  { id: 'contact_3', name: 'Rahul', status: 'online', last_seen: '2024-07-30T11:00:00Z',
-    avatarUrl: '/images/rahul-avatar.png', // Placeholder, replace with actual image
+  { 
+    id: 'contact_3', 
+    name: 'Rahul',
+    avatarUrl: '/images/rahul-avatar.png',
     statusText: 'Weekend vibes are on! 🏏 Any plans?',
     hasUpdate: true,
-    statusImageUrl: '/images/rahul-status-1.jpg', // Placeholder, replace with actual image
+    statusImageUrl: '/images/rahul-status-1.jpg',
     enabled: true,
   }
 ];
