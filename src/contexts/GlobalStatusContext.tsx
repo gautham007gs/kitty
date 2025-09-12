@@ -26,6 +26,8 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
   const { toast } = useToast();
 
   const fetchGlobalStatuses = useCallback(async () => {
+    if (isLoadingGlobalStatuses) return; // Prevent multiple simultaneous calls
+
     setIsLoadingGlobalStatuses(true);
     if (!supabase) {
       console.warn("Supabase client not available for fetching global statuses. Using defaults.");
@@ -105,9 +107,9 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
 
           if (backupAdminData?.settings) {
             const adminStatusSettings = backupAdminData.settings as Partial<AdminStatusDisplay>;
-            const mergedAdminStatus: AdminStatusDisplay = { 
-              ...defaultAdminStatusDisplay, 
-              ...adminStatusSettings 
+            const mergedAdminStatus: AdminStatusDisplay = {
+              ...defaultAdminStatusDisplay,
+              ...adminStatusSettings
             };
             setAdminOwnStatus(mergedAdminStatus);
           }
@@ -122,8 +124,8 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
 
           if (backupContactsData?.settings) {
             const contactsSettings = backupContactsData.settings as ManagedContactStatus[];
-            const finalContacts = (contactsSettings && Array.isArray(contactsSettings) && contactsSettings.length > 0) 
-              ? contactsSettings 
+            const finalContacts = (contactsSettings && Array.isArray(contactsSettings) && contactsSettings.length > 0)
+              ? contactsSettings
               : defaultManagedContactStatuses;
 
             setManagedDemoContacts(finalContacts);
@@ -147,7 +149,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
     } finally {
       setIsLoadingGlobalStatuses(false);
     }
-  }, [toast]);
+  }, [toast, isLoadingGlobalStatuses]); // Added isLoadingGlobalStatuses dependency
 
   const updateGlobalStatus = useCallback(async (statusId: string, updates: any) => {
     if (!supabase) {
@@ -195,7 +197,10 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, [fetchGlobalStatuses, toast]);
 
   useEffect(() => {
-    fetchGlobalStatuses();
+    // Initial fetch when the component mounts or supabase becomes available
+    if (supabase && !isLoadingGlobalStatuses) {
+      fetchGlobalStatuses();
+    }
 
     // Set up real-time subscription for global status changes
     if (supabase && typeof supabase.channel === 'function') {
@@ -217,17 +222,20 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        // Ensure the channel is removed to prevent memory leaks
+        if (channel) {
+          supabase.removeChannel(channel);
+        }
       };
     }
-  }, [fetchGlobalStatuses]);
+  }, [fetchGlobalStatuses, isLoadingGlobalStatuses]); // Added isLoadingGlobalStatuses dependency
 
   return (
-    <GlobalStatusContext.Provider value={{ 
-      adminOwnStatus, 
-      managedDemoContacts, 
+    <GlobalStatusContext.Provider value={{
+      adminOwnStatus,
+      managedDemoContacts,
       globalStatuses: { adminOwnStatus, managedDemoContacts },  // Alias for compatibility
-      isLoadingGlobalStatuses, 
+      isLoadingGlobalStatuses,
       fetchGlobalStatuses,
       updateGlobalStatus
     }}>
