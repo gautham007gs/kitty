@@ -14,29 +14,26 @@ let googleAI: GoogleGenerativeAI | null = null;
 let model: any = null;
 let usingFallback = false;
 
-// Initialize Vertex AI client with fallback to Google Generative AI
+// Initialize AI client with Google Generative AI as primary and Vertex AI as secondary
 const initializeVertexAI = async (): Promise<void> => {
-  if (vertexAI && model) return;
+  if (model) return;
 
   try {
+    const googleApiKey = process.env.GOOGLE_API_KEY;
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
     const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    const googleApiKey = process.env.GOOGLE_API_KEY;
 
     console.log('🔧 Initializing AI Chatbot System...');
     
-    // If Vertex AI credentials missing, use Google Generative AI as fallback
-    if (!projectId || !credentialsJson) {
-      if (!googleApiKey) {
-        throw new Error('Missing required AI configuration - need either Vertex AI credentials or Google API key');
-      }
-      console.log('⚠️ Vertex AI credentials not found, using Google Generative AI as fallback');
+    // Prioritize Google Generative AI to avoid decoder issues
+    if (googleApiKey) {
+      console.log('🎯 Using Google Generative AI as primary choice');
       
-      // Initialize Google Generative AI as fallback
+      // Initialize Google Generative AI as primary
       googleAI = new GoogleGenerativeAI(googleApiKey);
       model = googleAI.getGenerativeModel({
-        model: 'gemini-2.0-flash-001',
+        model: 'gemini-1.5-flash-latest',
         generationConfig: {
           maxOutputTokens: 80,
           temperature: 1.2,
@@ -44,8 +41,13 @@ const initializeVertexAI = async (): Promise<void> => {
         }
       });
       usingFallback = true;
-      console.log('✅ Google Generative AI fallback initialized successfully!');
+      console.log('✅ Google Generative AI initialized successfully!');
       return;
+    }
+    
+    // Only try Vertex AI if Google API key is not available
+    if (!projectId || !credentialsJson) {
+      throw new Error('Missing required AI configuration - need either Google API key or Vertex AI credentials');
     }
 
     const credentials = JSON.parse(credentialsJson);
@@ -125,7 +127,7 @@ const initializeVertexAI = async (): Promise<void> => {
       }
     });
 
-    console.log('✅ AI Chatbot initialized successfully!');
+    console.log('✅ Vertex AI initialized successfully!');
 
   } catch (error: any) {
     console.error('❌ Vertex AI initialization failed:', error);
