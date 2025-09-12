@@ -29,6 +29,10 @@ externalPort = 3001
 localPort = 36329
 externalPort = 3002
 
+[[ports]]
+localPort = 37783
+externalPort = 4200
+
 [workflows]
 runButton = "Maya Chat Dev Server"
 

@@ -49,7 +49,7 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
       if (currentAdProvider === 'adsterra') {
         selectedAdCode = adSettings.adsterraBannerCode || '';
         selectedNetworkEnabled = adSettings.adsterraBannerEnabled;
-      } else {
+      } else if (currentAdProvider === 'monetag') {
         selectedAdCode = adSettings.monetagBannerCode || '';
         selectedNetworkEnabled = adSettings.monetagBannerEnabled;
       }
