@@ -21,8 +21,12 @@ export default function AdminLoginPage() {
     try {
       // Simple demo credentials (replace with proper auth in production)
       if (credentials.username === 'admin' && credentials.password === 'admin123') {
-        // Set admin session cookie
-        document.cookie = 'admin-session=true; path=/; max-age=86400'; // 24 hours
+        // Set admin session cookie with proper attributes
+        document.cookie = 'admin-session=true; path=/; max-age=86400; SameSite=Lax'; // 24 hours
+        
+        // Also set in sessionStorage as backup
+        sessionStorage.setItem('isAdminLoggedIn_KruthikaChat', 'true');
+        sessionStorage.setItem('admin_user_id', 'admin');
         
         console.log('🔓 Admin logged in successfully');
         toast({

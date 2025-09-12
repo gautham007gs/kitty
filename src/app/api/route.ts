@@ -1,21 +1,9 @@
 
-import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  try {
-    return NextResponse.json({ 
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      message: 'Maya Chat API is running'
-    });
-  } catch (error) {
-    console.error('API Error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
-  }
+// This API route was causing a HEAD request loop - removing it completely
+// The ads and other functionality work fine without this endpoint
+
+export async function GET() {
+  return new Response('API is working', { status: 200 });
 }
 
-// Remove HEAD handler completely to stop the loop
-// The constant HEAD requests were causing the console spam

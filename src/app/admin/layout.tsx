@@ -22,12 +22,14 @@ export default function AdminLayout({
         return;
       }
 
-      // Check for admin session cookie
+      // Check for admin session cookie and sessionStorage
       const hasAdminSession = document.cookie
         .split(';')
         .some(cookie => cookie.trim().startsWith('admin-session=true'));
+      
+      const hasSessionStorage = sessionStorage.getItem('isAdminLoggedIn_KruthikaChat') === 'true';
 
-      if (!hasAdminSession) {
+      if (!hasAdminSession && !hasSessionStorage) {
         console.log('🔒 Admin session not found, redirecting to login');
         router.push('/admin/login');
         return;
