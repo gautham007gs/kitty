@@ -1,14 +1,14 @@
 'use client';
 
-import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
-import { Image, Upload, Link as LinkIcon, Trash2, Eye } from 'lucide-react';
+import { Image, Upload, Link as LinkIcon, Trash2, Eye, RefreshCw } from 'lucide-react';
 
 interface MediaAsset {
   id: string;
@@ -92,21 +92,32 @@ export default function MediaAssetsPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Media Assets</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage images, videos, and other media files</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Media Assets</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">Manage images, videos, and other media files</p>
         </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button className="bg-purple-600 hover:bg-purple-700" size="sm">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload New
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all">All Assets</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="status">Status</TabsTrigger>
-            <TabsTrigger value="background">Background</TabsTrigger>
-            <TabsTrigger value="upload">Upload New</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="all" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+          <TabsTrigger value="all" className="text-xs sm:text-sm">All Assets</TabsTrigger>
+          <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile</TabsTrigger>
+          <TabsTrigger value="status" className="text-xs sm:text-sm">Status</TabsTrigger>
+          <TabsTrigger value="background" className="text-xs sm:text-sm hidden sm:block">Background</TabsTrigger>
+          <TabsTrigger value="upload" className="text-xs sm:text-sm hidden md:block">Upload New</TabsTrigger>
+        </TabsList>
 
           <TabsContent value="all" className="space-y-4">
             <Card>
@@ -116,39 +127,59 @@ export default function MediaAssetsPage() {
                   All Media Assets ({assets.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="p-3 md:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                   {assets.map((asset) => (
-                    <div key={asset.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <div key={asset.id} className="border rounded-lg p-3 md:p-4 space-y-3 hover:shadow-md transition-shadow">
+                      <div className="aspect-square sm:aspect-video bg-gray-100 rounded-lg overflow-hidden">
                         <img 
                           src={asset.url} 
                           alt={asset.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                         />
                       </div>
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium truncate">{asset.name}</h3>
-                          <div className="flex items-center gap-2">
-                            <Switch 
-                              checked={asset.enabled} 
-                              onCheckedChange={() => toggleAsset(asset.id)}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(asset.url, '_blank')}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeAsset(asset.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate text-sm md:text-base">{asset.name}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant={asset.enabled ? 'default' : 'secondary'} className="text-xs">
+                                {asset.enabled ? 'Active' : 'Disabled'}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {asset.category}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Switch 
+                            checked={asset.enabled} 
+                            onCheckedChange={() => toggleAsset(asset.id)}
+                            className="flex-shrink-0"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{asset.type.toUpperCase()}</span>
+                          <span>{(asset.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(asset.url, '_blank')}
+                            className="flex-1 text-xs"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeAsset(asset.id)}
+                            className="flex-1 text-xs text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 space-y-1">
