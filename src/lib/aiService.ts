@@ -26,11 +26,56 @@ const initializeVertexAI = async (): Promise<void> => {
 
     console.log('🔧 Initializing AI Chatbot System...');
     
-    // Prioritize Google Generative AI to avoid decoder issues
-    if (googleApiKey) {
-      console.log('🎯 Using Google Generative AI as primary choice');
+    // Try Vertex AI first since we have proper credentials
+    if (projectId && credentialsJson) {
+      console.log('🎯 Using Vertex AI as primary choice');
       
-      // Initialize Google Generative AI as primary
+      try {
+        const credentials = JSON.parse(credentialsJson);
+        console.log('✅ Service Account:', credentials.client_email);
+
+        // Properly format the private key
+        let privateKey = credentials.private_key;
+        if (privateKey) {
+          privateKey = privateKey.replace(/\\n/g, '\n');
+        }
+
+        vertexAI = new VertexAI({
+          project: credentials.project_id,
+          location: location,
+          googleAuthOptions: {
+            credentials: {
+              type: credentials.type || 'service_account',
+              project_id: credentials.project_id,
+              private_key_id: credentials.private_key_id,
+              private_key: privateKey,
+              client_email: credentials.client_email,
+              client_id: credentials.client_id,
+              universe_domain: credentials.universe_domain || 'googleapis.com'
+            }
+          }
+        });
+
+        model = vertexAI.preview.getGenerativeModel({
+          model: 'gemini-2.0-flash-001',
+          generationConfig: {
+            maxOutputTokens: 80,
+            temperature: 1.2,
+            topP: 0.95,
+          }
+        });
+
+        console.log('✅ Vertex AI initialized successfully!');
+        return;
+      } catch (vertexError) {
+        console.error('❌ Vertex AI failed, trying Google Generative AI fallback:', vertexError);
+      }
+    }
+    
+    // Fallback to Google Generative AI if available
+    if (googleApiKey) {
+      console.log('🎯 Using Google Generative AI as fallback');
+      
       googleAI = new GoogleGenerativeAI(googleApiKey);
       model = googleAI.getGenerativeModel({
         model: 'gemini-1.5-flash-latest',
