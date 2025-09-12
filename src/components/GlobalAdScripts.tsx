@@ -1,5 +1,4 @@
 
-```tsx
 'use client';
 
 import React, { useEffect, useRef } from 'react';
@@ -109,4 +108,3 @@ const GlobalAdScripts: React.FC = () => {
 };
 
 export default GlobalAdScripts;
-```

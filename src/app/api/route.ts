@@ -1,5 +1,4 @@
 
-```ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -20,4 +19,3 @@ export async function GET(request: NextRequest) {
 
 // Remove HEAD handler completely to stop the loop
 // The constant HEAD requests were causing the console spam
-```
