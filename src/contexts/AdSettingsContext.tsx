@@ -16,8 +16,20 @@ interface AdSettingsContextType {
 
 const AdSettingsContext = createContext<AdSettingsContextType | undefined>(undefined);
 
-// Helper to map DB columns to the AdSettings object
+// The correct config key to match your previous working system
+const AD_SETTINGS_CONFIG_KEY = 'ad_settings_kruthika_chat_v1';
+
+// Helper to map DB columns to the AdSettings object - use app_configurations table structure
 const mapDataToSettings = (data: any): AdSettings => {
+  // If data comes from app_configurations.settings (JSONB), use it directly
+  if (data && typeof data === 'object' && data.adsEnabledGlobally !== undefined) {
+    return {
+      ...defaultAdSettings,
+      ...data
+    };
+  }
+  
+  // Fallback for old ad_settings table structure
   return {
     adsEnabledGlobally: data.ads_enabled_globally ?? defaultAdSettings.adsEnabledGlobally,
     maxDirectLinkAdsPerDay: data.max_direct_link_ads_per_day ?? defaultAdSettings.maxDirectLinkAdsPerDay,
@@ -59,6 +71,22 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setIsLoading(true);
     try {
+      // First try the app_configurations table like the previous working system
+      const { data: configData, error: configError } = await supabase
+        .from('app_configurations')
+        .select('settings')
+        .eq('id', AD_SETTINGS_CONFIG_KEY)
+        .single();
+
+      if (configData && configData.settings) {
+        const newSettings = mapDataToSettings(configData.settings);
+        setAdSettings(newSettings);
+        console.log('[AdSettingsContext] Ad settings loaded successfully from app_configurations.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fallback to ad_settings table if app_configurations doesn't have data
       const { data, error } = await supabase
         .from('ad_settings')
         .select('*')
@@ -72,10 +100,10 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
       if (data) {
         const newSettings = mapDataToSettings(data);
         setAdSettings(newSettings);
-        console.log('[AdSettingsContext] Ad settings loaded successfully.');
+        console.log('[AdSettingsContext] Ad settings loaded successfully from ad_settings table.');
       } else {
-        // If no data in ad_settings, use defaults. Fallback logic can be added here if needed.
-        console.warn('[AdSettingsContext] No ad settings found in DB, using default settings.');
+        // If no data in either table, use defaults
+        console.warn('[AdSettingsContext] No ad settings found in either table, using default settings.');
         setAdSettings(defaultAdSettings);
       }
     } catch (error: any) {
@@ -99,9 +127,17 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
       .channel('ad-settings-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ad_settings', filter: 'id=eq:default' },
+        { event: '*', schema: 'public', table: 'app_configurations', filter: `id=eq.${AD_SETTINGS_CONFIG_KEY}` },
         (payload) => {
-          console.log('[AdSettingsContext] Real-time change detected, refetching ad settings.', payload);
+          console.log('[AdSettingsContext] Real-time change detected in app_configurations, refetching ad settings.', payload);
+          fetchAdSettings();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ad_settings', filter: 'id=eq.default' },
+        (payload) => {
+          console.log('[AdSettingsContext] Real-time change detected in ad_settings, refetching ad settings.', payload);
           fetchAdSettings();
         }
       )
@@ -126,36 +162,18 @@ export const AdSettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
     try {
       setIsLoading(true);
-      const mappedData = {
-        ads_enabled_globally: newSettings.adsEnabledGlobally,
-        max_direct_link_ads_per_day: newSettings.maxDirectLinkAdsPerDay,
-        max_direct_link_ads_per_session: newSettings.maxDirectLinkAdsPerSession,
-        adsterra_direct_link: newSettings.adsterraDirectLink,
-        adsterra_direct_link_enabled: newSettings.adsterraDirectLinkEnabled,
-        adsterra_banner_code: newSettings.adsterraBannerCode,
-        adsterra_banner_enabled: newSettings.adsterraBannerEnabled,
-        adsterra_native_banner_code: newSettings.adsterraNativeBannerCode,
-        adsterra_native_banner_enabled: newSettings.adsterraNativeBannerEnabled,
-        adsterra_social_bar_code: newSettings.adsterraSocialBarCode,
-        adsterra_social_bar_enabled: newSettings.adsterraSocialBarEnabled,
-        adsterra_popunder_code: newSettings.adsterraPopunderCode,
-        adsterra_popunder_enabled: newSettings.adsterraPopunderEnabled,
-        monetag_direct_link: newSettings.monetagDirectLink,
-        monetag_direct_link_enabled: newSettings.monetagDirectLinkEnabled,
-        monetag_banner_code: newSettings.monetagBannerCode,
-        monetag_banner_enabled: newSettings.monetagBannerEnabled,
-        monetag_native_banner_code: newSettings.monetagNativeBannerCode,
-        monetag_native_banner_enabled: newSettings.monetagNativeBannerEnabled,
-        monetag_social_bar_code: newSettings.monetagSocialBarCode,
-        monetag_social_bar_enabled: newSettings.monetagSocialBarEnabled,
-        monetag_popunder_code: newSettings.monetagPopunderCode,
-        monetag_popunder_enabled: newSettings.monetagPopunderEnabled,
-      };
-
+      
+      // Save to app_configurations table like the previous working system
       const { error } = await supabase
-        .from('ad_settings')
-        .update(mappedData)
-        .eq('id', 'default');
+        .from('app_configurations')
+        .upsert(
+          { 
+            id: AD_SETTINGS_CONFIG_KEY, 
+            settings: newSettings, 
+            updated_at: new Date().toISOString() 
+          },
+          { onConflict: 'id' }
+        );
 
       if (error) throw error;
       await fetchAdSettings(); // Refresh after update

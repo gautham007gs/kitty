@@ -1,111 +1,117 @@
-'use client';
 
-import { useEffect, useRef } from 'react';
+"use client";
+
+import React, { useEffect, useRef } from 'react';
+import type { AdSettings } from '@/types';
 import { useAdSettings } from '@/contexts/AdSettingsContext';
 
-// Mock implementations for demonstration purposes if not provided
-const GLOBAL_EVENTS = {
-  ADMIN_AD_SETTINGS_UPDATED: 'ADMIN_AD_SETTINGS_UPDATED',
-  FORCE_REFRESH_ALL: 'FORCE_REFRESH_ALL',
-};
-
-class GlobalEventSystem {
-  private static instance: GlobalEventSystem;
-  private listeners: { [key: string]: ((...args: any[]) => void)[] } = {};
-
-  private constructor() {}
-
-  public static getInstance(): GlobalEventSystem {
-    if (!GlobalEventSystem.instance) {
-      GlobalEventSystem.instance = new GlobalEventSystem();
-    }
-    return GlobalEventSystem.instance;
-  }
-
-  public on(event: string, callback: (...args: any[]) => void): () => void {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event].push(callback);
-    return () => {
-      this.listeners[event] = this.listeners[event].filter(listener => listener !== callback);
-    };
-  }
-
-  public emit(event: string, ...args: any[]): void {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(callback => {
-        try {
-          callback(...args);
-        } catch (error) {
-          console.error(`Error in event listener for ${event}:`, error);
-        }
-      });
-    }
-  }
-}
-
-
-export default function GlobalAdScripts() {
-  const { adSettings, isLoading: isLoadingAdSettings, refreshAdSettings } = useAdSettings();
-  const injectedScripts = useRef(new Set<string>());
-
-  // Listen for admin updates
-  useEffect(() => {
-    const eventSystem = GlobalEventSystem.getInstance();
-
-    const unsubscribeAdUpdate = eventSystem.on(GLOBAL_EVENTS.ADMIN_AD_SETTINGS_UPDATED, () => {
-      console.log('[GlobalAdScripts] Admin updated ad settings, refreshing...');
-      refreshAdSettings();
-    });
-
-    const unsubscribeForceRefresh = eventSystem.on(GLOBAL_EVENTS.FORCE_REFRESH_ALL, () => {
-      console.log('[GlobalAdScripts] Force refresh triggered by admin');
-      refreshAdSettings();
-    });
-
-    return () => {
-      unsubscribeAdUpdate();
-      unsubscribeForceRefresh();
-    };
-  }, [refreshAdSettings]);
-
+const GlobalAdScripts: React.FC = () => {
+  const { adSettings, isLoadingAdSettings } = useAdSettings();
+  const adsterraPopunderInjected = useRef(false);
+  const monetagPopunderInjected = useRef(false);
+  const adsterraSocialBarInjected = useRef(false);
+  
+  // Check if we're in admin panel to prevent ads
+  const isAdminPanel = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
   useEffect(() => {
-    // Return early if still loading or if adSettings is null
+    console.log('GlobalAdScripts: Checking ad settings', { 
+      isLoadingAdSettings, 
+      adSettingsNull: !adSettings, 
+      adsEnabledGlobally: adSettings?.adsEnabledGlobally,
+      isAdminPanel 
+    });
+
     if (isLoadingAdSettings || !adSettings) {
-      console.log('GlobalAdScripts: Ads disabled or still loading', { 
-        isLoadingAdSettings: isLoadingAdSettings, 
-        adSettingsNull: !adSettings 
-      });
+      console.log('GlobalAdScripts: Ads disabled or still loading', { isLoadingAdSettings, adSettingsNull: !adSettings });
       return;
     }
 
+    if (isAdminPanel) {
+      console.log('GlobalAdScripts: In admin panel, skipping ads');
+      return;
+    }
+
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    /**
+     * Injects a script into the document body.
+     * WARNING: Using innerHTML to parse script code from an untrusted source can be a security risk (XSS).
+     * Ensure that the source of `scriptCode` (i.e., your ad settings) is strictly controlled and sanitized.
+     *
+     * Consider alternative, safer methods for injecting external scripts provided by ad networks.
+     * Consult the specific ad network documentation for recommended integration methods in modern web applications.
+     *
+     * @param scriptCode The script code to inject.
+     */
+    const injectScript = (scriptCode: string, networkName: string, injectedRef: React.MutableRefObject<boolean>) => {
+      if (injectedRef.current || !scriptCode || !scriptCode.trim() || scriptCode.toLowerCase().includes('placeholder')) {
+        return; 
+      }
+
+      try {
+        const scriptContainer = document.createElement('div');
+        scriptContainer.innerHTML = scriptCode; 
+        
+        let hasValidScriptTag = false;
+        Array.from(scriptContainer.childNodes).forEach(node => {
+          if (node.nodeName === "SCRIPT") {
+            const scriptTag = document.createElement('script');
+            const originalScript = node as HTMLScriptElement;
+            
+            for (let i = 0; i < originalScript.attributes.length; i++) {
+              const attr = originalScript.attributes[i];
+              scriptTag.setAttribute(attr.name, attr.value);
+            }
+            scriptTag.innerHTML = originalScript.innerHTML;
+            
+            if (scriptTag.src || scriptTag.innerHTML.trim()) {
+              hasValidScriptTag = true;
+              document.body.appendChild(scriptTag);
+            }
+          } else {
+            // Append other nodes like comments, noscript tags, etc.
+            // Check if it's not just whitespace text node
+            if (node.nodeType !== Node.TEXT_NODE || node.textContent?.trim()) {
+                document.body.appendChild(node.cloneNode(true));
+            }
+          }
+        });
+
+        if(hasValidScriptTag){
+            injectedRef.current = true;
+            console.log(`${networkName} script injected successfully.`);
+        }
+
+      } catch (e) {
+        console.error(`Error injecting ${networkName} script:`, e);
+      }
+    };
+
     console.log('GlobalAdScripts: Checking ad settings', adSettings);
 
-    // Only inject scripts if ads are enabled and not already present
-    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && adSettings.adsterraPopunderCode && !injectedScripts.current.has('adsterra-popunder');
-    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && adSettings.monetagPopunderCode && !injectedScripts.current.has('monetag-popunder');
+    if (adSettings.adsEnabledGlobally) {
+      // Adsterra Pop-under
+      if (adSettings.adsterraPopunderEnabled && !adsterraPopunderInjected.current) {
+        injectScript(adSettings.adsterraPopunderCode, "Adsterra Popunder", adsterraPopunderInjected);
+      }
 
-    if (shouldInjectAdsterra) {
-      const adsterraScript = document.createElement('script');
-      adsterraScript.id = 'adsterra-popunder-global';
-      adsterraScript.innerHTML = adSettings.adsterraPopunderCode;
-      document.head.appendChild(adsterraScript);
-      injectedScripts.current.add('adsterra-popunder');
-      console.log('Adsterra pop-under script injected.');
+      // Monetag Pop-under
+      if (adSettings.monetagPopunderEnabled && !monetagPopunderInjected.current) {
+        injectScript(adSettings.monetagPopunderCode, "Monetag Popunder", monetagPopunderInjected);
+      }
+
+      // Adsterra Social Bar
+      if (adSettings.adsterraSocialBarEnabled && !adsterraSocialBarInjected.current) {
+        injectScript(adSettings.adsterraSocialBarCode, "Adsterra Social Bar", adsterraSocialBarInjected);
+      }
     }
 
-    if (shouldInjectMonetag) {
-      const monetagScript = document.createElement('script');
-      monetagScript.id = 'monetag-popunder-global';
-      monetagScript.innerHTML = adSettings.monetagPopunderCode;
-      document.head.appendChild(monetagScript);
-      injectedScripts.current.add('monetag-popunder');
-      console.log('Monetag script injected.');
-    }
+  }, [adSettings, isLoadingAdSettings, isAdminPanel]);
 
-  }, [adSettings?.adsEnabledGlobally, adSettings?.adsterraPopunderEnabled, adSettings?.adsterraPopunderCode, adSettings?.monetagPopunderEnabled, adSettings?.monetagPopunderCode, isLoadingAdSettings]); // Dependency array includes necessary ad settings and loading state
+  return null; 
+};
 
-  return null;
-}
+export default GlobalAdScripts;
