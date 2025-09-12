@@ -126,8 +126,21 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
 
     const container = adContainerRef.current;
 
-    // Clear previous content
-    container.innerHTML = '';
+    // Clear previous content safely
+    const cleanup = () => {
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      // Clean up any scripts we may have added
+      const existingScripts = document.head.querySelectorAll(`script[id^="banner-ad-script-${placementKey}-"]`);
+      existingScripts.forEach(script => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      });
+    };
+    
+    cleanup();
 
     try {
       // Create a temporary div to parse the ad code
@@ -219,6 +232,22 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
         container.innerHTML = '<div style="background: #f9f9f9; padding: 10px; text-align: center; color: #999; border: 1px dashed #ddd; border-radius: 4px;">Ad failed to load</div>';
       }
     }
+
+    // Return cleanup function for proper React DOM management
+    return () => {
+      if (adContainerRef.current) {
+        while (adContainerRef.current.firstChild) {
+          adContainerRef.current.removeChild(adContainerRef.current.firstChild);
+        }
+      }
+      // Clean up any scripts we added
+      const scriptsToClean = document.head.querySelectorAll(`script[id^="banner-ad-script-${placementKey}-"]`);
+      scriptsToClean.forEach(script => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      });
+    };
   }, [adCodeToInject, placementKey, adType]);
 
   // REVENUE-OPTIMIZED rotation - prioritize higher-paying providers
