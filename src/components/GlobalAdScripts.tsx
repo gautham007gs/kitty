@@ -1,10 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAdSettings } from '@/contexts/AdSettingsContext';
-// Assuming GlobalEventSystem and GLOBAL_EVENTS are imported from appropriate files
-// For example:
-// import { GlobalEventSystem, GLOBAL_EVENTS } from '@/lib/globalEventSystem'; 
 
 // Mock implementations for demonstration purposes if not provided
 const GLOBAL_EVENTS = {
@@ -51,6 +48,7 @@ class GlobalEventSystem {
 
 export default function GlobalAdScripts() {
   const { adSettings, isLoading: isLoadingAdSettings, refreshAdSettings } = useAdSettings();
+  const injectedScripts = useRef(new Set<string>());
 
   // Listen for admin updates
   useEffect(() => {
@@ -86,30 +84,28 @@ export default function GlobalAdScripts() {
     console.log('GlobalAdScripts: Checking ad settings', adSettings);
 
     // Only inject scripts if ads are enabled and not already present
-    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && !document.querySelector('script[src*="suv4c1"]');
-    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && !document.querySelector('script[src*="thubanoa"]');
+    const shouldInjectAdsterra = adSettings.adsterraPopunderEnabled && adSettings.adsterraPopunderCode && !injectedScripts.current.has('adsterra-popunder');
+    const shouldInjectMonetag = adSettings.monetagPopunderEnabled && adSettings.monetagPopunderCode && !injectedScripts.current.has('monetag-popunder');
 
     if (shouldInjectAdsterra) {
       const adsterraScript = document.createElement('script');
-      adsterraScript.setAttribute('data-cfasync', 'false');
-      adsterraScript.src = '//suv4c1.com/c84a8af7a8a64a5eaf8c3f4c5b46b49b/invoke.js';
-      adsterraScript.async = true;
+      adsterraScript.id = 'adsterra-popunder-global';
+      adsterraScript.innerHTML = adSettings.adsterraPopunderCode;
       document.head.appendChild(adsterraScript);
-
+      injectedScripts.current.add('adsterra-popunder');
       console.log('Adsterra pop-under script injected.');
     }
 
     if (shouldInjectMonetag) {
       const monetagScript = document.createElement('script');
-      monetagScript.setAttribute('data-cfasync', 'false');
-      monetagScript.src = '//thubanoa.com/1?z=7865873';
-      monetagScript.async = true;
+      monetagScript.id = 'monetag-popunder-global';
+      monetagScript.innerHTML = adSettings.monetagPopunderCode;
       document.head.appendChild(monetagScript);
-
+      injectedScripts.current.add('monetag-popunder');
       console.log('Monetag script injected.');
     }
 
-  }, [adSettings, isLoadingAdSettings]); // Dependency array includes isLoadingAdSettings
+  }, [adSettings?.adsEnabledGlobally, adSettings?.adsterraPopunderEnabled, adSettings?.adsterraPopunderCode, adSettings?.monetagPopunderEnabled, adSettings?.monetagPopunderCode, isLoadingAdSettings]); // Dependency array includes necessary ad settings and loading state
 
   return null;
 }

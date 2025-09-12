@@ -1,70 +1,75 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAdSettings } from '@/contexts/AdSettingsContext';
-import Head from 'next/head';
 
 const AdScriptInjector = () => {
-  const { settings, isLoading } = useAdSettings();
+  const { adSettings, isLoading } = useAdSettings();
+  const injectedScripts = useRef(new Set<string>());
 
   useEffect(() => {
-    if (isLoading || !settings || !settings.ads_enabled_globally) {
+    if (isLoading || !adSettings || !adSettings.adsEnabledGlobally) {
       return;
     }
 
     const injectScript = (scriptContent: string, id: string) => {
-        if (!scriptContent || document.getElementById(id)) {
+        if (!scriptContent || document.getElementById(id) || injectedScripts.current.has(id)) {
             return; // Don't inject if script is empty or already present
         }
 
-        // The script content from the database is a full <script> tag. 
-        // We need to parse it to extract the src and other attributes.
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = scriptContent;
-        const scriptTag = tempDiv.querySelector('script');
+        try {
+          // The script content from the database is a full <script> tag. 
+          // We need to parse it to extract the src and other attributes.
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = scriptContent;
+          const scriptTag = tempDiv.querySelector('script');
 
-        if (scriptTag) {
-            const newScript = document.createElement('script');
-            newScript.id = id;
-            newScript.async = scriptTag.async;
-            newScript.defer = scriptTag.defer;
-            
-            if (scriptTag.src) {
-                 newScript.src = scriptTag.src;
-            } else if (scriptTag.innerHTML) {
-                newScript.innerHTML = scriptTag.innerHTML;
-            }
+          if (scriptTag) {
+              const newScript = document.createElement('script');
+              newScript.id = id;
+              newScript.async = scriptTag.async || true;
+              newScript.defer = scriptTag.defer || false;
+              
+              if (scriptTag.src) {
+                   newScript.src = scriptTag.src;
+              } else if (scriptTag.innerHTML) {
+                  newScript.innerHTML = scriptTag.innerHTML;
+              }
 
-            // Copy over any other attributes like data-*
-            for (const attr of scriptTag.attributes) {
-                if (!['id', 'src', 'async', 'defer'].includes(attr.name)) {
-                     newScript.setAttribute(attr.name, attr.value);
-                }
-            }
-            
-            document.head.appendChild(newScript);
+              // Copy over any other attributes like data-*
+              for (const attr of scriptTag.attributes) {
+                  if (!['id', 'src', 'async', 'defer'].includes(attr.name)) {
+                       newScript.setAttribute(attr.name, attr.value);
+                  }
+              }
+              
+              document.head.appendChild(newScript);
+              injectedScripts.current.add(id);
+              console.log(`Script ${id} injected successfully`);
+          }
+        } catch (error) {
+          console.error(`Error injecting script ${id}:`, error);
         }
     };
 
     // --- Adsterra --- 
-    if (settings.adsterra_popunder_enabled) {
-      injectScript(settings.adsterra_popunder_code, 'adsterra-popunder-script');
+    if (adSettings.adsterraPopunderEnabled && adSettings.adsterraPopunderCode) {
+      injectScript(adSettings.adsterraPopunderCode, 'adsterra-popunder-script');
     }
-    if (settings.adsterra_social_bar_enabled) {
-      injectScript(settings.adsterra_social_bar_code, 'adsterra-social-bar-script');
+    if (adSettings.adsterraSocialBarEnabled && adSettings.adsterraSocialBarCode) {
+      injectScript(adSettings.adsterraSocialBarCode, 'adsterra-social-bar-script');
     }
 
     // --- Monetag ---
-    if (settings.monetag_popunder_enabled) {
-      injectScript(settings.monetag_popunder_code, 'monetag-popunder-script');
+    if (adSettings.monetagPopunderEnabled && adSettings.monetagPopunderCode) {
+      injectScript(adSettings.monetagPopunderCode, 'monetag-popunder-script');
     }
-    
-    // Note: Banner and Native Banner codes are typically not injected into the head,
-    // but are placed in specific components where the ad should appear. 
-    // Direct links are used in specific onClick events.
+    if (adSettings.monetagSocialBarEnabled && adSettings.monetagSocialBarCode) {
+      injectScript(adSettings.monetagSocialBarCode, 'monetag-social-bar-script');
+    }
 
-  }, [settings, isLoading]);
+  }, [adSettings, isLoading]);
 
   // This component does not render anything itself
   return null; 

@@ -167,7 +167,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
             has_update: updates.hasUpdate
           })
           .eq('id', 'default');
-        
+
         if (error) throw error;
       } else {
         // Handle managed demo contacts updates
@@ -175,10 +175,10 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
           .from('managed_demo_contacts')
           .update(updates)
           .eq('id', statusId);
-          
+
         if (error) throw error;
       }
-      
+
       await fetchGlobalStatuses(); // Refresh after update
       toast({
         title: "Success",

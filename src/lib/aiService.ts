@@ -54,25 +54,45 @@ const initializeVertexAI = async (): Promise<void> => {
     // Properly format the private key - fix the main issue
     let privateKey = credentials.private_key;
     if (privateKey) {
-      // Remove any existing newline escapes and normalize
-      privateKey = privateKey
-        .replace(/\\n/g, '\n')
-        .replace(/\r\n/g, '\n')
-        .replace(/\n\n+/g, '\n')
-        .trim();
-      
-      // Ensure proper PEM format
-      if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
-        privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
-      }
-      
-      // Make sure we have proper line breaks in the key body
-      const lines = privateKey.split('\n');
-      if (lines.length === 3) {
-        // If it's all on one line, split it properly
-        const keyBody = lines[1];
-        const formattedKeyBody = keyBody.match(/.{1,64}/g)?.join('\n') || keyBody;
-        privateKey = `${lines[0]}\n${formattedKeyBody}\n${lines[2]}`;
+      // Handle different encoding formats
+      try {
+        // First, try to decode if it's base64 encoded
+        if (!privateKey.includes('-----BEGIN')) {
+          privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
+        }
+        
+        // Remove any existing newline escapes and normalize
+        privateKey = privateKey
+          .replace(/\\n/g, '\n')
+          .replace(/\r\n/g, '\n')
+          .replace(/\n\n+/g, '\n')
+          .trim();
+        
+        // Ensure proper PEM format
+        if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+          // Remove any existing headers/footers first
+          privateKey = privateKey
+            .replace(/-----BEGIN.*?-----/g, '')
+            .replace(/-----END.*?-----/g, '')
+            .replace(/\s/g, '');
+          
+          // Add proper headers
+          privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
+        }
+        
+        // Format the key body with proper line breaks (64 chars per line)
+        const lines = privateKey.split('\n');
+        if (lines.length >= 3) {
+          const header = lines[0];
+          const footer = lines[lines.length - 1];
+          const keyBody = lines.slice(1, -1).join('').replace(/\s/g, '');
+          const formattedKeyBody = keyBody.match(/.{1,64}/g)?.join('\n') || keyBody;
+          privateKey = `${header}\n${formattedKeyBody}\n${footer}`;
+        }
+      } catch (keyError) {
+        console.error('Error formatting private key:', keyError);
+        // If formatting fails, try to use the key as-is but with minimal cleanup
+        privateKey = credentials.private_key.replace(/\\n/g, '\n');
       }
     }
 
