@@ -30,9 +30,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         if (!isLoggedIn || !adminUserId) {
           console.log('🔒 Admin session not found, redirecting to login');
-          setIsAuthenticated(false);
           setIsLoading(false);
-          router.push('/admin/login');
+          router.replace('/admin/login');
           return;
         }
 
@@ -43,9 +42,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           console.log('🔒 Supabase session invalid, clearing local auth and redirecting');
           sessionStorage.removeItem(ADMIN_AUTH_KEY);
           sessionStorage.removeItem('admin_user_id');
-          setIsAuthenticated(false);
           setIsLoading(false);
-          router.push('/admin/login');
+          router.replace('/admin/login');
           return;
         }
 
@@ -54,9 +52,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           console.log('🔒 Session user mismatch, clearing auth and redirecting');
           sessionStorage.removeItem(ADMIN_AUTH_KEY);
           sessionStorage.removeItem('admin_user_id');
-          setIsAuthenticated(false);
           setIsLoading(false);
-          router.push('/admin/login');
+          router.replace('/admin/login');
           return;
         }
 
@@ -69,9 +66,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         console.error('❌ Auth check failed:', error);
         sessionStorage.removeItem(ADMIN_AUTH_KEY);
         sessionStorage.removeItem('admin_user_id');
-        setIsAuthenticated(false);
         setIsLoading(false);
-        router.push('/admin/login');
+        router.replace('/admin/login');
       }
     };
 
@@ -85,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('admin_user_id');
         setIsAuthenticated(false);
         if (pathname !== '/admin/login') {
-          router.push('/admin/login');
+          router.replace('/admin/login');
         }
       }
     });
@@ -107,13 +103,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Show unauthorized state if not authenticated
+  // For login page, render directly without auth check
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
+  // For other admin pages, require authentication
   if (!isAuthenticated) {
+    // Don't show access denied, just redirect
+    if (typeof window !== 'undefined') {
+      router.replace('/admin/login');
+    }
     return (
       <div className="min-h-screen w-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You must be logged in to access the admin panel.</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     );

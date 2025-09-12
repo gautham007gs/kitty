@@ -64,7 +64,7 @@ const AdminLoginPage: React.FC = () => {
         sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
         sessionStorage.setItem('admin_user_id', data.user.id);
         toast({ title: 'Login Successful', description: "Welcome to the Admin Panel!" });
-        router.push('/admin/profile');
+        router.replace('/admin/profile');
       } catch (sessionError: any) {
           console.error("Error setting sessionStorage:", sessionError);
           setError(`Failed to initiate session. Please ensure cookies/session storage are enabled. ${sessionError.message || ''}`);
