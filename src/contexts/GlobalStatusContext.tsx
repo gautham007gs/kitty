@@ -25,12 +25,10 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [isLoadingGlobalStatuses, setIsLoadingGlobalStatuses] = useState(true);
   const { toast } = useToast();
 
+  // Fetch global statuses with caching and reduced polling
   const fetchGlobalStatuses = useCallback(async () => {
-    if (isLoadingGlobalStatuses) return; // Prevent multiple simultaneous calls
-
-    setIsLoadingGlobalStatuses(true);
     if (!supabase) {
-      console.warn("Supabase client not available for fetching global statuses. Using defaults.");
+      console.warn('[GlobalStatusContext] Supabase not available, using defaults.');
       setAdminOwnStatus({
           name: defaultAIProfile.name,
           statusText: defaultAIProfile.status,
@@ -44,6 +42,14 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
       return;
     }
 
+    // Prevent too frequent requests
+    const now = Date.now();
+    const lastFetch = localStorage.getItem('lastStatusFetch');
+    if (lastFetch && (now - parseInt(lastFetch)) < 30000) { // 30 seconds cache
+      return;
+    }
+
+    setIsLoadingGlobalStatuses(true);
     try {
       // Fetch admin own status from dedicated table
       const { data: adminStatusData, error: adminStatusError } = await supabase
@@ -133,6 +139,7 @@ export const GlobalStatusProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
       }
 
+      localStorage.setItem('lastStatusFetch', now.toString());
       console.log('[GlobalStatusContext] Successfully fetched global statuses');
     } catch (e: any) {
       console.error('Unexpected error fetching global statuses:', e);

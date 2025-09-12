@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  return NextResponse.json({ 
-    status: 'healthy', 
-    message: 'API service operational',
+export async function GET(request: Request) {
+  return Response.json({
+    message: 'Maya Chat API is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    status: 'healthy'
+  }, {
+    headers: {
+      'Cache-Control': 'public, max-age=300, s-maxage=300',
+      'Content-Type': 'application/json',
+    },
   });
 }
 
-export async function HEAD(request: NextRequest) {
-  // Optimized for health checks - no logging to reduce noise
-  // This satisfies external monitoring systems (like Sentry/Replit infrastructure)
-  return new NextResponse(null, { 
+export async function HEAD(request: Request) {
+  // Add caching headers to reduce frequent HEAD requests
+  return new Response(null, {
     status: 200,
     headers: {
-      'Cache-Control': 'no-cache',
-      'X-Health-Check': 'ok'
-    }
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=300, s-maxage=300',
+      'X-API-Status': 'healthy',
+    },
   });
 }
 
