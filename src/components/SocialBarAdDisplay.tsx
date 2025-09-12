@@ -10,7 +10,7 @@ interface SocialBarAdDisplayProps {
   placementKey?: string;
 }
 
-const SocialBarAdDisplay: React.FC<SocialBarAdDisplayProps> = ({ 
+const SocialBarAdDisplay: React.FC<SocialBarAdDisplayProps> = ({
   className,
   placementKey = 'social-bar'
 }) => {
@@ -38,7 +38,7 @@ const SocialBarAdDisplay: React.FC<SocialBarAdDisplayProps> = ({
     }
 
     // Check if we have valid ad code
-    if (adSettings.adsterraSocialBarCode && 
+    if (adSettings.adsterraSocialBarCode &&
         !adSettings.adsterraSocialBarCode.toLowerCase().includes("placeholder") &&
         adSettings.adsterraSocialBarCode.trim()) {
       setAdCodeToInject(adSettings.adsterraSocialBarCode);
@@ -61,6 +61,22 @@ const SocialBarAdDisplay: React.FC<SocialBarAdDisplayProps> = ({
         const fragment = document.createRange().createContextualFragment(adCodeToInject);
         adContainerRef.current.appendChild(fragment);
         scriptInjectedRef.current = true;
+
+        // Set a timeout to check if the ad rendered, and hide the container if it didn't
+        const adWrapper = adContainerRef.current;
+        setTimeout(() => {
+          // Check if ad has actually rendered
+          const hasAdContent = adWrapper.querySelector('iframe') ||
+                              adWrapper.querySelector('ins') ||
+                              adWrapper.querySelector('[data-ad]') ||
+                              adWrapper.children.length > 0;
+
+          if (!hasAdContent && adContainerRef.current) {
+            // Hide the container instead of showing placeholder
+            adContainerRef.current.style.display = 'none';
+          }
+        }, 3000);
+
       } catch (e) {
         console.error(`Error injecting social bar ad script for placement ${placementKey}:`, e);
         scriptInjectedRef.current = false;
@@ -71,6 +87,7 @@ const SocialBarAdDisplay: React.FC<SocialBarAdDisplayProps> = ({
     }
   }, [adCodeToInject, placementKey]);
 
+  // Don't show loading placeholder
   if (isLoading || !isVisible || !adCodeToInject) {
     return null;
   }

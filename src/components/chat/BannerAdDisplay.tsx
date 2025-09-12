@@ -168,37 +168,47 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
 
       container.appendChild(adWrapper);
 
-      // Then execute scripts
+      // Then execute scripts with improved error handling
       let scriptLoadPromises: Promise<void>[] = [];
 
       scriptTags.forEach((script, index) => {
-        const scriptPromise = new Promise<void>((resolve, reject) => {
+        const scriptPromise = new Promise<void>((resolve) => {
           const newScript = document.createElement('script');
           const scriptId = `banner-ad-script-${placementKey}-${index}-${Date.now()}`;
           newScript.id = scriptId;
 
+          // Set a timeout for script loading
+          const timeout = setTimeout(() => {
+            console.warn(`[BannerAdDisplay] Script ${index + 1} timed out, continuing anyway`);
+            resolve();
+          }, 5000); // 5 second timeout
+
           newScript.onload = () => {
+            clearTimeout(timeout);
             console.log(`[BannerAdDisplay] Script ${index + 1} loaded successfully`);
             resolve();
           };
 
           newScript.onerror = () => {
-            console.error(`[BannerAdDisplay] Script ${index + 1} failed to load`);
-            reject(new Error(`Script ${index + 1} failed to load`));
+            clearTimeout(timeout);
+            console.warn(`[BannerAdDisplay] Script ${index + 1} failed to load, continuing anyway`);
+            resolve(); // Resolve instead of reject to prevent breaking the entire ad
           };
 
           if (script.src) {
             newScript.src = script.src;
             newScript.async = true;
+            newScript.defer = true; // Add defer to help with loading
           } else if (script.innerHTML) {
             newScript.innerHTML = script.innerHTML;
             // For inline scripts, resolve immediately
-            setTimeout(resolve, 10);
+            clearTimeout(timeout);
+            setTimeout(resolve, 100);
           }
 
           // Copy attributes
           Array.from(script.attributes).forEach(attr => {
-            if (attr.name !== 'id') {
+            if (!['id', 'onload', 'onerror'].includes(attr.name)) {
               newScript.setAttribute(attr.name, attr.value);
             }
           });
@@ -209,17 +219,26 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
         scriptLoadPromises.push(scriptPromise);
       });
 
-      // Wait for all scripts to load
+      // Wait for all scripts to load or timeout
       Promise.allSettled(scriptLoadPromises).then((results) => {
         const successful = results.filter(r => r.status === 'fulfilled').length;
-        console.log(`[BannerAdDisplay] ${successful}/${scriptTags.length} scripts loaded successfully for ${adType} ad`);
+        console.log(`[BannerAdDisplay] ${successful}/${scriptTags.length} scripts processed for ${adType} ad`);
 
-        // Force a small delay to allow ad to render
+        // Give ad more time to render without showing fallback
         setTimeout(() => {
-          if (adWrapper.children.length === 0) {
-            adWrapper.innerHTML = '<div style="background: #f0f0f0; padding: 10px; text-align: center; color: #666; border-radius: 4px;">Ad Loading...</div>';
+          // Check if ad has actually rendered by looking for iframe or ad content
+          const hasAdContent = adWrapper.querySelector('iframe') || 
+                              adWrapper.querySelector('ins') || 
+                              adWrapper.querySelector('[data-ad]') ||
+                              adWrapper.children.length > 0;
+          
+          if (!hasAdContent) {
+            // Hide the container instead of showing placeholder
+            if (adContainerRef.current) {
+              adContainerRef.current.style.display = 'none';
+            }
           }
-        }, 1000);
+        }, 3000); // Increased timeout to 3 seconds
       });
 
       scriptInjectedRef.current = true;
@@ -227,9 +246,9 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
 
     } catch (error) {
       console.error(`[BannerAdDisplay] Error injecting ad script for ${adType}:`, error);
-      // Show fallback content on error
-      if (container) {
-        container.innerHTML = '<div style="background: #f9f9f9; padding: 10px; text-align: center; color: #999; border: 1px dashed #ddd; border-radius: 4px;">Ad failed to load</div>';
+      // Hide the container on error instead of showing error message
+      if (container && adContainerRef.current) {
+        adContainerRef.current.style.display = 'none';
       }
     }
 
@@ -289,15 +308,8 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
   }, [adSettings, currentAdIndex, isLoadingAdSettings]);
 
 
-  if (isLoadingAdSettings) {
-    return (
-      <div className={cn("w-full animate-pulse", className)}>
-        <div className="bg-gray-200 rounded h-[90px]"></div>
-      </div>
-    );
-  }
-
-  if (!isVisible || !adCodeToInject) {
+  // Don't show loading placeholder - just return null
+  if (isLoadingAdSettings || !isVisible || !adCodeToInject) {
     return null;
   }
 
@@ -305,14 +317,20 @@ const BannerAdDisplay: React.FC<BannerAdDisplayProps> = ({ adType, placementKey,
     <div
       ref={adContainerRef}
       className={cn(
-        "kruthika-chat-banner-ad-container my-2 flex justify-center items-center min-h-[90px] w-full overflow-hidden",
-        "bg-white border border-gray-200 rounded-md shadow-sm",
+        "kruthika-chat-banner-ad-container my-2 flex justify-center items-center w-full overflow-hidden",
+        "transition-all duration-300", // Smooth transitions
         className,
         contextual && "kruthika-chat-contextual-ad"
       )}
+      style={{ 
+        minHeight: 'auto', // Remove fixed min-height
+        background: 'transparent', // Remove background
+        border: 'none', // Remove border
+        boxShadow: 'none' // Remove shadow
+      }}
       key={`${placementKey}-${adType}-${currentAdProvider}-${adCodeToInject?.substring(0, 30)}`}
     >
-      {/* Container for actual ad content - no fallback that blocks the ad */}
+      {/* Container for actual ad content - will be populated by ad scripts */}
     </div>
   );
 };
