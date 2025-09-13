@@ -9,10 +9,11 @@ export function middleware(request: NextRequest) {
 
   // Only handle admin routes
   if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
-    // Check for admin session (you can add more sophisticated auth here)
-    const isAuthenticated = request.cookies.has('admin-session');
-
-    if (!isAuthenticated) {
+    // Check for admin session cookie
+    const adminSession = request.cookies.get('admin-session');
+    
+    if (!adminSession || adminSession.value !== 'true') {
+      console.log('🔒 Admin session not found or invalid, redirecting to login');
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }

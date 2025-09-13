@@ -21,8 +21,8 @@ export default function AdminLoginPage() {
     try {
       // Simple demo credentials (replace with proper auth in production)
       if (credentials.username === 'admin' && credentials.password === 'admin123') {
-        // Set admin session cookie with proper attributes
-        document.cookie = 'admin-session=true; path=/; max-age=86400; SameSite=Lax'; // 24 hours
+        // Set admin session cookie with proper attributes (no Secure flag for HTTP dev)
+        document.cookie = 'admin-session=true; Path=/; Max-Age=86400; SameSite=Lax'; // 24 hours
         
         // Also set in sessionStorage as backup
         sessionStorage.setItem('isAdminLoggedIn_KruthikaChat', 'true');
@@ -34,9 +34,10 @@ export default function AdminLoginPage() {
           description: "Login successful! Redirecting...",
         });
         
+        // Immediate redirect with window.location for better cookie handling
         setTimeout(() => {
-          router.push('/admin');
-        }, 1000);
+          window.location.href = '/admin';
+        }, 500);
       } else {
         toast({
           title: "Error",
